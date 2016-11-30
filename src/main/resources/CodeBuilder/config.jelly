@@ -1,0 +1,45 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:html="jelly:html">
+
+  <f:section title="AWS aws-codebuild Configuration" >
+
+    <f:entry title="Region" field="region">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Proxy Host (optional)" field="proxyHost">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Proxy Port (optional)" field="proxyPort">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="AWS Access Key" field="awsAccessKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="AWS Secret Key" field="awsSecretKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
+      <f:password />
+    </f:entry>
+
+  </f:section>
+
+  <f:section title="AWS aws-codebuild Project Configuration" >
+
+    <f:entry title="Project Name" field="projectName" help="/plugin/aws-codebuild/help-projectNameHelp.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:radioBlock title="Use Project source" name="sourceControlType" help="/plugin/aws-codebuild/help-projectSourceHelp.html"
+                  value="project" checked="${instance.sourceControlTypeEquals('project')}" inline="true">
+        <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/SourceVersionHelp.html">
+          <f:textbox />
+        </f:entry>
+    </f:radioBlock>
+
+    <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
+                  value="jenkins" checked="${instance.sourceControlTypeEquals('jenkins')}" inline="true">
+    </f:radioBlock>
+  </f:section>
+</j:jelly>

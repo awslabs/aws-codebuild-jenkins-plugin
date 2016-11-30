@@ -1,0 +1,6 @@
+<j:jelly xmlns:j="jelly:core"
+         xmlns:t="/lib/hudson">
+    <t:summary icon="${it.bigIconFileName}">
+        <a href="${it.urlName}" target="_blank">CodeBuild: BUILD ${it.buildStatus}</a>
+    </t:summary>
+</j:jelly>

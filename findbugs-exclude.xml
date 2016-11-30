@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<FindBugsFilter>
+    <Match>
+        <!-- URF_UNREAD_FIELD suppressed for future support -->
+        <!-- RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE suppressed due to Lombok (see https://github.com/rzwitserloot/lombok/issues/737) -->
+        <Bug pattern="URF_UNREAD_FIELD,RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+    </Match>
+</FindBugsFilter>

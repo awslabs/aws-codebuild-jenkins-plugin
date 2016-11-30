@@ -1,0 +1,133 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:f="/lib/form">
+    <l:layout>
+        <st:include it="${it.build}" page="sidepanel.jelly"/>
+        <l:main-panel>
+
+            <h1>CodeBuild Dashboard</h1>
+
+            <!--Build Status-->
+            <script type="text/javascript">
+
+                if("${it.jenkinsBuildSucceeds}" == "") {
+                    document.write('<h2>Current Build Status: <font color="blue">${it.buildStatus}</font></h2>');
+                } else {
+                    if("${it.buildStatus}" == "SUCCEEDED") {
+                        if("${it.jenkinsBuildSucceeds}" == "true") {
+                            document.write('<h2>Current Build Status: <font color="green">${it.buildStatus}</font></h2>');
+                        } else {
+                            document.write('<h2>Current Build Status: <font color="red">FAILED</font></h2>');
+                            document.write("The build succeeded in CodeBuild but failed in Jenkins. You can still find your artifacts at the link below. ")
+                            document.write('Consult the <a href="../console">console output.</a>');
+                            document.write('<br />');
+                        }
+                    } else if("${it.buildStatus}" == "FAILED") {
+                        document.write('<h2>Current Build Status: <font color="red">FAILED</font></h2>');
+                        document.write("The build failed. ")
+                        document.write('Consult the CloudWatch logs or the <a href="../console">console output.</a>');
+                        document.write('<br />');
+                    } else {
+                        if("${it.jenkinsBuildSucceeds}" == "false") {
+                            document.write('<h2>Current Build Status: <font color="red">FAILED</font></h2>');
+                            document.write("The build failed. ")
+                            document.write('Consult the CloudWatch logs or the <a href="../console">console output.</a>');
+                            document.write('<br />');
+                        }
+                    }
+                }
+            </script>
+
+            <br />
+
+            <table class="pane bigtable stripped-odd">
+                <tbody>
+                    <tr align="left">
+                        <th>Build Metadata</th>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="pane bigtable stripped-odd">
+                <tbody>
+                    <tr>
+                        <td>Build ARN</td>
+                        <td> ${it.buildARN} </td>
+                    </tr>
+                    <tr>
+                        <td>Start Time</td>
+                        <td> ${it.startTime} </td>
+                    </tr>
+                    <tr>
+                        <td>Finish Time</td>
+                        <td> ${it.finishTime} </td>
+                    </tr>
+                    <tr>
+                        <td>Current Phase</td>
+                        <td> ${it.currentPhase} </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Phase History</h2>
+            <table class="pane bigtable stripped-odd" style="table-layout: fixed;">
+                <tbody>
+                    <tr align="left">
+                        <th>Build Phase</th>
+                        <th>Phase State</th>
+                        <th>Start Time</th>
+                        <th>Duration</th>
+                    </tr>
+                    <j:forEach var="phase" items="${it.phases}">
+                        <tr>
+                            <td>${phase.getPhaseType()}</td>
+                            <td>${phase.getPhaseStatus()}</td>
+                            <td>${phase.getStartTime()}</td>
+                            <td>${phase.getDurationInSeconds()} seconds</td>
+                        </tr>
+                    </j:forEach>
+                </tbody>
+            </table>
+
+            <script type="text/javascript">
+                if("${it.errorPhaseType}" != "") {
+                    document.write('<br/>');
+                    document.write('<table class="pane bigtable stripped-odd">');
+                    document.write('<tbody>');
+                    document.write('<tr style="border-top: 0px;"><td>' +
+                    'Error in phase ' + '${it.errorPhaseType}' + ': ' + '${it.phaseErrorMessage}' + '</td></tr>');
+                    document.write("</tbody></table>");
+                }
+            </script>
+
+
+            <h2><a href="${it.logURL}">CloudWatch Logs</a></h2>
+            <table class="pane bigtable stripped-odd">
+                <tbody>
+                    <tr style="border-top: 0px;" align="left"><th>Container logs</th></tr>
+                    <tr><td><ol>
+                        <j:forEach var="log" items="${it.logs}">
+                            <li>${log} <br /> </li>
+                        </j:forEach>
+                    </ol></td></tr>
+                </tbody>
+            </table>
+
+            <br /><br />
+
+            <!-- Display location of artifacts if build was successful -->
+            <script type="text/javascript">
+                if("${it.buildStatus}" == "SUCCEEDED") {
+                    if("${it.s3ArtifactURL}" != "") {
+                        document.write('<h2>Build Artifacts</h2>');
+                        document.write('<table class="pane bigtable stripped-odd">');
+                        document.write('<tbody>');
+                        document.write('<tr align="left"><th>S3 Bucket</th></tr>');
+                        document.write('<tr style="border-top: 0px;"><td>' +
+                                '<a href="' + '${it.s3ArtifactURL}' + '">' + '${it.s3BucketName}' + '</a>' + '</td></tr>');
+                        document.write("</tbody></table>");
+                    }
+                }
+            </script>
+
+        </l:main-panel>
+    </l:layout>
+</j:jelly>
