@@ -118,7 +118,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         assert(savedLogs.getValue().size() == 1);
         assert(savedLogs.getValue().get(0).equals(logs.get(0)));
         assert(savedPhases.getValue().equals(new ArrayList<BuildPhase>()));
-        assert(savedStartTime.getValue().equals("Wed Dec 31 16:00:00 PST 1969"));
+        assert(savedStartTime.getValue().equals(startTime.toString()));
         assert(savedBuildArn.getValue().equals(arn));
         assert(savedLogURL.getValue().equals(logURL));
         assert(savedArtifactURL.getValue().equals("https://console.aws.amazon.com/s3/home?region=us-east-1#&bucket=artifactBucket"));
