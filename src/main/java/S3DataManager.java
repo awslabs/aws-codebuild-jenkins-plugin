@@ -20,9 +20,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.scm.SCM;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -56,14 +55,9 @@ public class S3DataManager {
     // The upload bucket used is this.s3InputBucket and the name of the zip file is source.zip.
     // @return: the s3 bucket where the zip containing the source can be found
     //  (takes the form <this.s3InputBucket>/<project name>-source.zip).
-    public UploadToS3Output uploadSourceToS3(AbstractBuild build, Launcher launcher, BuildListener listener) throws Exception {
+    public UploadToS3Output uploadSourceToS3(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception {
         Validation.checkS3SourceUploaderConfig(projectName, workspace);
 
-        SCM scm = build.getProject().getScm();
-        if (scm.getType().equals("hudson.scm.NullSCM")) {
-            throw new Exception("Select a valid option in Source Code Management.");
-        }
-        scm.checkout(build, launcher, workspace, listener, null, null);
         String localfileName = this.projectName + "-" + "source.zip";
         String sourceFilePath = workspace.getRemote();
         String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + localfileName;
