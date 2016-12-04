@@ -16,6 +16,7 @@
 
 import com.amazonaws.services.codebuild.model.BuildPhase;
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.mock;
 
 public class CodeBuildActionTest {
 
-    private AbstractBuild<?, ?> build = mock(AbstractBuild.class);
+    private Run<?, ?> build = mock(AbstractBuild.class);
     CodeBuildAction action;
 
     @Before
