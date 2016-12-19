@@ -63,7 +63,7 @@ public class S3DataManager {
         scm.checkout(build, launcher, workspace, listener, null, null);
         String localfileName = this.projectName + "-" + "source.zip";
         String sourceFilePath = workspace.getRemote();
-        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf("/")) + "/" + localfileName;
+        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + localfileName;
         File zipFile = new File(zipFilePath);
 
         if (!zipFile.getParentFile().exists()) {
