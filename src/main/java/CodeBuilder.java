@@ -323,8 +323,12 @@ public class CodeBuilder extends Builder {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            proxyHost = formData.getString("proxyHost");
-            proxyPort = formData.getString("proxyPort");
+            if(formData.has("proxyHost")) {
+              proxyHost = formData.getString("proxyHost");
+            }
+            if(formData.has("proxyPort")) {
+              proxyPort = formData.getString("proxyPort");
+            }
 
             req.bindJSON(this, formData);
             save();
@@ -332,7 +336,7 @@ public class CodeBuilder extends Builder {
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-            // Indicates that this builder can be used with all kinds of project types 
+            // Indicates that this builder can be used with all kinds of project types
             return true;
         }
 
