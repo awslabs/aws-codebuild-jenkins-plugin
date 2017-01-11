@@ -34,7 +34,11 @@ public class CloudWatchMonitorTest {
     private AWSLogsClient mockClient = mock(AWSLogsClient.class);
 
     private void assertLogsContainErrorMessage(CloudWatchMonitor c) {
-        assert(c.getLatestLogs().get(0).equals(CloudWatchMonitor.noLogsMessage));
+        assert(c.getLatestLogs().get(0).equals(CloudWatchMonitor.failedConfigurationLogsMessage));
+    }
+
+    private void assertLogsContainExceptionMessage(CloudWatchMonitor c, Exception e) {
+        assert(c.getLatestLogs().get(0).equals(e.getMessage()));
     }
 
     @Before
@@ -52,9 +56,10 @@ public class CloudWatchMonitorTest {
     public void testPollExcepts() throws Exception {
         CloudWatchMonitor c = new CloudWatchMonitor(mockClient);
         c.setLogsLocation(new LogsLocation());
-        when(mockClient.getLogEvents(any(GetLogEventsRequest.class))).thenThrow(new InvalidInputException("no logs"));
+        InvalidInputException e = new InvalidInputException("no logs");
+        when(mockClient.getLogEvents(any(GetLogEventsRequest.class))).thenThrow(e);
         c.pollForLogs();
-        assertLogsContainErrorMessage(c);
+        assertLogsContainExceptionMessage(c, e);
     }
 
     @Test

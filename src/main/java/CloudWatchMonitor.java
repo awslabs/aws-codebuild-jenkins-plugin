@@ -34,11 +34,12 @@ public class CloudWatchMonitor {
     private static final int LOG_LIMIT = 15;
     private static final int htmlMaxLineLength = 200;
     public static final String noLogsMessage = "Fetching CloudWatch logs for this build.";
+    public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
     public CloudWatchMonitor(AWSLogsClient client) {
         this.logsClient = client;
         if(!Validation.checkCloudWatchMonitorConfig(logsClient)) {
-            latestLogs = Arrays.asList(noLogsMessage);
+            latestLogs = Arrays.asList(failedConfigurationLogsMessage);
             return;
         }
     }
@@ -56,7 +57,7 @@ public class CloudWatchMonitor {
             try {
                 formatLogs(logsClient.getLogEvents(logRequest).getEvents());
             } catch (Exception e) {
-                latestLogs = Arrays.asList(noLogsMessage);
+                latestLogs = Arrays.asList(e.getMessage());
                 return;
             }
         } else {
