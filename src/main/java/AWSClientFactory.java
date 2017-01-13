@@ -61,6 +61,8 @@ public class AWSClientFactory {
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        return new AWSLogsClient(awsCredentials, clientConfig);
+        AWSLogsClient client = new AWSLogsClient(awsCredentials, clientConfig);
+        client.setEndpoint("https://logs." + region + ".amazonaws.com");
+        return client;
     }
 }
