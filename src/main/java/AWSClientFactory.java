@@ -14,10 +14,13 @@
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.AmazonClientException;
 
 public class AWSClientFactory {
 
@@ -31,6 +34,14 @@ public class AWSClientFactory {
     private AWSCredentials awsCredentials;
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
+
+        try {
+            AWSCredentialsProvider cp = new InstanceProfileCredentialsProvider();
+            awsCredentials = cp.getCredentials();
+            awsAccessKey = awsCredentials.getAWSAccessKeyId();
+            awsSecretKey = awsCredentials.getAWSSecretKey();
+        } catch (AmazonClientException e) {
+        }
 
         Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
 
@@ -47,7 +58,9 @@ public class AWSClientFactory {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
 
-        awsCredentials = new BasicAWSCredentials(this.awsAccessKey, this.awsSecretKey);
+        if (awsCredentials == null) {
+            awsCredentials = new BasicAWSCredentials(this.awsAccessKey, this.awsSecretKey);
+        }
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
