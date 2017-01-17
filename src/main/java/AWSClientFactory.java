@@ -35,25 +35,21 @@ public class AWSClientFactory {
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
-
-
-        
-        //まずはインスタンスプロファイルが存在するか
+        // Priority is IAM credential > Instance Profile Credential
         try {
             AWSCredentialsProvider cp = new InstanceProfileCredentialsProvider();
             awsCredentials = cp.getCredentials();
 
+            // Overwrite if IAM Credential is specified
             if(!awsAccessKey.isEmpty() && !awsSecretKey.isEmpty()) {
                 Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
                 awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
-            }                       
+            }
         } catch (AmazonClientException e) {
             Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
             awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         }
 
-
-        
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.awsAccessKey = awsAccessKey;
