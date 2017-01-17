@@ -62,9 +62,6 @@ public class AWSClientFactory {
         if(Validation.parseInt(this.proxyPort) != null) {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
-
-
-
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
