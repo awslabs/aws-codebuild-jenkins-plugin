@@ -35,16 +35,25 @@ public class AWSClientFactory {
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
+
+
+        
+        //まずはインスタンスプロファイルが存在するか
         try {
             AWSCredentialsProvider cp = new InstanceProfileCredentialsProvider();
             awsCredentials = cp.getCredentials();
-            awsAccessKey = awsCredentials.getAWSAccessKeyId();
-            awsSecretKey = awsCredentials.getAWSSecretKey();
+
+            if(!awsAccessKey.isEmpty() && !awsSecretKey.isEmpty()) {
+                Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+                awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
+            }                       
         } catch (AmazonClientException e) {
+            Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+            awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
         }
 
-        Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
 
+        
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.awsAccessKey = awsAccessKey;
@@ -58,9 +67,8 @@ public class AWSClientFactory {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
 
-        if (awsCredentials == null) {
-            awsCredentials = new BasicAWSCredentials(this.awsAccessKey, this.awsSecretKey);
-        }
+
+
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
