@@ -14,10 +14,13 @@
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.AmazonClientException;
 
 public class AWSClientFactory {
 
@@ -32,7 +35,20 @@ public class AWSClientFactory {
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
-        Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+        // Priority is IAM credential > Instance Profile Credential
+        try {
+            AWSCredentialsProvider cp = new InstanceProfileCredentialsProvider();
+            awsCredentials = cp.getCredentials();
+
+            // Overwrite if IAM Credential is specified
+            if(!awsAccessKey.isEmpty() && !awsSecretKey.isEmpty()) {
+                Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+                awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
+            }
+        } catch (AmazonClientException e) {
+            Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+            awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+        }
 
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
@@ -46,8 +62,6 @@ public class AWSClientFactory {
         if(Validation.parseInt(this.proxyPort) != null) {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
-
-        awsCredentials = new BasicAWSCredentials(this.awsAccessKey, this.awsSecretKey);
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
