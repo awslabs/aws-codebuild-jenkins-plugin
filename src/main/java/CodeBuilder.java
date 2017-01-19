@@ -62,6 +62,7 @@ public class CodeBuilder extends Builder {
     public static final String s3DashboardURL = "https://console.aws.amazon.com/s3/home?";
     public static final String invalidProjectError = "Please select a project with S3 source type.\n";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
+    public static final String ec2CredentialsUsedWarning = "AWS access and secret keys were not provided. The instance profile credentials are being used to instantiate AWS service clients.";
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
@@ -98,6 +99,9 @@ public class CodeBuilder extends Builder {
             return false;
         }
 
+        if (awsClientFactory.isInstanceProfileCredentialUsed()) {
+            LoggingHelper.log(listener, ec2CredentialsUsedWarning);
+        }
         final AWSCodeBuildClient cbClient;
         try {
             cbClient = awsClientFactory.getCodeBuildClient();

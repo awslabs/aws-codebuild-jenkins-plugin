@@ -21,15 +21,13 @@ import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.AmazonClientException;
+import lombok.Getter;
+import org.apache.commons.lang.StringUtils;
 
 public class AWSClientFactory {
 
-    private final String proxyHost;
-    private final String proxyPort;
-    private final String awsAccessKey;
-    private final String awsSecretKey;
+    @Getter private boolean isInstanceProfileCredentialUsed = true;
     private final String region;
-
     private ClientConfiguration clientConfig;
     private AWSCredentials awsCredentials;
 
@@ -37,29 +35,27 @@ public class AWSClientFactory {
 
         // Priority is IAM credential > Instance Profile Credential
         try {
-            AWSCredentialsProvider cp = new InstanceProfileCredentialsProvider();
+            AWSCredentialsProvider cp = InstanceProfileCredentialsProvider.getInstance();
             awsCredentials = cp.getCredentials();
 
             // Overwrite if IAM Credential is specified
-            if(!awsAccessKey.isEmpty() && !awsSecretKey.isEmpty()) {
-                Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+            if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
                 awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
+                isInstanceProfileCredentialUsed = false;
             }
         } catch (AmazonClientException e) {
-            Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+            Validation.checkAWSClientFactoryCredentialConfig(awsAccessKey, awsSecretKey);
             awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+            isInstanceProfileCredentialUsed = false;
         }
 
-        this.proxyHost = proxyHost;
-        this.proxyPort = proxyPort;
-        this.awsAccessKey = awsAccessKey;
-        this.awsSecretKey = awsSecretKey;
         this.region = region;
 
         clientConfig = new ClientConfiguration();
         clientConfig.setUserAgentPrefix("CodeBuild-Jenkins-Plugin"); //tags all calls made from Jenkins plugin.
-        clientConfig.setProxyHost(this.proxyHost);
-        if(Validation.parseInt(this.proxyPort) != null) {
+        Validation.checkAWSClientFactoryProxyConfig(proxyHost, proxyPort);
+        clientConfig.setProxyHost(proxyHost);
+        if(Validation.parseInt(proxyPort) != null) {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
     }
