@@ -232,13 +232,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
-        Boolean jenkinsBuildResult;
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
-            jenkinsBuildResult = true;
         } else {
             action.setJenkinsBuildSucceeds(false);
-            jenkinsBuildResult = false;
         }
 
         nullifyBuildComponents();

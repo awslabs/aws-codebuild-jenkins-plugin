@@ -114,7 +114,7 @@ public class CodeBuildStep extends AbstractStepImpl {
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<Void> {
 
-        private static final long serialVersionUID = 1;
+        private static final long serialVersionUID = 1L;
 
         @Inject
         private transient CodeBuildStep step;
@@ -142,6 +142,10 @@ public class CodeBuildStep extends AbstractStepImpl {
             );
             builder.perform(run, ws, launcher, listener);
             return null;
+        }
+
+        private void readObject(java.io.ObjectInputStream stream) throws java.io.IOException, ClassNotFoundException {
+            throw new java.io.NotSerializableException(getClass().getName());
         }
     }
 }
