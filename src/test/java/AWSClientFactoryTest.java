@@ -16,7 +16,7 @@
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,79 +30,72 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(InstanceProfileCredentialsProvider.class)
+@PrepareForTest(DefaultAWSCredentialsProviderChain.class)
 public class AWSClientFactoryTest {
 
     private static final String REGION = "us-east-1";
-    private final InstanceProfileCredentialsProvider cp = mock(InstanceProfileCredentialsProvider.class);
+    private final DefaultAWSCredentialsProviderChain cpChain = mock(DefaultAWSCredentialsProviderChain.class);
 
     @Test
-    public void testValidConfigInstanceProfileUsedAsDefault() {
+    public void testValidConfigDefaultCredentialsUsed() {
         // Given
-        setUpInstanceWithProfile();
+        setUpInstanceWithDefaultCredentials();
 
         AWSClientFactory cf = new AWSClientFactory("", "", "", "", REGION);
 
         // Then
-        assertTrue(cf.isInstanceProfileCredentialUsed());
+        assertTrue(cf.isDefaultCredentialUsed());
     }
 
     @Test
-    public void testValidConfigProfileInstanceOverridenByIAM() {
+    public void testValidConfigIAMCredentialsUsedOverDefaultCredentials() {
         // Given
-        setUpInstanceWithProfile();
+        setUpInstanceWithDefaultCredentials();
 
         AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
 
         // Then
-        assertFalse(cf.isInstanceProfileCredentialUsed());
+        assertFalse(cf.isDefaultCredentialUsed());
     }
 
     @Test
-    public void testValidConfigNoProfileInstanceButIAMProvided() {
+    public void testValidConfigNoDefaultCredentialsIAMUsed() {
         // Given
-        setUpInstanceWithNoProfile();
+        setUpInstanceWithNoDefaultCredentials();
 
         AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
 
         // Then
-        assertFalse(cf.isInstanceProfileCredentialUsed());
+        assertFalse(cf.isDefaultCredentialUsed());
     }
 
     @Test(expected=InvalidInputException.class)
-    public void testInvalidConfigNoProfileInstanceNullKeys() {
-        setUpInstanceWithNoProfile();
-        PowerMockito.mockStatic(InstanceProfileCredentialsProvider.class);
-        when(InstanceProfileCredentialsProvider.getInstance()).thenReturn(cp);
+    public void testInvalidConfigNoDefaultCredentialsNullKeys() {
+        setUpInstanceWithNoDefaultCredentials();
 
         new AWSClientFactory(null, null, null, null, null);
     }
 
     @Test(expected=InvalidInputException.class)
-    public void testInvalidConfigNoProfileInstanceEmptyKeys() {
-        setUpInstanceWithNoProfile();
-        PowerMockito.mockStatic(InstanceProfileCredentialsProvider.class);
-        when(InstanceProfileCredentialsProvider.getInstance()).thenReturn(cp);
+    public void testInvalidConfigNoDefaultCredentialsEmptyKeys() {
+        setUpInstanceWithNoDefaultCredentials();
 
         new AWSClientFactory("", "", "", "", REGION);
     }
 
     @Test(expected=InvalidInputException.class)
     public void testInvalidProxyPort() {
-        PowerMockito.mockStatic(InstanceProfileCredentialsProvider.class);
-        when(InstanceProfileCredentialsProvider.getInstance()).thenReturn(cp);
-
         new AWSClientFactory("host", "-2", "", "", REGION);
     }
 
-    protected void setUpInstanceWithNoProfile() {
-        when(cp.getCredentials()).thenThrow(new SdkClientException("No Instance Profile Credentials"));
-        PowerMockito.mockStatic(InstanceProfileCredentialsProvider.class);
-        when(InstanceProfileCredentialsProvider.getInstance()).thenReturn(cp);
+    protected void setUpInstanceWithNoDefaultCredentials() {
+        when(cpChain.getCredentials()).thenThrow(new SdkClientException("No Instance Profile Credentials"));
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
     }
 
-    protected void setUpInstanceWithProfile() {
-        when(cp.getCredentials()).thenReturn(new AWSCredentials() {
+    protected void setUpInstanceWithDefaultCredentials() {
+        when(cpChain.getCredentials()).thenReturn(new AWSCredentials() {
             @Override
             public String getAWSAccessKeyId() { return null;}
 
@@ -111,7 +104,7 @@ public class AWSClientFactoryTest {
                 return null;
             }
         });
-        PowerMockito.mockStatic(InstanceProfileCredentialsProvider.class);
-        when(InstanceProfileCredentialsProvider.getInstance()).thenReturn(cp);
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
     }
 }

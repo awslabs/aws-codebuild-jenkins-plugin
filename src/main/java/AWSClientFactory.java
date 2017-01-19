@@ -12,41 +12,38 @@
  */
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.AmazonClientException;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
 
+
 public class AWSClientFactory {
 
-    @Getter private boolean isInstanceProfileCredentialUsed = true;
+    @Getter private final boolean isDefaultCredentialUsed;
     private final String region;
     private ClientConfiguration clientConfig;
     private AWSCredentials awsCredentials;
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
-        // Priority is IAM credential > Instance Profile Credential
-        try {
-            AWSCredentialsProvider cp = InstanceProfileCredentialsProvider.getInstance();
-            awsCredentials = cp.getCredentials();
-
-            // Overwrite if IAM Credential is specified
-            if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
-                awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
-                isInstanceProfileCredentialUsed = false;
+        // Priority is IAM credential > Credentials provided by the default AWS credentials provider
+        if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
+            awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
+            isDefaultCredentialUsed = false;
+        } else {
+            try {
+                awsCredentials = DefaultAWSCredentialsProviderChain.getInstance().getCredentials();
+                isDefaultCredentialUsed = true;
+            } catch (SdkClientException e) {
+                throw new InvalidInputException(Validation.invalidKeysError);
             }
-        } catch (AmazonClientException e) {
-            Validation.checkAWSClientFactoryCredentialConfig(awsAccessKey, awsSecretKey);
-            awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-            isInstanceProfileCredentialUsed = false;
         }
 
         this.region = region;

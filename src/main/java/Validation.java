@@ -90,12 +90,6 @@ public class Validation {
     }
 
     //AWSClientFactory
-    public static void checkAWSClientFactoryCredentialConfig(String awsAccessKey, String awsSecretKey) throws InvalidInputException {
-        if(awsAccessKey == null || awsAccessKey.isEmpty() || awsSecretKey == null || awsSecretKey.isEmpty()) {
-            throw new InvalidInputException(invalidKeysError);
-        }
-    }
-
     public static void checkAWSClientFactoryProxyConfig(String proxyHost, String proxyPort) throws InvalidInputException {
         if(proxyHost != null && !proxyHost.isEmpty()) {
             Integer proxyPortInt = Validation.parseInt(proxyPort);
