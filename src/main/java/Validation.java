@@ -14,7 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
@@ -93,7 +93,9 @@ public class Validation {
 
     //AWSClientFactory
     public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
-        if(RegionUtils.getRegion(region) == null) {
+        try {
+            Regions.fromName(region);
+        } catch (IllegalArgumentException e) {
             throw new InvalidInputException(invalidRegionError);
         }
     }
