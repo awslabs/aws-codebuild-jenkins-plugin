@@ -11,9 +11,10 @@
  *     See the License for the specific language governing permissions and limitations under the License.
  */
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
@@ -29,23 +30,20 @@ public class AWSClientFactory {
     @Getter private final boolean isDefaultCredentialUsed;
     private final String region;
     private ClientConfiguration clientConfig;
-    private AWSCredentials awsCredentials;
+    private AWSCredentialsProvider awsCredentialsProvider;
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
         // Priority is IAM credential > Credentials provided by the default AWS credentials provider
         if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
-            awsCredentials = new BasicAWSCredentials(awsAccessKey,awsSecretKey);
             isDefaultCredentialUsed = false;
+            awsCredentialsProvider = new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey,awsSecretKey));
         } else {
-            try {
-                awsCredentials = DefaultAWSCredentialsProviderChain.getInstance().getCredentials();
-                isDefaultCredentialUsed = true;
-            } catch (SdkClientException e) {
-                throw new InvalidInputException(Validation.invalidKeysError);
-            }
+            isDefaultCredentialUsed = true;
+            awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         }
 
+        Validation.checkAWSClientFactoryRegionConfig(region);
         this.region = region;
 
         clientConfig = new ClientConfiguration();
@@ -58,18 +56,30 @@ public class AWSClientFactory {
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
-        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentials, clientConfig);
-        client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
-        return client;
+        try {
+            AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
+            client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
+            return client;
+        } catch (AmazonClientException e) {
+            throw new InvalidInputException("Failed to instantiate CodeBuild client." + e.getMessage());
+        }
     }
 
     public AmazonS3Client getS3Client() throws InvalidInputException {
-        return new AmazonS3Client(awsCredentials, clientConfig);
+        try{
+            return new AmazonS3Client(awsCredentialsProvider, clientConfig);
+        } catch (AmazonClientException e) {
+            throw new InvalidInputException("Failed to instantiate S3 client." + e.getMessage());
+        }
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        AWSLogsClient client = new AWSLogsClient(awsCredentials, clientConfig);
-        client.setEndpoint("https://logs." + region + ".amazonaws.com");
-        return client;
+        try{
+            AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, clientConfig);
+            client.setEndpoint("https://logs." + region + ".amazonaws.com");
+            return client;
+        } catch (AmazonClientException e) {
+            throw new InvalidInputException("Failed to instantiate AWSLogs client." + e.getMessage());
+        }
     }
 }

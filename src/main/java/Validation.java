@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
@@ -28,6 +29,7 @@ public class Validation {
 
     public static final String invalidIAMRoleError = "Enter a valid IAM Role ARN";
     public static final String invalidKeysError = "Enter valid AWS access and secret keys";
+    public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
     public static final String invalidCredTypeError = "Invalid credentialsType option";
 
@@ -90,6 +92,12 @@ public class Validation {
     }
 
     //AWSClientFactory
+    public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
+        if(RegionUtils.getRegion(region) == null) {
+            throw new InvalidInputException(invalidRegionError);
+        }
+    }
+
     public static void checkAWSClientFactoryProxyConfig(String proxyHost, String proxyPort) throws InvalidInputException {
         if(proxyHost != null && !proxyHost.isEmpty()) {
             Integer proxyPortInt = Validation.parseInt(proxyPort);
