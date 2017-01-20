@@ -46,9 +46,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/awslabs/aws-codebuild-jenkins-plugin</url>
-        <connection>scm:git:ssh://github.com/awslabs/aws-codebuild-jenkins-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/awslabs/aws-codebuild-jenkins-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/aws-codebuild-plugin</url>
+        <connection>scm:git:ssh://github.com/jenkinsci/aws-codebuild-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codebuild-plugin.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
