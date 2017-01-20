@@ -93,6 +93,9 @@ public class Validation {
 
     //AWSClientFactory
     public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
+        if (region == null) {
+            throw new InvalidInputException(invalidRegionError);
+        }
         try {
             Regions.fromName(region);
         } catch (IllegalArgumentException e) {
