@@ -13,6 +13,7 @@
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -41,6 +42,12 @@ public class AWSClientFactory {
         } else {
             isDefaultCredentialUsed = true;
             awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+            // validate if credentials can be loaded from any provider
+            try {
+                awsCredentialsProvider.getCredentials();
+            } catch (SdkClientException e) {
+                throw new InvalidInputException(Validation.invalidKeysError);
+            }
         }
 
         Validation.checkAWSClientFactoryRegionConfig(region);
@@ -56,30 +63,18 @@ public class AWSClientFactory {
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
-        try {
-            AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
-            client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
-            return client;
-        } catch (AmazonClientException e) {
-            throw new InvalidInputException("Failed to instantiate CodeBuild client." + e.getMessage());
-        }
+        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
+        client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
+        return client;
     }
 
     public AmazonS3Client getS3Client() throws InvalidInputException {
-        try{
-            return new AmazonS3Client(awsCredentialsProvider, clientConfig);
-        } catch (AmazonClientException e) {
-            throw new InvalidInputException("Failed to instantiate S3 client." + e.getMessage());
-        }
+        return new AmazonS3Client(awsCredentialsProvider, clientConfig);
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        try{
-            AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, clientConfig);
-            client.setEndpoint("https://logs." + region + ".amazonaws.com");
-            return client;
-        } catch (AmazonClientException e) {
-            throw new InvalidInputException("Failed to instantiate AWSLogs client." + e.getMessage());
-        }
+        AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, clientConfig);
+        client.setEndpoint("https://logs." + region + ".amazonaws.com");
+        return client;
     }
 }
