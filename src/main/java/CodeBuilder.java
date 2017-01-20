@@ -62,7 +62,7 @@ public class CodeBuilder extends Builder {
     public static final String s3DashboardURL = "https://console.aws.amazon.com/s3/home?";
     public static final String invalidProjectError = "Please select a project with S3 source type.\n";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
-    public static final String ec2CredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
+    public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
@@ -99,8 +99,8 @@ public class CodeBuilder extends Builder {
             return false;
         }
 
-        if (awsClientFactory.isDefaultCredentialUsed()) {
-            LoggingHelper.log(listener, ec2CredentialsUsedWarning);
+        if (awsClientFactory.isDefaultCredentialsUsed()) {
+            LoggingHelper.log(listener, defaultCredentialsUsedWarning);
         }
         final AWSCodeBuildClient cbClient;
         try {

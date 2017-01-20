@@ -11,7 +11,6 @@
  *     See the License for the specific language governing permissions and limitations under the License.
  */
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -28,7 +27,7 @@ import org.apache.commons.lang.StringUtils;
 
 public class AWSClientFactory {
 
-    @Getter private final boolean isDefaultCredentialUsed;
+    @Getter private final boolean defaultCredentialsUsed;
     private final String region;
     private ClientConfiguration clientConfig;
     private AWSCredentialsProvider awsCredentialsProvider;
@@ -37,10 +36,10 @@ public class AWSClientFactory {
 
         // Priority is IAM credential > Credentials provided by the default AWS credentials provider
         if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
-            isDefaultCredentialUsed = false;
+            defaultCredentialsUsed = false;
             awsCredentialsProvider = new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey,awsSecretKey));
         } else {
-            isDefaultCredentialUsed = true;
+            defaultCredentialsUsed = true;
             awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
             // validate if credentials can be loaded from any provider
             try {

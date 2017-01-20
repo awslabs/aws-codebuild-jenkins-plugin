@@ -44,7 +44,7 @@ public class AWSClientFactoryTest {
         AWSClientFactory cf = new AWSClientFactory("", "", "", "", REGION);
 
         // Then
-        assertTrue(cf.isDefaultCredentialUsed());
+        assertTrue(cf.isDefaultCredentialsUsed());
     }
 
     @Test
@@ -55,7 +55,7 @@ public class AWSClientFactoryTest {
         AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
 
         // Then
-        assertFalse(cf.isDefaultCredentialUsed());
+        assertFalse(cf.isDefaultCredentialsUsed());
     }
 
     @Test
@@ -66,7 +66,7 @@ public class AWSClientFactoryTest {
         AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
 
         // Then
-        assertFalse(cf.isDefaultCredentialUsed());
+        assertFalse(cf.isDefaultCredentialsUsed());
     }
 
     @Test(expected=InvalidInputException.class)
