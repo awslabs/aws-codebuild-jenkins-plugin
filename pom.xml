@@ -11,8 +11,7 @@
   ~     See the License for the specific language governing permissions and limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -23,7 +22,7 @@
 
     <groupId>com.amazonaws</groupId>
     <artifactId>aws-codebuild</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
     <packaging>hpi</packaging>
     <name>AWS CodeBuild Plugin for Jenkins</name>
     <description>Adds a build step to integrate Jenkins with AWS CodeBuild.</description>
@@ -49,7 +48,7 @@
         <url>https://github.com/jenkinsci/aws-codebuild-plugin</url>
         <connection>scm:git:ssh://github.com/jenkinsci/aws-codebuild-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codebuild-plugin.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>aws-codebuild-0.1</tag>
     </scm>
 
     <!-- get every artifact through repo.jenkins-ci.org, which proxies all the
