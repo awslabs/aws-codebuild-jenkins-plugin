@@ -16,25 +16,30 @@
 
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
+import com.amazonaws.services.codebuild.model.Build;
 import enums.SourceControlType;
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
+import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import jenkins.tasks.SimpleBuildStep;
 import lombok.Getter;
 import lombok.Setter;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
-public class CodeBuilder extends Builder {
+public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @Getter private final String sourceControlType;
     @Getter private final String proxyHost;
@@ -84,19 +89,20 @@ public class CodeBuilder extends Builder {
         }
     }
 
-
     /*
      * This is the Jenkins method that executes the actual build.
-     * @return true if the build succeeds and false otherwise.
      */
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    @Override
+    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         if(!awsClientInitFailureMessage.equals("")) {
             LoggingHelper.log(listener, configuredImproperlyError, awsClientInitFailureMessage);
-            return false;
+            build.setResult(Result.FAILURE);
+            return;
         }
         if(!Validation.checkCodeBuilderConfig(this)) {
             LoggingHelper.log(listener, configuredImproperlyError, generalConfigInvalidError);
-            return false;
+            build.setResult(Result.FAILURE);
+            return;
         }
 
         if (awsClientFactory.isDefaultCredentialsUsed()) {
@@ -107,20 +113,23 @@ public class CodeBuilder extends Builder {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            return false;
+            build.setResult(Result.FAILURE);
+            return;
         }
 
         try {
             retrieveArtifactAndSourceInfo(cbClient);
         } catch (Exception e) {
             logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
-            return false;
+            build.setResult(Result.FAILURE);
+            return;
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
                 LoggingHelper.log(listener, invalidProjectError, "");
-                return false;
+                build.setResult(Result.FAILURE);
+                return;
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
@@ -128,12 +137,13 @@ public class CodeBuilder extends Builder {
             LoggingHelper.log(listener, "Source S3 bucket is " + sourceS3Bucket);
             if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                return false;
+                build.setResult(Result.FAILURE);
+                return;
             }
 
             if(s3DataManager == null) {
-                s3DataManager = new S3DataManager(build.getProject().getFullName(),
-                        build.getWorkspace(),
+                s3DataManager = new S3DataManager(build.getParent().getFullName(),
+                        ws,
                         build.getFullDisplayName(),
                         awsClientFactory.getS3Client(),
                         sourceS3Bucket,
@@ -149,12 +159,14 @@ public class CodeBuilder extends Builder {
                     this.sourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
                     LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                    return false;
+                    build.setResult(Result.FAILURE);
+                    return;
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + this.sourceVersion);
             } catch (Exception e) {
                 logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
-                return false;
+                build.setResult(Result.FAILURE);
+                return;
             }
         }
 
@@ -166,7 +178,8 @@ public class CodeBuilder extends Builder {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
             logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
-            return false;
+            build.setResult(Result.FAILURE);
+            return;
         }
 
         Build currentBuild;
@@ -211,7 +224,11 @@ public class CodeBuilder extends Builder {
 
             } catch(Exception e) {
                 logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
-                return failActionAndReturnFalse();
+                if(this.action != null) {
+                    this.action.setJenkinsBuildSucceeds(false);
+                }
+                build.setResult(Result.FAILURE);
+                return;
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
@@ -225,7 +242,8 @@ public class CodeBuilder extends Builder {
         }
 
         nullifyBuildComponents();
-        return jenkinsBuildResult;
+        build.setResult(Result.SUCCESS);
+        return;
     }
 
     // finds the name of the artifact S3 bucket associated with this project.
@@ -275,17 +293,9 @@ public class CodeBuilder extends Builder {
         }
     }
 
-    private void logErrorAndNullifyBuildComponents(BuildListener listener, String error, String secondaryError) {
+    private void logErrorAndNullifyBuildComponents(TaskListener listener, String error, String secondaryError) {
         LoggingHelper.log(listener, error, secondaryError);
         nullifyBuildComponents();
-    }
-
-    // Notify the CodeBuild dashboard that the build failed, then return false;
-    private boolean failActionAndReturnFalse() {
-        if(this.action != null) {
-            this.action.setJenkinsBuildSucceeds(false);
-        }
-        return false;
     }
 
     //sets these fields to null so they are reinstantiated on the next build and not reused.
@@ -305,6 +315,7 @@ public class CodeBuilder extends Builder {
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl)super.getDescriptor();
     }
+
 
     /**
      * Descriptor for CodeBuilder. Used as a singleton.

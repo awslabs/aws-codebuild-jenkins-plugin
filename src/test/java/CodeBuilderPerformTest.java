@@ -15,9 +15,6 @@
  */
 
 import com.amazonaws.services.codebuild.model.*;
-import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -26,10 +23,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 public class CodeBuilderPerformTest extends CodeBuilderTest {
@@ -41,8 +35,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
         assert(log.toString().contains(error));
     }
 
@@ -53,8 +46,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         String error = "submit build exception.";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
         String s = log.toString();
         assert(log.toString().contains(error));
     }
@@ -66,8 +58,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
         assert(log.toString().contains(error));
 
     }
@@ -104,7 +95,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
         test.setAction(a);
         test.setLogMonitor(mockMonitor);
-        test.perform(build, launcher, listener);
+        test.perform(build, ws, launcher, listener);
 
         verify(a, times(2)).setLogs(savedLogs.capture());
         verify(a, times(2)).setPhases(savedPhases.capture());

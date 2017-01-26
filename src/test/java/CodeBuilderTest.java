@@ -18,12 +18,15 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import org.junit.Before;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -52,9 +55,10 @@ public class CodeBuilderTest {
 
     Build mockBuild = mock(Build.class);
 
-    AbstractBuild build = mock(AbstractBuild.class);
+    Run build = mock(Run.class);
+    FilePath ws = new FilePath(new File("/path/to"));
     Launcher launcher = mock(Launcher.class);
-    BuildListener listener = mock(BuildListener.class);
+    TaskListener listener = mock(TaskListener.class);
 
     //mock console log
     protected ByteArrayOutputStream log;
@@ -95,6 +99,7 @@ public class CodeBuilderTest {
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
+        when(build.getResult()).thenReturn(Result.SUCCESS);
     }
 
     protected void fixCodeBuilderFactories(CodeBuilder b, AWSClientFactory f, S3DataManager s, ProjectFactory p) {
