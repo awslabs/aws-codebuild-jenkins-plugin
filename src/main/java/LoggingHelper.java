@@ -14,15 +14,15 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 
 public class LoggingHelper {
 
-    public static void log(final BuildListener listener, String message) {
+    public static void log(final TaskListener listener, String message) {
         log(listener, message, null);
     }
 
-    public static void log(final BuildListener listener, String message, String secondary) {
+    public static void log(final TaskListener listener, String message, String secondary) {
         String completeMessage;
         if(secondary == null || secondary.isEmpty()) {
             completeMessage = "[AWS CodeBuild Plugin] " + message;
@@ -36,5 +36,4 @@ public class LoggingHelper {
             listener.getLogger().println(completeMessage);
         }
     }
-
 }

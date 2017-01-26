@@ -12,56 +12,67 @@
  */
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import lombok.Getter;
+import org.apache.commons.lang.StringUtils;
+
 
 public class AWSClientFactory {
 
-    private final String proxyHost;
-    private final String proxyPort;
-    private final String awsAccessKey;
-    private final String awsSecretKey;
+    @Getter private final boolean defaultCredentialsUsed;
     private final String region;
-
     private ClientConfiguration clientConfig;
-    private AWSCredentials awsCredentials;
+    private AWSCredentialsProvider awsCredentialsProvider;
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
-        Validation.checkAWSClientFactoryConfig(proxyHost, proxyPort, awsAccessKey, awsSecretKey);
+        // Priority is IAM credential > Credentials provided by the default AWS credentials provider
+        if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
+            defaultCredentialsUsed = false;
+            awsCredentialsProvider = new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey,awsSecretKey));
+        } else {
+            defaultCredentialsUsed = true;
+            awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+            // validate if credentials can be loaded from any provider
+            try {
+                awsCredentialsProvider.getCredentials();
+            } catch (SdkClientException e) {
+                throw new InvalidInputException(Validation.invalidKeysError);
+            }
+        }
 
-        this.proxyHost = proxyHost;
-        this.proxyPort = proxyPort;
-        this.awsAccessKey = awsAccessKey;
-        this.awsSecretKey = awsSecretKey;
+        Validation.checkAWSClientFactoryRegionConfig(region);
         this.region = region;
 
         clientConfig = new ClientConfiguration();
         clientConfig.setUserAgentPrefix("CodeBuild-Jenkins-Plugin"); //tags all calls made from Jenkins plugin.
-        clientConfig.setProxyHost(this.proxyHost);
-        if(Validation.parseInt(this.proxyPort) != null) {
+        Validation.checkAWSClientFactoryProxyConfig(proxyHost, proxyPort);
+        clientConfig.setProxyHost(proxyHost);
+        if(Validation.parseInt(proxyPort) != null) {
             clientConfig.setProxyPort(Validation.parseInt(proxyPort));
         }
-
-        awsCredentials = new BasicAWSCredentials(this.awsAccessKey, this.awsSecretKey);
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
-        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentials, clientConfig);
+        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
         client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
         return client;
     }
 
     public AmazonS3Client getS3Client() throws InvalidInputException {
-        return new AmazonS3Client(awsCredentials, clientConfig);
+        return new AmazonS3Client(awsCredentialsProvider, clientConfig);
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        AWSLogsClient client = new AWSLogsClient(awsCredentials, clientConfig);
+        AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, clientConfig);
         client.setEndpoint("https://logs." + region + ".amazonaws.com");
         return client;
     }

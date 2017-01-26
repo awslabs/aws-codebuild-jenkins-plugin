@@ -14,16 +14,19 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.*;
-import hudson.model.AbstractBuild;
+import com.amazonaws.services.codebuild.model.BuildPhase;
+import com.amazonaws.services.codebuild.model.StatusType;
 import hudson.model.Action;
-import java.util.*;
-import lombok.*;
+import hudson.model.Run;
+import lombok.Data;
+
+import java.util.List;
+import java.util.Locale;
 
 @Data
 public class CodeBuildAction implements Action {
 
-    private final AbstractBuild<?, ?> build;
+    private final Run<?, ?> build;
     private static final String URL = "codebuild"; //the display URL in jenkins for this page.
 
     private List<String> logs;
