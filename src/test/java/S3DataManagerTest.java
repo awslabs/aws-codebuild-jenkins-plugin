@@ -313,6 +313,69 @@ public class S3DataManagerTest {
     }
 
     @Test
+    public void testZipSourceOneDirMultipleFilesAndGit() throws Exception {
+        clearSourceDirectory();
+        String buildSpecName = "buildspec.yml";
+        String rootFileName = "pom.xml";
+        String sourceDirName = "src";
+        String srcFileName = "file.java";
+        String srcFile2Name = "util.java";
+
+        File buildSpec = new File("/tmp/source/" + buildSpecName);
+        File rootFile = new File("/tmp/source/" + rootFileName);
+        File sourceDir = new File("/tmp/source/" + sourceDirName);
+        sourceDir.mkdir();
+        File srcFile = new File("/tmp/source/src/" + srcFileName);
+        File srcFile2 = new File("/tmp/source/src/" + srcFile2Name);
+
+        File gitDir = new File("/tmp/source/.git");
+        gitDir.mkdir();
+        File gitFile = new File("/tmp/source/.git/something.txt");
+
+        String rootFileContents = "<plugin>codebuild</plugin>";
+        String buildSpecContents = "Hello!!!!!";
+        String srcFileContents = "int i = 1;";
+        String srcFile2Contents = "util() { ; }";
+        String gitFileContents = "git data";
+
+        FileUtils.write(buildSpec, buildSpecContents);
+        FileUtils.write(rootFile, rootFileContents);
+        FileUtils.write(srcFile, srcFileContents);
+        FileUtils.write(srcFile2, srcFile2Contents);
+        FileUtils.write(gitFile, gitFileContents);
+
+        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
+        S3DataManager dataManager = createDefaultSource();
+        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        out.close();
+
+        File zip = new File("/tmp/source.zip");
+        assertTrue(zip.exists());
+
+        File unzipFolder = new File("/tmp/folder/");
+        unzipFolder.mkdir();
+        ZipFile z = new ZipFile(zip.getPath());
+        z.extractAll(unzipFolder.getPath());
+        assertTrue(unzipFolder.list().length == 3);
+        File srcFolder = new File("/tmp/folder/src/");
+        assertTrue(srcFolder.list().length == 2);
+        List<String> files = Arrays.asList(unzipFolder.list());
+        assertTrue(files.contains(buildSpecName));
+        assertTrue(files.contains(rootFileName));
+        assertTrue(files.contains(sourceDirName));
+        assertFalse(files.contains("something.txt"));
+
+        File extractedBuildSpec = new File(unzipFolder.getPath() + "/" + buildSpecName);
+        File extractedRootFile = new File(unzipFolder.getPath() + "/" + rootFileName);
+        File extractedSrcFile = new File(unzipFolder.getPath() + "/src/" + srcFileName);
+        File extractedSrcFile2 = new File(unzipFolder.getPath() + "/src/" + srcFile2Name);
+        assertTrue(FileUtils.readFileToString(extractedBuildSpec).equals(buildSpecContents));
+        assertTrue(FileUtils.readFileToString(extractedRootFile).equals(rootFileContents));
+        assertTrue(FileUtils.readFileToString(extractedSrcFile).equals(srcFileContents));
+        assertTrue(FileUtils.readFileToString(extractedSrcFile2).equals(srcFile2Contents));
+    }
+
+    @Test
     public void testZipSourceDoubleDirMultipleHugeFiles() throws Exception {
         clearSourceDirectory();
         String buildSpecName = "buildspec.yml";
