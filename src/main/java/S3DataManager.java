@@ -133,6 +133,10 @@ public class S3DataManager {
                 try {
                     String path = trimPrefix(f.getPath(), prefixToTrim);
 
+                    if(path.startsWith(File.separator)) {
+                    	path = path.substring(1, path.length());
+                    }
+
                     ZipEntry entry = new ZipEntry(path);
                     out.putNextEntry(entry);
                     while ((bytesRead = inputStream.read(buffer)) != -1) {
