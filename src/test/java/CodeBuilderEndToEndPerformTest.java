@@ -14,19 +14,17 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
+import hudson.model.Result;
 import org.junit.Test;
 
 import java.util.Date;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
@@ -42,8 +40,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
         test.setAction(mockAction);
         test.setLogMonitor(mockMonitor);
-        boolean result = test.perform(build, launcher, listener);
-        assertTrue(result);
+        test.perform(build, ws, launcher, listener);
+        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
     }
 
     @Test
@@ -59,8 +57,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
         test.setAction(mockAction);
         test.setLogMonitor(mockMonitor);
-        boolean result = test.perform(build, launcher, listener);
-        assertTrue(result);
+        test.perform(build, ws, launcher, listener);
+        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
     }
 
     @Test
@@ -69,8 +67,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         when(mockBuild.getBuildStatus()).thenReturn(f);
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
+        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
     }
 
     @Test
@@ -84,7 +82,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(failed));
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
+        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
     }
 }

@@ -20,17 +20,19 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.scm.SCM;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -53,17 +55,12 @@ public class S3DataManager {
     // The upload bucket used is this.s3InputBucket and the name of the zip file is source.zip.
     // @return: the s3 bucket where the zip containing the source can be found
     //  (takes the form <this.s3InputBucket>/<project name>-source.zip).
-    public UploadToS3Output uploadSourceToS3(AbstractBuild build, Launcher launcher, BuildListener listener) throws Exception {
+    public UploadToS3Output uploadSourceToS3(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception {
         Validation.checkS3SourceUploaderConfig(projectName, workspace);
 
-        SCM scm = build.getProject().getScm();
-        if (scm.getType().equals("hudson.scm.NullSCM")) {
-            throw new Exception("Select a valid option in Source Code Management.");
-        }
-        scm.checkout(build, launcher, workspace, listener, null, null);
         String localfileName = this.projectName + "-" + "source.zip";
         String sourceFilePath = workspace.getRemote();
-        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf("/")) + "/" + localfileName;
+        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + localfileName;
         File zipFile = new File(zipFilePath);
 
         if (!zipFile.getParentFile().exists()) {
@@ -112,9 +109,9 @@ public class S3DataManager {
     //     The given directory is /tmp/dir/folder/ which contains one file /tmp/dir/folder/file.txt
     //     The given prefixToTrim is /tmp/dir/folder
     //     Then the zip file created will expand into file.txt
-    public static void zipSource(String directory, ZipOutputStream out, String prefixToTrim) throws Exception {
-        if (!directory.contains(prefixToTrim)) {
-            throw new Exception(zipSourceError);
+    public static void zipSource(final String directory, final ZipOutputStream out, final String prefixToTrim) throws Exception {
+        if (!Paths.get(directory).startsWith(Paths.get(prefixToTrim))) {
+            throw new Exception(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
         }
 
         File dir = new File(directory);
@@ -128,13 +125,11 @@ public class S3DataManager {
         for (int i = 0; i < dirFiles.length; i++) {
             File f = new File(dir, dirFiles[i]);
             if (f.isDirectory()) {
-                zipSource(f.getPath() + "/", out, prefixToTrim);
+                zipSource(f.getPath() + File.separator, out, prefixToTrim);
             } else {
                 FileInputStream inputStream = new FileInputStream(f);
                 try {
-                    String path = f.getPath();
-
-                    path = path.substring(prefixToTrim.length(), path.length());
+                    String path = trimPrefix(f.getPath(), prefixToTrim);
 
                     ZipEntry entry = new ZipEntry(path);
                     out.putNextEntry(entry);
@@ -146,5 +141,17 @@ public class S3DataManager {
                 }
             }
         }
+    }
+
+    // Trim a directory prefix from a file path
+    // @param path: file path.
+    // @param prefixToTrim: the prefix in directory that should be trimmed before zipping.
+    // @return path with no prefixToTrim
+    //   Example:
+    //     The given path is /tmp/dir/folder/file.txt
+    //     The given prefixToTrim can be /tmp/dir/ or /tmp/dir
+    //     Then the returned path string will be folder/file.txt.
+    public static String trimPrefix(final String path, final String prefixToTrim) {
+        return Paths.get(prefixToTrim).relativize(Paths.get(path)).toString();
     }
 }

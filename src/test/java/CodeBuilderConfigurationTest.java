@@ -21,7 +21,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +29,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null);
-        assertFalse(test.perform(build, launcher, listener));
+        test.perform(build, ws, launcher, listener);
     }
 
     @Test
@@ -38,13 +37,12 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "");
 
         test.setAwsClientInitFailureMessage(""); //hide failure from trying to initialize client factory.
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
         assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
     }
 
     @Test
-    public void testInvalidAWSCredentials() {
+    public void testInvalidAWSCredentials() throws IOException, InterruptedException {
         when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
         when(mockClient.startBuild(any(StartBuildRequest.class)))
                 .thenThrow(new com.amazonaws.AmazonServiceException("The security token included in " +
@@ -52,31 +50,28 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
     }
 
     @Test
-    public void testInvalidGitLocation() {
+    public void testInvalidGitLocation() throws IOException, InterruptedException {
         when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
         when(mockClient.startBuild(any(StartBuildRequest.class)))
                 .thenThrow(new InvalidInputException("service only supports https protocol for GIT endpoints"));
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
     }
 
     @Test
-    public void testInvalidEnvARN() {
+    public void testInvalidEnvARN() throws IOException, InterruptedException {
         when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
         when(mockClient.startBuild(any(StartBuildRequest.class)))
                 .thenThrow(new InvalidInputException("The provided ARN(" + "123" + ") is invalid."));
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        boolean result = test.perform(build, launcher, listener);
-        assertFalse(result);
+        test.perform(build, ws, launcher, listener);
     }
 }
