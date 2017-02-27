@@ -99,7 +99,7 @@
             </script>
 
 
-            <h2><a href="${it.logURL}">CloudWatch Logs</a></h2>
+            <h2><a href="${it.logURL}" target="_blank">CloudWatch Logs</a></h2>
             <table class="pane bigtable stripped-odd">
                 <tbody>
                     <tr style="border-top: 0px;" align="left"><th>Container logs</th></tr>
