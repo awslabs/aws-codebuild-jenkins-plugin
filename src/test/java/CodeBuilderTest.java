@@ -19,6 +19,7 @@ import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
 import hudson.FilePath;
+import enums.SourceControlType;
 import hudson.Launcher;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -65,7 +66,7 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", "remote");
+        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString());
         cb.setAwsClientInitFailureMessage(""); //hide failure from trying to initialize client factory.
             // It will be a mock factory during testing.
         return cb;
