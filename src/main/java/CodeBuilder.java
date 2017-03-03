@@ -134,7 +134,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
-            LoggingHelper.log(listener, "Source S3 bucket is " + sourceS3Bucket);
             if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 LoggingHelper.log(listener, notVersionsedS3BucketError, "");
                 build.setResult(Result.FAILURE);
@@ -142,17 +141,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             }
 
             if(s3DataManager == null) {
-                s3DataManager = new S3DataManager(build.getParent().getFullName(),
-                        ws,
-                        build.getFullDisplayName(),
-                        awsClientFactory.getS3Client(),
-                        sourceS3Bucket,
-                        sourceS3Key
-                        );
+                s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
             }
             try {
                 LoggingHelper.log(listener, "Uploading source to S3.");
-                UploadToS3Output uploadToS3Output = s3DataManager.uploadSourceToS3(build, launcher, listener);
+                UploadToS3Output uploadToS3Output = s3DataManager.uploadSourceToS3(listener, ws);
                 // Override source version to object version id returned by S3
                 LoggingHelper.log(listener, "Source upload finished.");
                 if(uploadToS3Output.getObjectVersionId() != null) {

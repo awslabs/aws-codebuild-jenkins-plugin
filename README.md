@@ -133,3 +133,10 @@ Policy sample for IAM user:
 }
 ```
 
+### Using the AWS CodeBuild plugin with the Jenkins Pipeline plugin
+
+Use the snippet generator (click "Pipeline Syntax" on your pipeline project page) to generate the pipeline script that adds CodeBuild as a step in your pipeline. It should generate something like
+
+```
+awsCodeBuild projectName: "project", awsAccessKey: AWS_ACCESS_KEY_ID, awsSecretKey: AWS_SECRET_ACCESS_KEY, region: "us-west-2", sourceControlType: "jenkins"
+```

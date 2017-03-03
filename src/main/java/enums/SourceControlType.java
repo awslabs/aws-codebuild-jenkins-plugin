@@ -14,7 +14,8 @@
 package enums;
 
 public enum SourceControlType {
-    RemoteRepo("remote"),
+
+    ProjectSource("project"),
     JenkinsSource("jenkins");
 
     private String value;

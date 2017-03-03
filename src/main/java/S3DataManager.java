@@ -22,26 +22,22 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.scm.SCM;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @RequiredArgsConstructor
 public class S3DataManager {
 
-    private final String projectName;
-    private final FilePath workspace;
-    private final String buildDisplayName; //takes the form "<project name> #<build number>
     private final AmazonS3Client s3Client;
     private final String s3InputBucket;
     private final String s3InputKey;
@@ -52,42 +48,29 @@ public class S3DataManager {
     public static final String zipSourceError = "zipSource usage: prefixToTrim must be contained in the given directory.";
 
     // Clones, zips, and uploads the source code specified in the Source Code Management pane in the project configuration.
-    // The upload bucket used is this.s3InputBucket and the name of the zip file is source.zip.
-    // @return: the s3 bucket where the zip containing the source can be found
-    //  (takes the form <this.s3InputBucket>/<project name>-source.zip).
-    public UploadToS3Output uploadSourceToS3(Run<?, ?> build, Launcher launcher, TaskListener listener) throws Exception {
-        Validation.checkS3SourceUploaderConfig(projectName, workspace);
+    // The upload bucket used is this.s3InputBucket and the name of the zip file is this.s3InputKey.
+    public UploadToS3Output uploadSourceToS3(TaskListener listener, FilePath workspace) throws Exception {
+        Validation.checkS3SourceUploaderConfig(workspace);
 
-        String localfileName = this.projectName + "-" + "source.zip";
+        String zipFileName = this.s3InputKey;
         String sourceFilePath = workspace.getRemote();
-        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + localfileName;
-        File zipFile = new File(zipFilePath);
+        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + zipFileName;
+        FilePath jenkinsZipFile = new FilePath(workspace, zipFilePath);
+        ZipOutputStream out = new ZipOutputStream(jenkinsZipFile.write());
 
-        if (!zipFile.getParentFile().exists()) {
-            boolean dirMade = zipFile.getParentFile().mkdirs();
-            if (!dirMade) {
-                throw new Exception("Unable to create directory: " + zipFile.getParentFile().getAbsolutePath());
-            }
-        }
-
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFilePath));
         try {
-            zipSource(sourceFilePath, out, sourceFilePath);
+            zipSource(workspace, sourceFilePath, out, sourceFilePath);
         } finally {
             out.close();
         }
 
-        File sourceZipFile = new File(zipFilePath);
-        PutObjectRequest putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, sourceZipFile);
-
         // Add MD5 checksum as S3 Object metadata
-        String zipFileMD5;
-        try (FileInputStream fis = new FileInputStream(zipFilePath)) {
-            zipFileMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(DigestUtils.md5(fis)), "UTF-8");
-        }
+        String zipFileMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(DigestUtils.md5(jenkinsZipFile.read())), "UTF-8");;
         ObjectMetadata objectMetadata = new ObjectMetadata();
         objectMetadata.setContentMD5(zipFileMD5);
-        objectMetadata.setContentLength(sourceZipFile.length());
+        objectMetadata.setContentLength(jenkinsZipFile.length());
+
+        PutObjectRequest putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, jenkinsZipFile.read(), objectMetadata);
         putObjectRequest.setMetadata(objectMetadata);
 
         LoggingHelper.log(listener, "Uploading code to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
@@ -109,27 +92,27 @@ public class S3DataManager {
     //     The given directory is /tmp/dir/folder/ which contains one file /tmp/dir/folder/file.txt
     //     The given prefixToTrim is /tmp/dir/folder
     //     Then the zip file created will expand into file.txt
-    public static void zipSource(final String directory, final ZipOutputStream out, final String prefixToTrim) throws Exception {
+    public static void zipSource(FilePath workspace, final String directory, final ZipOutputStream out, final String prefixToTrim) throws Exception {
         if (!Paths.get(directory).startsWith(Paths.get(prefixToTrim))) {
             throw new Exception(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
         }
 
-        File dir = new File(directory);
-        String[] dirFiles = dir.list();
+        FilePath dir = new FilePath(workspace, directory);
+        List<FilePath> dirFiles = dir.list();
         if (dirFiles == null) {
             throw new Exception("Invalid directory path provided: " + directory);
         }
         byte[] buffer = new byte[1024];
         int bytesRead;
 
-        for (int i = 0; i < dirFiles.length; i++) {
-            File f = new File(dir, dirFiles[i]);
+        for (int i = 0; i < dirFiles.size(); i++) {
+            FilePath f = new FilePath(workspace, dirFiles.get(i).getRemote());
             if (f.isDirectory()) {
-                zipSource(f.getPath() + File.separator, out, prefixToTrim);
+                zipSource(workspace, f.getRemote() + File.separator, out, prefixToTrim);
             } else {
-                FileInputStream inputStream = new FileInputStream(f);
+                InputStream inputStream = f.read();
                 try {
-                    String path = trimPrefix(f.getPath(), prefixToTrim);
+                    String path = trimPrefix(f.getRemote(), prefixToTrim);
 
                     if(path.startsWith(File.separator)) {
                     	path = path.substring(1, path.length());
