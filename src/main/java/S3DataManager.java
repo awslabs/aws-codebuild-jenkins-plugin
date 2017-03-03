@@ -131,6 +131,15 @@ public class S3DataManager {
                 try {
                     String path = trimPrefix(f.getPath(), prefixToTrim);
 
+                    if(path.startsWith(File.separator)) {
+                    	path = path.substring(1, path.length());
+                    }
+
+                    // Zip files created on the windows file system will not unzip
+                    // properly on unix systems. Without this change, no directory structure
+                    // is built when unzipping.
+                    path = path.replace(File.separator, "/");
+
                     ZipEntry entry = new ZipEntry(path);
                     out.putNextEntry(entry);
                     while ((bytesRead = inputStream.read(buffer)) != -1) {

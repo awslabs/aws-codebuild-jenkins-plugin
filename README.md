@@ -70,7 +70,7 @@ Policy sample for IAM user:
 }
 ``` 
 
-### Using AWS CodeBulid with source only available inside of your VPC
+### Using AWS CodeBuild with source only available inside of your VPC
 
 To use AWS CodeBuild inside of a VPC the Jenkins plugin is going to pull the source from your repository inside of your VPC, zip it up and place the source into the Amazon S3 input bucket for the project you specified. To do this we need to make some modifications to the setup above.
 
