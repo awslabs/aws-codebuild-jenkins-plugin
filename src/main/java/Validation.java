@@ -70,10 +70,7 @@ public class Validation {
     }
 
     //S3DataManager
-    public static void checkS3SourceUploaderConfig(String projectName, FilePath workspace) throws Exception {
-        if(projectName == null || projectName.isEmpty()) {
-            throw new Exception("Invalid project name.");
-        }
+    public static void checkS3SourceUploaderConfig(FilePath workspace) throws Exception {
         if(workspace == null) {
             throw new Exception("Null workspace for project.");
         }

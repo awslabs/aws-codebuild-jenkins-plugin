@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:html="jelly:html">
 
-  <f:section title="AWS aws-codebuild Configuration" >
+  <f:section title="AWS Configuration" >
 
     <f:entry title="Region" field="region">
       <f:textbox />
@@ -25,7 +25,7 @@
 
   </f:section>
 
-  <f:section title="AWS aws-codebuild Project Configuration" >
+  <f:section title="Project Configuration" >
 
     <f:entry title="Project Name" field="projectName" help="/plugin/aws-codebuild/help-projectNameHelp.html">
       <f:textbox />
@@ -33,7 +33,7 @@
 
     <f:radioBlock title="Use Project source" name="sourceControlType" help="/plugin/aws-codebuild/help-projectSourceHelp.html"
                   value="project" checked="${instance.sourceControlTypeEquals('project')}" inline="true">
-        <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/SourceVersionHelp.html">
+        <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/help-sourceVersionHelp.html">
           <f:textbox />
         </f:entry>
     </f:radioBlock>

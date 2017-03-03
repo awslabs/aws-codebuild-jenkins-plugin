@@ -43,10 +43,9 @@ import static org.mockito.Mockito.when;
 
 public class S3DataManagerTest {
 
-    private String projectName = "project123";
-    private String buildDisplayName = projectName + " #456";
     private AmazonS3Client s3Client = mock(AmazonS3Client.class);
-    private FilePath workspace = new FilePath(new File("/tmp/jenkins/"));
+    private FilePath testWorkSpace = new FilePath(new File("/tmp/jenkins/workspace/proj"));
+    private FilePath testZipSourceWorkspace = new FilePath(new File("/"));
     Map<String, String> s3ARNs = new HashMap<String, String>();
     private String s3InputBucketName = "Inputbucket";
     private String s3InputKeyName = "InputKey";
@@ -68,8 +67,7 @@ public class S3DataManagerTest {
     }
 
     private S3DataManager createDefault() throws Exception {
-        return new S3DataManager(projectName, workspace, buildDisplayName, s3Client,
-                s3InputBucketName, s3InputKeyName);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName);
     }
 
     //creates S3DataManager with parameters that won't throw a FileNotFoundException for below tests.
@@ -79,15 +77,13 @@ public class S3DataManagerTest {
         PutObjectResult mockedResponse = new PutObjectResult();
         mockedResponse.setVersionId("some-version-id");
         when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
-        return new S3DataManager("proj", new FilePath(new File("/tmp/jenkins/workspace/proj")),
-                buildDisplayName, s3Client,
-                s3InputBucketName, s3InputKeyName);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName);
     }
 
     @Test(expected=Exception.class)
     public void testNullConfig() throws Exception {
-        S3DataManager d = new S3DataManager(null, null, null, null, null, null);
-        d.uploadSourceToS3(build, launcher, listener);
+        S3DataManager d = new S3DataManager(null, null, null);
+        d.uploadSourceToS3(listener, testWorkSpace);
     }
 
     @Test(expected=Exception.class)
@@ -99,7 +95,7 @@ public class S3DataManagerTest {
         S3DataManager d  = createDefault();
         OutputStream mockWriter = mock(OutputStream.class);
         d.setWriter(mockWriter);
-        d.uploadSourceToS3(build, launcher, listener);
+        d.uploadSourceToS3(listener, testWorkSpace);
     }
 
     @Test
@@ -114,7 +110,7 @@ public class S3DataManagerTest {
         sourceFolder.mkdirs();
         OutputStream mockWriter = mock(OutputStream.class);
         d.setWriter(mockWriter);
-        UploadToS3Output result = d.uploadSourceToS3(build, launcher, listener);
+        UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
     }
 
@@ -148,7 +144,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -170,7 +166,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -198,7 +194,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -230,7 +226,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -284,7 +280,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -349,7 +345,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -411,7 +407,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -458,7 +454,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource("/tmp/source/", out, "/tmp/source/");
+        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
