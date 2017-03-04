@@ -22,7 +22,7 @@
 
     <groupId>com.amazonaws</groupId>
     <artifactId>aws-codebuild</artifactId>
-    <version>0.6</version>
+    <version>0.7-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>AWS CodeBuild Plugin for Jenkins</name>
     <description>Adds a build step to integrate Jenkins with AWS CodeBuild.</description>
@@ -52,7 +52,7 @@
         <url>https://github.com/jenkinsci/aws-codebuild-plugin</url>
         <connection>scm:git:ssh://github.com/jenkinsci/aws-codebuild-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codebuild-plugin.git</developerConnection>
-        <tag>aws-codebuild-0.6</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <!-- get every artifact through repo.jenkins-ci.org, which proxies all the
