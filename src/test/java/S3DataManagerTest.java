@@ -93,8 +93,6 @@ public class S3DataManagerTest {
         when(build.getProject().getScm()).thenReturn(mockSCM);
 
         S3DataManager d  = createDefault();
-        OutputStream mockWriter = mock(OutputStream.class);
-        d.setWriter(mockWriter);
         d.uploadSourceToS3(listener, testWorkSpace);
     }
 
@@ -108,8 +106,6 @@ public class S3DataManagerTest {
         S3DataManager d = createDefaultSource();
         File sourceFolder = new File("/tmp/jenkins/workspace/proj");
         sourceFolder.mkdirs();
-        OutputStream mockWriter = mock(OutputStream.class);
-        d.setWriter(mockWriter);
         UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
     }

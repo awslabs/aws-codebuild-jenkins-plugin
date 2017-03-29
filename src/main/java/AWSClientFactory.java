@@ -17,6 +17,9 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.codebuild.AWSCodeBuild;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
@@ -31,6 +34,9 @@ public class AWSClientFactory {
     private final String region;
     private ClientConfiguration clientConfig;
     private AWSCredentialsProvider awsCredentialsProvider;
+
+    public static final String regionUnavailable = "CodeBuild is currently unavailable in ";
+    public static final String invalidRegion = " is not a valid AWS region";
 
     public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
 
@@ -61,7 +67,16 @@ public class AWSClientFactory {
         }
     }
 
-    public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException {
+    public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException, IllegalArgumentException {
+        boolean validRegion = false;
+        try {
+            validRegion = Region.getRegion(Regions.fromName(region)).isServiceSupported(AWSCodeBuild.ENDPOINT_PREFIX);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidInputException(region + invalidRegion);
+        }
+        if (!validRegion) {
+            throw new InvalidInputException(regionUnavailable + region);
+        }
         AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
         client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
         return client;

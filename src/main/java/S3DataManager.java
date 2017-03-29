@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -42,9 +43,6 @@ public class S3DataManager {
     private final String s3InputBucket;
     private final String s3InputKey;
 
-    @Setter
-    private OutputStream writer;
-
     public static final String zipSourceError = "zipSource usage: prefixToTrim must be contained in the given directory.";
 
     // Clones, zips, and uploads the source code specified in the Source Code Management pane in the project configuration.
@@ -54,7 +52,7 @@ public class S3DataManager {
 
         String zipFileName = this.s3InputKey;
         String sourceFilePath = workspace.getRemote();
-        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)) + File.separator + zipFileName;
+        String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)+1) + UUID.randomUUID().toString() + "-" + zipFileName;
         FilePath jenkinsZipFile = new FilePath(workspace, zipFilePath);
         ZipOutputStream out = new ZipOutputStream(jenkinsZipFile.write());
 
@@ -75,6 +73,8 @@ public class S3DataManager {
 
         LoggingHelper.log(listener, "Uploading code to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
         PutObjectResult putObjectResult = s3Client.putObject(putObjectRequest);
+
+        jenkinsZipFile.delete();
 
         return new UploadToS3Output(putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey(), putObjectResult.getVersionId());
     }
