@@ -20,28 +20,28 @@ import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
 import hudson.model.Result;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.Date;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
-
-    String in = StatusType.IN_PROGRESS.toString();
-    String s = StatusType.SUCCEEDED.toString();
-    String f = StatusType.FAILED.toString();
 
     @Test
     public void testBuildSuccess() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        test.setAction(mockAction);
-        test.setLogMonitor(mockMonitor);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
-        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
     }
 
     @Test
@@ -54,21 +54,23 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(succeeded));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        test.setAction(mockAction);
-        test.setLogMonitor(mockMonitor);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
-        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
     }
 
     @Test
     public void testBuildFails() throws Exception {
         setUpBuildEnvironment();
-        when(mockBuild.getBuildStatus()).thenReturn(f);
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
-        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
     }
 
     @Test
@@ -81,8 +83,10 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(failed));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
-        assertTrue(build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
     }
 }

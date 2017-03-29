@@ -50,11 +50,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String projectName;
     @Getter private String sourceVersion;
 
-    @Setter private S3DataManager s3DataManager;
     @Setter private String awsClientInitFailureMessage;
     @Setter private AWSClientFactory awsClientFactory;
-    @Setter private CloudWatchMonitor logMonitor;
-    @Setter private CodeBuildAction action;
 
     @Getter@Setter String artifactLocation;
     @Getter@Setter String artifactType;
@@ -120,7 +117,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             retrieveArtifactAndSourceInfo(cbClient);
         } catch (Exception e) {
-            logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
+            LoggingHelper.log(listener, e.getMessage());
             build.setResult(Result.FAILURE);
             return;
         }
@@ -140,9 +137,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            if(s3DataManager == null) {
-                s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
-            }
+            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
+
             try {
                 LoggingHelper.log(listener, "Uploading source to S3.");
                 UploadToS3Output uploadToS3Output = s3DataManager.uploadSourceToS3(listener, ws);
@@ -157,7 +153,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + this.sourceVersion);
             } catch (Exception e) {
-                logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
+                LoggingHelper.log(listener, e.getMessage());
                 build.setResult(Result.FAILURE);
                 return;
             }
@@ -170,7 +166,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
-            logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
+            LoggingHelper.log(listener, e.getMessage());
             build.setResult(Result.FAILURE);
             return;
         }
@@ -178,10 +174,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         Build currentBuild;
         String buildId = sbResult.getBuild().getId();
         boolean haveInitializedAction = false;
-
-        if(action == null) {
-            action = new CodeBuildAction(build); //the entity that creates the codebuild dashboard.
-        }
+        CodeBuildAction action = null;
+        CloudWatchMonitor logMonitor = null;
 
         //poll buildResult for build status until it's complete.
         do {
@@ -195,11 +189,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 currentBuild = buildsForId.get(0);
 
                 if(!haveInitializedAction) {
-                    if(logMonitor == null) {
-                        logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
-                    }
-
-                    updateDashboard(currentBuild);
+                    logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
+                    action = new CodeBuildAction(build);
+                    updateDashboard(currentBuild, action, logMonitor);
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
@@ -213,26 +205,28 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
                 Thread.sleep(5000L);
                 logMonitor.pollForLogs();
-                updateDashboard(currentBuild);
+                updateDashboard(currentBuild, action, logMonitor);
 
             } catch(Exception e) {
-                logErrorAndNullifyBuildComponents(listener, e.getMessage(), "");
-                if(this.action != null) {
-                    this.action.setJenkinsBuildSucceeds(false);
+                LoggingHelper.log(listener, e.getMessage());
+                if(action != null) {
+                    action.setJenkinsBuildSucceeds(false);
                 }
                 build.setResult(Result.FAILURE);
                 return;
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
+        Result result;
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
+            result = Result.SUCCESS;
         } else {
+            result = Result.FAILURE;
             action.setJenkinsBuildSucceeds(false);
         }
 
-        nullifyBuildComponents();
-        build.setResult(Result.SUCCESS);
+        build.setResult(result);
         return;
     }
 
@@ -256,7 +250,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Performs an update of build data to the codebuild dashboard.
     // @param action: the entity representing the dashboard.
-    private void updateDashboard(Build b) {
+    private void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor) {
         if(action != null) {
             action.setCurrentStatus(b.getBuildStatus());
             action.setLogs(logMonitor.getLatestLogs());
@@ -281,17 +275,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 .append("region=" + this.region + "#")
                 .append("&bucket=" + URLEncoder.encode(artifactLocation, "UTF-8")).toString();
         }
-    }
-
-    private void logErrorAndNullifyBuildComponents(TaskListener listener, String error, String secondaryError) {
-        LoggingHelper.log(listener, error, secondaryError);
-        nullifyBuildComponents();
-    }
-
-    //sets these fields to null so they are reinstantiated on the next build and not reused.
-    private void nullifyBuildComponents() {
-        this.logMonitor = null;
-        this.action = null;
     }
 
     //// Jenkins-specific functions ////

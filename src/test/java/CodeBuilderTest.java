@@ -100,10 +100,9 @@ public class CodeBuilderTest {
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
-        when(build.getResult()).thenReturn(Result.SUCCESS);
     }
 
-    protected void fixCodeBuilderFactories(CodeBuilder b, AWSClientFactory f, S3DataManager s, ProjectFactory p) {
+    protected void fixCodeBuilderFactories(CodeBuilder b, AWSClientFactory f) {
         b.setAwsClientFactory(f);
     }
 

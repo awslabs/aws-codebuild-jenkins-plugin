@@ -14,17 +14,13 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.*;
+import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
+import com.amazonaws.services.codebuild.model.InvalidInputException;
+import com.amazonaws.services.codebuild.model.StartBuildRequest;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
 
 public class CodeBuilderPerformTest extends CodeBuilderTest {
 
@@ -34,7 +30,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
         assert(log.toString().contains(error));
     }
@@ -45,7 +41,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "submit build exception.";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
         String s = log.toString();
         assert(log.toString().contains(error));
@@ -57,63 +53,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         String error = "cannot get build";
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
         assert(log.toString().contains(error));
 
     }
 
-    @Test
-    public void testActionConfig() throws Exception {
-        setUpBuildEnvironment();
-        Date startTime = new Date(0);
-        String arn = "arn123:456";
-        String logURL = "url1";
-
-        List<String> logs = Arrays.asList("logs");
-        when(mockMonitor.getLatestLogs()).thenReturn(logs);
-        when(mockBuild.getPhases()).thenReturn(new ArrayList<BuildPhase>());
-        when(mockBuild.getStartTime()).thenReturn(startTime);
-
-        LogsLocation mockLogsLocation = new LogsLocation().withDeepLink(logURL);
-        when(mockMonitor.getLogsLocation()).thenReturn(mockLogsLocation);
-        when(mockBuild.getArn()).thenReturn(arn);
-
-        CodeBuildAction a = mock(CodeBuildAction.class);
-
-        ArgumentCaptor<List<String>> savedLogs = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<List<BuildPhase>> savedPhases = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<String> savedBuildArn = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> savedStartTime = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> savedLogURL = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> savedArtifactURL = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> savedBucketName = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Boolean> savedJStatus = ArgumentCaptor.forClass(Boolean.class);
-
-
-        CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
-        test.setAction(a);
-        test.setLogMonitor(mockMonitor);
-        test.perform(build, ws, launcher, listener);
-
-        verify(a, times(2)).setLogs(savedLogs.capture());
-        verify(a, times(2)).setPhases(savedPhases.capture());
-        verify(a).setBuildARN(savedBuildArn.capture());
-        verify(a).setStartTime(savedStartTime.capture());
-        verify(a, times(2)).setLogURL(savedLogURL.capture());
-        verify(a).setS3ArtifactURL(savedArtifactURL.capture());
-        verify(a).setS3BucketName(savedBucketName.capture());
-        verify(a).setJenkinsBuildSucceeds(savedJStatus.capture());
-
-        assert(savedLogs.getValue().size() == 1);
-        assert(savedLogs.getValue().get(0).equals(logs.get(0)));
-        assert(savedPhases.getValue().equals(new ArrayList<BuildPhase>()));
-        assert(savedStartTime.getValue().equals(startTime.toString()));
-        assert(savedBuildArn.getValue().equals(arn));
-        assert(savedLogURL.getValue().equals(logURL));
-        assert(savedArtifactURL.getValue().equals("https://console.aws.amazon.com/s3/home?region=us-east-1#&bucket=artifactBucket"));
-        assert(savedBucketName.getValue().equals("artifactBucket"));
-        assert(savedJStatus.getValue().equals(true));
-    }
 }

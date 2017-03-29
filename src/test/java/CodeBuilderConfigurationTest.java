@@ -49,7 +49,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                         "the request is invalid"));
 
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
     }
 
@@ -60,7 +60,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                 .thenThrow(new InvalidInputException("service only supports https protocol for GIT endpoints"));
 
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
     }
 
@@ -71,7 +71,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                 .thenThrow(new InvalidInputException("The provided ARN(" + "123" + ") is invalid."));
 
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory, mockDataManager, mockProjectFactory);
+        fixCodeBuilderFactories(test, mockFactory);
         test.perform(build, ws, launcher, listener);
     }
 }
