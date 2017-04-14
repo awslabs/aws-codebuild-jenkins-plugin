@@ -7,15 +7,14 @@ If you already have a Jenkins server on which you want to use the plugin, you ca
 
 ## Plugin Installation
 
-Build AWS CodeBuild Jenkins plugin locally by running:
+1. Search for `AWS CodeBuild Plugin for Jenkins` in the Plugin Manager on your Jenkins instance **or**
 
-```
-mvn install
-```
+2. Install the plugin manually: 
 
-This command will generate a aws-codebuild.hpi file which will be installed on your Jenkins server.
+	* Build the AWS CodeBuild Jenkins plugin locally by running `mvn install` to generate `aws-codebuild.hpi` in the `target` 	directory **or**
+	* Download the latest `aws-codebuild.hpi` directly from the [Jenkins plugin repository](https://plugins.jenkins.io/aws-codebuild)
 
-* In Jenkins, choose **Manage Jenkins** > **Manage Plugins** > **Advanced** > **Upload Plugin** > **Browse** (select the *aws-codebuild.hpi* file) > **Upload** to install the AWS CodeBuild plugin.
+	* In Jenkins, choose **Manage Jenkins** > **Manage Plugins** > **Advanced** > **Upload Plugin** > **Browse** (select the 	*aws-codebuild.hpi* file) > **Upload** to install the AWS CodeBuild plugin.
 
 ## Plugin Usage
 
