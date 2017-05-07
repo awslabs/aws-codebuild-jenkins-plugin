@@ -14,15 +14,19 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Utils {
 
-    public static String getS3BucketFromObjectArn(String s3ObjectArn) {
-        String bucketArn = s3ObjectArn.substring(0, s3ObjectArn.indexOf('/'));
-        if (bucketArn.startsWith("arn:aws:s3:::")) {
-            return bucketArn.replaceAll("arn:aws:s3:::", "");
-        } else {
-            throw new RuntimeException("Unable to extract S3 bucket from object ARN.");
-        }
+    /*
+        Returns the bucket name given S3 source location informaton.
+        The given string can be in ARN format or <bucket>/<key> format, so handle both.
+     */
+    public static String getS3BucketFromObjectArn(String s3ObjectString) {
+        Matcher stringRegex = Pattern.compile("(arn:aws:s3:::)?(.*)/(.*)").matcher(s3ObjectString);
+        stringRegex.find();
+        return stringRegex.group(2);
     }
 
     public static String getS3KeyFromObjectArn(String s3ObjectArn) {
