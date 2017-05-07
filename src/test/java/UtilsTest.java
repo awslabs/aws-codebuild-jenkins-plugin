@@ -23,9 +23,27 @@ public class UtilsTest {
     @Test
     public void testExtractS3Bucket() {
         String objectArn = "arn:aws:s3:::my_corporate_bucket/exampleobject.png";
-
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
         assertEquals("my_corporate_bucket", bucket);
+    }
+
+    @Test
+    public void testExtractS3BucketNoArnPrefix() {
+        String objectArn = "my_corporate_bucket/exampleobject.png";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+        assertEquals("my_corporate_bucket", bucket);
+    }
+
+    @Test(expected=RuntimeException.class)
+    public void testExtractS3BucketEmpty() {
+        String objectArn = "";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+    }
+
+    @Test(expected=RuntimeException.class)
+    public void testExtractS3BucketInvalid() {
+        String objectArn = "arn:aws:s3:::my_corporate_bucketexampleobject.png";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
     }
 
     @Test
