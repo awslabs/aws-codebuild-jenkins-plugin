@@ -37,8 +37,7 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         String type = "S3";
         CodeBuilder cb = createDefaultCodeBuilder();
         String result = cb.generateS3ArtifactURL(baseURL, location, type);
-        assert(result.equals(baseURL + "region=" + cb.getRegion() + "#" +
-            "&bucket=bucket1"));
+        assert(result.equals(baseURL + location));
     }
 
 }

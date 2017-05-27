@@ -27,8 +27,8 @@ import java.util.Locale;
 public class CodeBuildAction implements Action {
 
     private final Run<?, ?> build;
-    private static final String URL = "codebuild"; //the display URL in jenkins for this page.
 
+    private String buildId;
     private List<String> logs;
     private String logURL;
     private List<BuildPhase> phases;
@@ -43,6 +43,8 @@ public class CodeBuildAction implements Action {
     private String s3ArtifactURL;
     private Boolean jenkinsBuildSucceeds;
 
+    private static final int MAX_DASHBOARD_NAME_LENGTH = 15;
+
 
     @Override
     public String getIconFileName() {
@@ -51,12 +53,12 @@ public class CodeBuildAction implements Action {
 
     @Override
     public String getDisplayName() {
-        return "CodeBuild Dashboard";
+        return "CodeBuild: " + Utils.formatStringWithEllipsis(getBuildId(), MAX_DASHBOARD_NAME_LENGTH);
     }
 
     @Override
     public String getUrlName() {
-        return URL;
+        return buildId.substring(buildId.indexOf(":")+1, buildId.length());
     }
 
 

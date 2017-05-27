@@ -62,7 +62,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     //These messages are used in the Jenkins console log.
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings \n";
     public static final String generalConfigInvalidError = "Valid credentials and project name are required parameters";
-    public static final String s3DashboardURL = "https://console.aws.amazon.com/s3/home?";
+    public static final String s3BucketBaseURL = "https://console.aws.amazon.com/s3/buckets/";
     public static final String invalidProjectError = "Please select a project with S3 source type.\n";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
@@ -201,9 +201,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
+                    action.setBuildId(buildId);
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
-                    action.setS3ArtifactURL(generateS3ArtifactURL(this.s3DashboardURL, artifactLocation, artifactType));
+                    action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
                     action.setS3BucketName(artifactLocation);
 
                     build.addAction(action);
@@ -285,8 +286,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         } else {
             return new StringBuilder()
                 .append(baseURL)
-                .append("region=" + this.region + "#")
-                .append("&bucket=" + URLEncoder.encode(artifactLocation, "UTF-8")).toString();
+                .append(URLEncoder.encode(artifactLocation, "UTF-8")).toString();
         }
     }
 

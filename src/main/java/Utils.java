@@ -32,4 +32,8 @@ public class Utils {
     public static String getS3KeyFromObjectArn(String s3ObjectArn) {
         return s3ObjectArn.substring(s3ObjectArn.indexOf('/') + 1, s3ObjectArn.length());
     }
+
+    public static String formatStringWithEllipsis(String s, int length) {
+        return s.substring(0, length) + "...";
+    }
 }

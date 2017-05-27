@@ -28,11 +28,11 @@ import java.util.List;
 public class CloudWatchMonitor {
 
     @Setter private AWSLogsClient logsClient;
-    @Setter@Getter  private LogsLocation logsLocation;
+    @Setter @Getter  private LogsLocation logsLocation;
     @Getter private List<String> latestLogs;
 
     private static final int LOG_LIMIT = 15;
-    private static final int htmlMaxLineLength = 200;
+    private static final int htmlMaxLineLength = 197;
     public static final String noLogsMessage = "Fetching CloudWatch logs for this build.";
     public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
@@ -70,17 +70,17 @@ public class CloudWatchMonitor {
     private void formatLogs(List<OutputLogEvent> logs) {
         if(logs.size() != 0) {
             String entry = logs.get(0).getMessage();
-            if(entry.contains("[") && entry.contains("]")) {
-                this.latestLogs = new ArrayList<String>();
-                for (int i = 0; i < logs.size(); i++) {
-                    entry = logs.get(i).getMessage();
-                    //trim the [Container] string from the log message.
+            this.latestLogs = new ArrayList<String>();
+            for (int i = 0; i < logs.size(); i++) {
+                entry = logs.get(i).getMessage();
+                //trim the [Container] string from the log message.
+                if(entry.startsWith("[Container]")) {
                     entry = entry.substring(entry.indexOf("]") + 2);
-                    if (entry.length() > htmlMaxLineLength) {
-                        entry = entry.substring(0, htmlMaxLineLength - "...".length()) + "...";
-                    }
-                    latestLogs.add(entry);
                 }
+                if (entry.length() > htmlMaxLineLength) {
+                    entry = Utils.formatStringWithEllipsis(entry, htmlMaxLineLength);
+                }
+                latestLogs.add(entry);
             }
         }
     }
