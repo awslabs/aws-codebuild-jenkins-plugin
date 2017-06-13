@@ -16,7 +16,10 @@
 
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
+import hudson.AbortException;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -25,10 +28,15 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderConfigurationTest extends CodeBuilderTest {
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null);
+
+        exception.expect(AbortException.class);
+        exception.expectMessage(CodeBuilder.configuredImproperlyError);
         test.perform(build, ws, launcher, listener);
     }
 
@@ -37,7 +45,11 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "");
 
         test.setAwsClientInitFailureMessage(""); //hide failure from trying to initialize client factory.
+
+        exception.expect(AbortException.class);
+        exception.expectMessage(CodeBuilder.configuredImproperlyError);
         test.perform(build, ws, launcher, listener);
+
         assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
     }
 
@@ -50,6 +62,8 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+
+        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
     }
 
@@ -61,6 +75,8 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+
+        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
     }
 
@@ -72,6 +88,8 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+
+        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
     }
 }
