@@ -18,6 +18,7 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
 import enums.SourceControlType;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -65,6 +66,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String invalidProjectError = "Please select a project with S3 source type.\n";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
+    public static final String buildFailedError = "Build failed";
+
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
@@ -93,13 +96,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         if(!awsClientInitFailureMessage.equals("")) {
             LoggingHelper.log(listener, configuredImproperlyError, awsClientInitFailureMessage);
-            build.setResult(Result.FAILURE);
-            return;
+            throw new AbortException(configuredImproperlyError + "\n" + awsClientInitFailureMessage);
         }
         if(!Validation.checkCodeBuilderConfig(this)) {
             LoggingHelper.log(listener, configuredImproperlyError, generalConfigInvalidError);
-            build.setResult(Result.FAILURE);
-            return;
+            throw new AbortException(configuredImproperlyError + "\n" + generalConfigInvalidError);
         }
 
         if (awsClientFactory.isDefaultCredentialsUsed()) {
@@ -110,31 +111,27 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            build.setResult(Result.FAILURE);
-            return;
+            throw new AbortException(e.getMessage());
         }
 
         try {
             retrieveArtifactAndSourceInfo(cbClient);
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            build.setResult(Result.FAILURE);
-            return;
+            throw new AbortException(e.getMessage());
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
                 LoggingHelper.log(listener, invalidProjectError, "");
-                build.setResult(Result.FAILURE);
-                return;
+                throw new AbortException(invalidProjectError);
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
             if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                build.setResult(Result.FAILURE);
-                return;
+                throw new AbortException(notVersionsedS3BucketError);
             }
 
             S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
@@ -148,14 +145,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     this.sourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
                     LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                    build.setResult(Result.FAILURE);
-                    return;
+                    throw new AbortException(notVersionsedS3BucketError);
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + this.sourceVersion);
             } catch (Exception e) {
                 LoggingHelper.log(listener, e.getMessage());
-                build.setResult(Result.FAILURE);
-                return;
+                throw new AbortException(e.getMessage());
             }
         }
 
@@ -167,8 +162,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            build.setResult(Result.FAILURE);
-            return;
+            throw new AbortException(e.getMessage());
         }
 
         Build currentBuild;
@@ -212,21 +206,18 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(action != null) {
                     action.setJenkinsBuildSucceeds(false);
                 }
-                build.setResult(Result.FAILURE);
-                return;
+                throw new AbortException(e.getMessage());
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
-        Result result;
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
-            result = Result.SUCCESS;
         } else {
-            result = Result.FAILURE;
             action.setJenkinsBuildSucceeds(false);
+            String errorMessage = buildFailedError + " for " + this.projectName + " and source version " + this.sourceVersion;
+            LoggingHelper.log(listener, errorMessage);
+            throw new AbortException(errorMessage);
         }
-
-        build.setResult(result);
         return;
     }
 
