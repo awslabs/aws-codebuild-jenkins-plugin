@@ -133,3 +133,7 @@ Use the snippet generator (click "Pipeline Syntax" on your pipeline project page
 ```
 awsCodeBuild projectName: "project", awsAccessKey: AWS_ACCESS_KEY_ID, awsSecretKey: AWS_SECRET_ACCESS_KEY, region: "us-west-2", sourceControlType: "jenkins"
 ```
+
+## Contributions
+
+Want to contribute a bug fix or feature? See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions.
