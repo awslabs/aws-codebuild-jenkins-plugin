@@ -18,7 +18,6 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
 import enums.SourceControlType;
-import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -195,7 +194,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
 
                 currentBuild = buildsForId.get(0);
-
                 if(!haveInitializedAction) {
                     logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
                     action = new CodeBuildAction(build);
@@ -225,13 +223,18 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
+        this.codeBuildResult.setBuildInformation(currentBuild.getId(), currentBuild.getArn());
+        BuildArtifacts artifacts = currentBuild.getArtifacts();
+
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
             this.codeBuildResult.setSuccess();
+            this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
         } else {
             action.setJenkinsBuildSucceeds(false);
             String errorMessage = buildFailedError + " for " + this.projectName + " and source version " + this.sourceVersion;
             LoggingHelper.log(listener, errorMessage);
+            this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
             this.codeBuildResult.setFailure(errorMessage);
         }
         return;
