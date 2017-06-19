@@ -1,4 +1,5 @@
 import com.google.inject.Inject;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -141,6 +142,10 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.sourceVersion, step.sourceControlType
             );
             builder.perform(run, ws, launcher, listener);
+            CodeBuildResult result = builder.getCodeBuildResult();
+            if(result.getStatus().equals(CodeBuildResult.FAILURE)){
+                throw new AbortException(result.getErrorMessage());
+            }
             return null;
         }
 
