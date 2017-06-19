@@ -16,41 +16,40 @@
 
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
-import hudson.AbortException;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderConfigurationTest extends CodeBuilderTest {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null);
 
-        exception.expect(AbortException.class);
-        exception.expectMessage(CodeBuilder.configuredImproperlyError);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
+
     }
 
     @Test
     public void testConfigAllBlank() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "");
 
-        test.setAwsClientInitFailureMessage(""); //hide failure from trying to initialize client factory.
-
-        exception.expect(AbortException.class);
-        exception.expectMessage(CodeBuilder.configuredImproperlyError);
         test.perform(build, ws, launcher, listener);
 
         assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
     }
 
     @Test
@@ -63,8 +62,10 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 
     @Test
@@ -76,8 +77,10 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 
     @Test
@@ -89,7 +92,9 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 }

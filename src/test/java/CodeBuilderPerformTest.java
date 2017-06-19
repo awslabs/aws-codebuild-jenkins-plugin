@@ -17,17 +17,14 @@
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
-import hudson.AbortException;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 
 public class CodeBuilderPerformTest extends CodeBuilderTest {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void testGetCBClientExcepts() throws Exception {
@@ -37,11 +34,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
-        exception.expectMessage(error);
         test.perform(build, ws, launcher, listener);
 
         assert(log.toString().contains(error));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(error));
     }
 
     @Test
@@ -52,12 +50,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
-        exception.expectMessage(error);
         test.perform(build, ws, launcher, listener);
 
-        String s = log.toString();
         assert(log.toString().contains(error));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(error));
     }
 
     @Test
@@ -68,11 +66,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
-        exception.expectMessage(error);
         test.perform(build, ws, launcher, listener);
 
         assert(log.toString().contains(error));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(error));
 
     }
 
