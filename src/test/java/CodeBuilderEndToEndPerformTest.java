@@ -18,28 +18,16 @@ import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
-import hudson.AbortException;
-import hudson.model.Result;
-import junit.framework.AssertionFailedError;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
-
     @Test
     public void testBuildSuccess() throws Exception {
         setUpBuildEnvironment();
@@ -49,6 +37,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         test.perform(build, ws, launcher, listener);
 
         assertNull(build.getResult());
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.SUCCESS, result.getStatus());
     }
 
     @Test
@@ -66,6 +56,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         test.perform(build, ws, launcher, listener);
 
         assertNull(build.getResult());
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.SUCCESS, result.getStatus());
     }
 
     @Test
@@ -75,8 +67,10 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 
     @Test
@@ -91,7 +85,9 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
-        exception.expect(AbortException.class);
         test.perform(build, ws, launcher, listener);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 }

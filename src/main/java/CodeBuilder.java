@@ -48,6 +48,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private final String awsAccessKey;
     @Getter private final String awsSecretKey;
     @Getter private final String region;
+    @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String projectName;
     @Getter private String sourceVersion;
 
@@ -82,6 +83,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.projectName = projectName;
         this.sourceVersion = Validation.sanitize(sourceVersion);
         this.awsClientInitFailureMessage = "";
+        this.codeBuildResult = new CodeBuildResult();
         try {
             awsClientFactory = new AWSClientFactory(this.proxyHost, this.proxyPort, this.awsAccessKey, this.awsSecretKey, region);
         } catch(Exception e) {
@@ -96,11 +98,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         if(!awsClientInitFailureMessage.equals("")) {
             LoggingHelper.log(listener, configuredImproperlyError, awsClientInitFailureMessage);
-            throw new AbortException(configuredImproperlyError + "\n" + awsClientInitFailureMessage);
+            String errorMessage = configuredImproperlyError + "\n" + awsClientInitFailureMessage;
+            this.codeBuildResult.setFailure(errorMessage);
+            return;
         }
         if(!Validation.checkCodeBuilderConfig(this)) {
             LoggingHelper.log(listener, configuredImproperlyError, generalConfigInvalidError);
-            throw new AbortException(configuredImproperlyError + "\n" + generalConfigInvalidError);
+            String errorMessage = configuredImproperlyError + "\n" + generalConfigInvalidError;
+            this.codeBuildResult.setFailure(errorMessage);
+            return;
         }
 
         if (awsClientFactory.isDefaultCredentialsUsed()) {
@@ -111,27 +117,32 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            throw new AbortException(e.getMessage());
+            this.codeBuildResult.setFailure(e.getMessage());
+            return;
         }
 
         try {
             retrieveArtifactAndSourceInfo(cbClient);
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            throw new AbortException(e.getMessage());
+            this.codeBuildResult.setFailure(e.getMessage());
+
+            return;
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
                 LoggingHelper.log(listener, invalidProjectError, "");
-                throw new AbortException(invalidProjectError);
+                this.codeBuildResult.setFailure(invalidProjectError);
+                return;
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
             if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                throw new AbortException(notVersionsedS3BucketError);
+                this.codeBuildResult.setFailure(notVersionsedS3BucketError);
+                return;
             }
 
             S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
@@ -145,12 +156,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     this.sourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
                     LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                    throw new AbortException(notVersionsedS3BucketError);
+                    this.codeBuildResult.setFailure(notVersionsedS3BucketError);
+                    return;
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + this.sourceVersion);
             } catch (Exception e) {
                 LoggingHelper.log(listener, e.getMessage());
-                throw new AbortException(e.getMessage());
+                this.codeBuildResult.setFailure(e.getMessage());
+                return;
             }
         }
 
@@ -162,7 +175,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
-            throw new AbortException(e.getMessage());
+            this.codeBuildResult.setFailure(e.getMessage());
+            return;
         }
 
         Build currentBuild;
@@ -206,17 +220,19 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(action != null) {
                     action.setJenkinsBuildSucceeds(false);
                 }
-                throw new AbortException(e.getMessage());
+                this.codeBuildResult.setFailure(e.getMessage());
+                return;
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
+            this.codeBuildResult.setSuccess();
         } else {
             action.setJenkinsBuildSucceeds(false);
             String errorMessage = buildFailedError + " for " + this.projectName + " and source version " + this.sourceVersion;
             LoggingHelper.log(listener, errorMessage);
-            throw new AbortException(errorMessage);
+            this.codeBuildResult.setFailure(errorMessage);
         }
         return;
     }
