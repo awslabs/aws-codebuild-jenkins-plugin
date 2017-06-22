@@ -1,9 +1,12 @@
 import java.io.Serializable;
 
 public class CodeBuildResult implements Serializable {
-    public static String IN_PROGRESS = "IN_PROGRESS";
-    public static String SUCCESS = "SUCCESS";
-    public static String FAILURE = "FAILURE";
+    public static final long serialVersionUID = 23L;
+
+    public static final String IN_PROGRESS = "IN_PROGRESS";
+    public static final String SUCCESS = "SUCCESS";
+    public static final String FAILURE = "FAILURE";
+    
     private String status = IN_PROGRESS;
     private String errorMessage;
 
