@@ -199,7 +199,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(!haveInitializedAction) {
                     logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
                     action = new CodeBuildAction(build);
-                    updateDashboard(currentBuild, action, logMonitor);
+                    updateDashboard(currentBuild, action, logMonitor, listener);
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
@@ -213,7 +213,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
                 Thread.sleep(5000L);
                 logMonitor.pollForLogs();
-                updateDashboard(currentBuild, action, logMonitor);
+                updateDashboard(currentBuild, action, logMonitor, listener);
 
             } catch(Exception e) {
                 LoggingHelper.log(listener, e.getMessage());
@@ -257,14 +257,18 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Performs an update of build data to the codebuild dashboard.
     // @param action: the entity representing the dashboard.
-    private void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor) {
+    private void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor, TaskListener listener) {
         if(action != null) {
             action.setCurrentStatus(b.getBuildStatus());
             action.setLogs(logMonitor.getLatestLogs());
             action.setPhases(b.getPhases());
             logMonitor.setLogsLocation(b.getLogs());
             if (logMonitor.getLogsLocation() != null) {
-                action.setLogURL(logMonitor.getLogsLocation().getDeepLink());
+                if(action.getLogURL() == null){
+                    String logUrl = logMonitor.getLogsLocation().getDeepLink();
+                    action.setLogURL(logUrl);
+                    LoggingHelper.log(listener, "Logs url: " + logUrl);
+                }
             }
         }
     }
