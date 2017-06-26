@@ -22,6 +22,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     private String projectName;
     private String sourceVersion;
     private String sourceControlType;
+    private long pollingInterval;
 
     public String getProxyHost() {
         return proxyHost;
@@ -95,6 +96,16 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.sourceControlType = sourceControlType;
     }
 
+    public long getPollingInterval() {
+        return pollingInterval;
+    }
+    @DataBoundSetter
+    public void setPollingInterval(long pollingInterval) {
+        this.pollingInterval = pollingInterval;
+    }
+
+    public long getDefaultPollingInterval(){ return 5L; }
+
     @Extension
     public static final class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -139,7 +150,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
                     step.getRegion(),
                     step.getProjectName(),
-                    step.sourceVersion, step.sourceControlType
+                    step.sourceVersion, step.sourceControlType, step.pollingInterval
             );
             builder.perform(run, ws, launcher, listener);
             CodeBuildResult result = builder.getCodeBuildResult();

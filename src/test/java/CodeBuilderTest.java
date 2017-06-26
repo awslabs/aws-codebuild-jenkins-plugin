@@ -21,7 +21,6 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import hudson.FilePath;
 import enums.SourceControlType;
 import hudson.Launcher;
-import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import org.junit.Before;
@@ -66,7 +65,7 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString());
+        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(), 0);
             // It will be a mock factory during testing.
         return cb;
 

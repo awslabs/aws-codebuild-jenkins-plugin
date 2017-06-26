@@ -15,6 +15,10 @@
       <f:textbox />
     </f:entry>
 
+   <f:entry title="Polling Interval(optional)" field="pollingInterval" help="/plugin/aws-codebuild/help-pollingIntervalHelp.html">
+     <f:textbox default="${descriptor.defaultPollingInterval()}"/>
+    </f:entry>
+
     <f:entry title="AWS Access Key" field="awsAccessKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
       <f:textbox />
     </f:entry>
