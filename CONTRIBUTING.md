@@ -8,3 +8,6 @@ To minimize unnecessary back-and-forth when reviewing and merging contributions,
 ```
 This contribution is under the Apache 2.0 license.
 ```
+
+## Validation
+All pull requests must pass `mvn install` successfully. Any changes that do not (e.g., due to FindBugs errors) will need to be addressed before they are eligible for acceptance.
