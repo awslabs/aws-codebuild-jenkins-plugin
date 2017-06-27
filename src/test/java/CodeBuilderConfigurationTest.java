@@ -30,7 +30,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null);
+        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null, 0);
 
         test.perform(build, ws, launcher, listener);
 
@@ -42,7 +42,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlank() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "");
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "", 0);
 
         test.perform(build, ws, launcher, listener);
 
@@ -96,5 +96,22 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+    }
+
+
+    @Test
+    public void testDefaultPollingInterval() throws IOException, ExecutionException, InterruptedException {
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "", 0);
+
+        assertEquals(CodeBuilder.defaultPollingInterval, test.getPollingInterval());
+    }
+
+    @Test
+    public void testNonDefaultPollingInterval() throws IOException, ExecutionException, InterruptedException {
+        int pollingInterval = 10;
+        
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "", pollingInterval);
+
+        assertEquals(pollingInterval, test.getPollingInterval());
     }
 }

@@ -18,7 +18,6 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
 import enums.SourceControlType;
-import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -51,6 +50,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String projectName;
     @Getter private String sourceVersion;
+    @Getter private final long pollingInterval;
 
     @Setter private String awsClientInitFailureMessage;
     @Setter private AWSClientFactory awsClientFactory;
@@ -68,11 +68,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
     public static final String buildFailedError = "Build failed";
+    public static final long defaultPollingInterval = 5L;
 
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region, String projectName, String sourceVersion, String sourceControlType) {
+                       String region, String projectName, String sourceVersion, String sourceControlType, long pollingInterval) {
 
         this.sourceControlType = sourceControlType;
         this.proxyHost = Validation.sanitize(proxyHost);
@@ -82,6 +83,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.region = region;
         this.projectName = projectName;
         this.sourceVersion = Validation.sanitize(sourceVersion);
+        this.pollingInterval = pollingInterval > 0 ? pollingInterval: defaultPollingInterval;
         this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
         try {
@@ -211,7 +213,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     build.addAction(action);
                     haveInitializedAction = true;
                 }
-                Thread.sleep(5000L);
+                Thread.sleep(this.pollingInterval * 1000L);
                 logMonitor.pollForLogs();
                 updateDashboard(currentBuild, action, logMonitor, listener);
 
