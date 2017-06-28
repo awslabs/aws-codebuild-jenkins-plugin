@@ -30,7 +30,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null);
+        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null, null);
 
         test.perform(build, ws, launcher, listener);
 
@@ -42,7 +42,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlank() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "");
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", "", "", "", "");
 
         test.perform(build, ws, launcher, listener);
 

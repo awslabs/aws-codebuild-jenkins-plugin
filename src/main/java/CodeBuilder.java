@@ -51,6 +51,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String projectName;
     @Getter private String sourceVersion;
+    @Getter private String buildSpecFile;
 
     @Setter private String awsClientInitFailureMessage;
     @Setter private AWSClientFactory awsClientFactory;
@@ -72,7 +73,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region, String projectName, String sourceVersion, String sourceControlType) {
+                       String region, String projectName, String sourceVersion, String sourceControlType,
+                       String buildSpecFile) {
 
         this.sourceControlType = sourceControlType;
         this.proxyHost = Validation.sanitize(proxyHost);
@@ -82,6 +84,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.region = region;
         this.projectName = projectName;
         this.sourceVersion = Validation.sanitize(sourceVersion);
+        this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
         try {
@@ -168,8 +171,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         StartBuildRequest startBuildRequest = new StartBuildRequest()
-                .withProjectName(this.projectName).withSourceVersion(sourceVersion);
-        LoggingHelper.log(listener, "Starting build with projectName " + this.projectName + " and source version " + this.sourceVersion);
+                .withProjectName(this.projectName)
+                .withSourceVersion(this.sourceVersion)
+                .withBuildspecOverride(this.buildSpecFile);
+        LoggingHelper.log(listener, "Starting build with projectName " + this.projectName
+                + " , source version " + this.sourceVersion + " and build spec file " + this.buildSpecFile);
         final StartBuildResult sbResult;
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
