@@ -42,6 +42,10 @@
                   value="jenkins" checked="${instance.sourceControlTypeEquals('jenkins')}" inline="true">
     </f:radioBlock>
 
+    <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
+      <f:textbox />
+    </f:entry>
+
     <f:entry title="Environment Variable Overrides" field="envVariables" help="/plugin/aws-codebuild/help-envVariablesHelp.html">
       <f:textarea />
     </f:entry>

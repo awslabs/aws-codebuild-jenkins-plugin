@@ -50,6 +50,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String projectName;
     @Getter private String sourceVersion;
     @Getter private String envVariables;
+    @Getter private String buildSpecFile;
 
     @Setter private String awsClientInitFailureMessage;
     @Setter private AWSClientFactory awsClientFactory;
@@ -74,7 +75,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
                        String region, String projectName, String sourceVersion, String sourceControlType,
-                       String envVariables) {
+                       String envVariables, String buildSpecFile) {
 
         this.sourceControlType = sourceControlType;
         this.proxyHost = Validation.sanitize(proxyHost);
@@ -85,6 +86,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.projectName = projectName;
         this.sourceVersion = Validation.sanitize(sourceVersion);
         this.envVariables = Validation.sanitize(envVariables);
+        this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
         try {
@@ -186,8 +188,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         StartBuildRequest startBuildRequest = new StartBuildRequest()
-                .withProjectName(this.projectName).withSourceVersion(sourceVersion).withEnvironmentVariablesOverride(codeBuildEnvVars);
-        LoggingHelper.log(listener, "Starting build with projectName " + this.projectName + " and source version " + this.sourceVersion);
+                .withProjectName(this.projectName)
+                .withSourceVersion(sourceVersion)
+                .withEnvironmentVariablesOverride(codeBuildEnvVars)
+                .withBuildspecOverride(this.buildSpecFile);
+
+        logStartBuildMessage(listener, projectName, sourceVersion, buildSpecFile);
         final StartBuildResult sbResult;
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
@@ -321,12 +327,23 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             .append("/view/new").toString();
     }
 
+    private void logStartBuildMessage(TaskListener listener, String projectName, String sourceVersion, String buildSpecFile) {
+        StringBuilder message = new StringBuilder().append("Starting build with project name " + projectName);
+        if(!sourceVersion.isEmpty()) {
+            message.append(" and source version " + sourceVersion);
+        }
+        if(!buildSpecFile.isEmpty()) {
+            message.append(" and build spec " + buildSpecFile);
+        }
+        LoggingHelper.log(listener, message.toString());
+    }
+
     // Given a String representing environment variables, returns a list of com.amazonaws.services.codebuild.model.EnvironmentVariable
     // objects with the same data. The input string must be in the form [{Key, value}, {k2, v2}] or else null is returned
     public static Collection<EnvironmentVariable> mapEnvVariables(String envVars) throws InvalidInputException {
         Collection<EnvironmentVariable> result = new HashSet<EnvironmentVariable>();
         if(envVars == null || envVars.isEmpty()) {
-            throw new InvalidInputException(envVariableSyntaxError);
+            return result;
         }
 
         envVars = envVars.replaceAll("\\s+", "");

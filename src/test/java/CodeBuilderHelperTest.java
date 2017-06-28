@@ -47,13 +47,13 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         assert(result.equals(baseURL + location));
     }
 
-    @Test(expected=InvalidInputException.class)
+    @Test
     public void TestMapEnvVarsEmpty() throws InvalidInputException {
         String evs = "";
         CodeBuilder.mapEnvVariables(evs);
     }
 
-    @Test(expected=InvalidInputException.class)
+    @Test
     public void TestMapEnvVarsNull() throws InvalidInputException {
         CodeBuilder.mapEnvVariables(null);
     }

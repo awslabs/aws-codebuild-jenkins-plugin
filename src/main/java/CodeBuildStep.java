@@ -23,6 +23,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     private String sourceVersion;
     private String sourceControlType;
     private String envVariables;
+    private String buildSpecFile;
 
     public String getProxyHost() {
         return proxyHost;
@@ -105,6 +106,15 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.envVariables = envVariables;
     }
 
+    public String getBuildSpecFile() {
+        return buildSpecFile;
+    }
+
+    @DataBoundSetter
+    public void setBuildSpecFile(String buildSpecFile) {
+        this.buildSpecFile = buildSpecFile;
+    }
+
     @Extension
     public static final class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -150,7 +160,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getRegion(),
                     step.getProjectName(),
                     step.sourceVersion, step.sourceControlType,
-                    step.envVariables
+                    step.envVariables, step.buildSpecFile
             );
             builder.perform(run, ws, launcher, listener);
 
