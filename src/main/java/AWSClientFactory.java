@@ -19,6 +19,10 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.retry.PredefinedBackoffStrategies;
+import com.amazonaws.retry.PredefinedRetryPolicies;
+import com.amazonaws.retry.RetryPolicy;
+import com.amazonaws.retry.v2.RetryCondition;
 import com.amazonaws.services.codebuild.AWSCodeBuild;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
@@ -58,12 +62,15 @@ public class AWSClientFactory {
         Validation.checkAWSClientFactoryRegionConfig(region);
         this.region = region;
 
-        clientConfig = new ClientConfiguration();
-        clientConfig.setUserAgentPrefix("CodeBuild-Jenkins-Plugin"); //tags all calls made from Jenkins plugin.
         Validation.checkAWSClientFactoryProxyConfig(proxyHost, proxyPort);
-        clientConfig.setProxyHost(proxyHost);
+        clientConfig = new ClientConfiguration()
+                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin") //tags all calls made from Jenkins plugin.
+                .withProxyHost(proxyHost)
+                .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
+                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(5000, 20000),
+                        10, true));
         if(Validation.parseInt(proxyPort) != null) {
-            clientConfig.setProxyPort(Validation.parseInt(proxyPort));
+            clientConfig = clientConfig.withProxyPort(Validation.parseInt(proxyPort));
         }
     }
 
