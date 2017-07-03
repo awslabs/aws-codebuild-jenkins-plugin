@@ -11,8 +11,7 @@
   ~     See the License for the specific language governing permissions and limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -23,10 +22,11 @@
 
     <groupId>com.amazonaws</groupId>
     <artifactId>aws-codebuild</artifactId>
-    <version>1.1</version>
+    <version>0.11-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>AWS CodeBuild Plugin for Jenkins</name>
     <description>Adds a build step to integrate Jenkins with AWS CodeBuild.</description>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/AWS+CodeBuild+Plugin</url>
 
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
@@ -34,9 +34,9 @@
 
     <developers>
         <developer>
-            <id>johnhankataws</id>
-            <name>John Hanks</name>
-            <email>johnhank@amazon.com</email>
+            <id>subinataws</id>
+            <name>CodeBuild</name>
+            <email>subinm@amazon.com</email>
         </developer>
     </developers>
 
@@ -49,9 +49,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/awslabs/aws-codebuild-jenkins-plugin</url>
-        <connection>scm:git:ssh://github.com/awslabs/aws-codebuild-jenkins-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/awslabs/aws-codebuild-jenkins-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/aws-codebuild-plugin</url>
+        <connection>scm:git:ssh://github.com/jenkinsci/aws-codebuild-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codebuild-plugin.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
