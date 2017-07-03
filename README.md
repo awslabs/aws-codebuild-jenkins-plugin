@@ -1,10 +1,4 @@
 # AWS CodeBuild Jenkins Plugin
-The AWS CodeBuild plugin for Jenkins provides a build step for your Jenkins project.
-
-### Build Status
-
-[![Build Status](https://jenkins.ci.cloudbees.com/buildStatus/icon?job=plugins/aws-codebuild-plugin)](https://jenkins.ci.cloudbees.com/job/plugins/job/aws-codebuild-plugin/)
-
 ## Setup Jenkins
 If you already have a Jenkins server on which you want to use the plugin, you can skip to the Plugin Installation section. If not, you can either:
 
