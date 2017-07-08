@@ -225,16 +225,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         this.codeBuildResult.setBuildInformation(currentBuild.getId(), currentBuild.getArn());
         BuildArtifacts artifacts = currentBuild.getArtifacts();
+        this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
             this.codeBuildResult.setSuccess();
-            this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
         } else {
             action.setJenkinsBuildSucceeds(false);
             String errorMessage = buildFailedError + " for " + this.projectName + " and source version " + this.sourceVersion;
             LoggingHelper.log(listener, errorMessage);
-            this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
             this.codeBuildResult.setFailure(errorMessage);
         }
         return;
