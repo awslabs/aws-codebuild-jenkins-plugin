@@ -205,6 +205,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
                     action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
+                    action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
                     action.setS3BucketName(artifactLocation);
 
                     build.addAction(action);
@@ -288,6 +289,17 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 .append(baseURL)
                 .append(URLEncoder.encode(artifactLocation, "UTF-8")).toString();
         }
+    }
+
+    private String generateDashboardURL(String buildId) {
+        return new StringBuilder()
+            .append("https://")
+            .append(this.region)
+            .append(".console.aws.amazon.com/codebuild/home?region=")
+            .append(this.region)
+            .append("#builds/")
+            .append(buildId)
+            .append("/view/new").toString();
     }
 
     //// Jenkins-specific functions ////

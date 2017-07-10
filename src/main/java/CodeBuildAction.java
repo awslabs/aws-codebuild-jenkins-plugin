@@ -41,6 +41,7 @@ public class CodeBuildAction implements Action {
     private String buildARN;
     private String s3BucketName;
     private String s3ArtifactURL;
+    private String codeBuildDashboardURL;
     private Boolean jenkinsBuildSucceeds;
 
     private static final int MAX_DASHBOARD_NAME_LENGTH = 15;
@@ -58,9 +59,9 @@ public class CodeBuildAction implements Action {
 
     @Override
     public String getUrlName() {
-        return buildId.substring(buildId.indexOf(":")+1, buildId.length());
+        String id = getBuildId();
+        return id.substring(id.indexOf(":")+1, id.length());
     }
-
 
     // Sets the state of the latest phase to be in_progress (unless the latest phase is completed, in which
     // case the state is set to succeeded).

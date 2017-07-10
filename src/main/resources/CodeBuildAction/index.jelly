@@ -36,6 +36,12 @@
                 }
             </script>
 
+            <script type="text/javascript">
+                if("${it.currentStatus}" == "IN_PROGRESS") {
+                    document.write('<h3>Stop Build: <a href="${it.codeBuildDashboardURL}" target="_blank">AWS Console</a></h3>');
+                }
+            </script>
+
             <br />
 
             <table class="pane bigtable stripped-odd">
