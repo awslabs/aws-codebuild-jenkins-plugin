@@ -113,7 +113,7 @@ public class CodeBuildStep extends AbstractStepImpl {
         }
     }
 
-    public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<Void> {
+    public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
 
         private static final long serialVersionUID = 1L;
 
@@ -133,7 +133,7 @@ public class CodeBuildStep extends AbstractStepImpl {
         private transient TaskListener listener;
 
         @Override
-        protected Void run() throws Exception {
+        protected CodeBuildResult run() throws Exception {
             CodeBuilder builder = new CodeBuilder(
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
@@ -142,11 +142,14 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.sourceVersion, step.sourceControlType
             );
             builder.perform(run, ws, launcher, listener);
+
             CodeBuildResult result = builder.getCodeBuildResult();
-            if(result.getStatus().equals(CodeBuildResult.FAILURE)){
-                throw new AbortException(result.getErrorMessage());
+
+            if(result.getStatus().equals(CodeBuildResult.FAILURE)) {
+                throw new CodeBuildException(result);
             }
-            return null;
+
+            return result;
         }
 
         private void readObject(java.io.ObjectInputStream stream) throws java.io.IOException, ClassNotFoundException {
