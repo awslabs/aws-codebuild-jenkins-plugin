@@ -22,6 +22,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     private String projectName;
     private String sourceVersion;
     private String sourceControlType;
+    private String envVariables;
 
     public String getProxyHost() {
         return proxyHost;
@@ -95,6 +96,15 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.sourceControlType = sourceControlType;
     }
 
+    public String getEnvVariables() {
+        return envVariables;
+    }
+
+    @DataBoundSetter
+    public void setEnvVariables(String envVariables) {
+        this.envVariables = envVariables;
+    }
+
     @Extension
     public static final class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -139,7 +149,8 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
                     step.getRegion(),
                     step.getProjectName(),
-                    step.sourceVersion, step.sourceControlType
+                    step.sourceVersion, step.sourceControlType,
+                    step.envVariables
             );
             builder.perform(run, ws, launcher, listener);
 

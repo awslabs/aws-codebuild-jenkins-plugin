@@ -17,6 +17,7 @@
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
+import com.amazonaws.util.StringUtils;
 import enums.SourceControlType;
 import hudson.Extension;
 import hudson.FilePath;
@@ -35,9 +36,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
@@ -50,6 +49,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String projectName;
     @Getter private String sourceVersion;
+    @Getter private String envVariables;
 
     @Setter private String awsClientInitFailureMessage;
     @Setter private AWSClientFactory awsClientFactory;
@@ -63,6 +63,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings \n";
     public static final String generalConfigInvalidError = "Valid credentials and project name are required parameters";
     public static final String s3BucketBaseURL = "https://console.aws.amazon.com/s3/buckets/";
+    public static final String envVariableSyntaxError = "CodeBuild environment variable keys and values cannot be empty and the string must be of the form [{key, value}, {key2, value2}]";
+    public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
     public static final String invalidProjectError = "Please select a project with S3 source type.\n";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
@@ -71,7 +73,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region, String projectName, String sourceVersion, String sourceControlType) {
+                       String region, String projectName, String sourceVersion, String sourceControlType,
+                       String envVariables) {
 
         this.sourceControlType = sourceControlType;
         this.proxyHost = Validation.sanitize(proxyHost);
@@ -81,6 +84,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.region = region;
         this.projectName = projectName;
         this.sourceVersion = Validation.sanitize(sourceVersion);
+        this.envVariables = Validation.sanitize(envVariables);
         this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
         try {
@@ -104,6 +108,21 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!Validation.checkCodeBuilderConfig(this)) {
             LoggingHelper.log(listener, configuredImproperlyError, generalConfigInvalidError);
             String errorMessage = configuredImproperlyError + "\n" + generalConfigInvalidError;
+            this.codeBuildResult.setFailure(errorMessage);
+            return;
+        }
+        Collection<EnvironmentVariable> codeBuildEnvVars = null;
+        try {
+            codeBuildEnvVars = mapEnvVariables(envVariables);
+        } catch(InvalidInputException e) {
+            LoggingHelper.log(listener, configuredImproperlyError, e.getMessage());
+            String errorMessage = configuredImproperlyError + "\n" + e.getMessage();
+            this.codeBuildResult.setFailure(errorMessage);
+            return;
+        }
+        if(Validation.envVariablesHaveRestrictedPrefix(codeBuildEnvVars)) {
+            LoggingHelper.log(listener, configuredImproperlyError, envVariableNameSpaceError);
+            String errorMessage = configuredImproperlyError + "\n" + envVariableNameSpaceError;
             this.codeBuildResult.setFailure(errorMessage);
             return;
         }
@@ -167,7 +186,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         StartBuildRequest startBuildRequest = new StartBuildRequest()
-                .withProjectName(this.projectName).withSourceVersion(sourceVersion);
+                .withProjectName(this.projectName).withSourceVersion(sourceVersion).withEnvironmentVariablesOverride(codeBuildEnvVars);
         LoggingHelper.log(listener, "Starting build with projectName " + this.projectName + " and source version " + this.sourceVersion);
         final StartBuildResult sbResult;
         try {
@@ -300,6 +319,51 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             .append("#builds/")
             .append(buildId)
             .append("/view/new").toString();
+    }
+
+    // Given a String representing environment variables, returns a list of com.amazonaws.services.codebuild.model.EnvironmentVariable
+    // objects with the same data. The input string must be in the form [{Key, value}, {k2, v2}] or else null is returned
+    public static Collection<EnvironmentVariable> mapEnvVariables(String envVars) throws InvalidInputException {
+        Collection<EnvironmentVariable> result = new HashSet<EnvironmentVariable>();
+        if(envVars == null || envVars.isEmpty()) {
+            throw new InvalidInputException(envVariableSyntaxError);
+        }
+
+        envVars = envVars.replaceAll("\\s+", "");
+        if(envVars.length() < 4 || envVars.charAt(0) != '[' || envVars.charAt(envVars.length()-1) != ']' ||
+           envVars.charAt(1) != '{' || envVars.charAt(envVars.length()-2) != '}') {
+            throw new InvalidInputException(envVariableSyntaxError);
+        } else {
+            envVars = envVars.substring(2, envVars.length()-2);
+        }
+
+        int numCommas = envVars.replaceAll("[^,]", "").length();
+        if(numCommas == 0) {
+            throw new InvalidInputException(envVariableSyntaxError);
+        }
+        //single environment variable case vs multiple
+        if(numCommas == 1) {
+            result.add(deserializeCodeBuildEnvVar(envVars));
+        } else {
+            String[] evs = envVars.split("\\},\\{");
+            for(int i = 0; i < evs.length; i++) {
+                result.add(deserializeCodeBuildEnvVar(evs[i]));
+            }
+        }
+        return result;
+    }
+
+    // Given a string of the form "key,value", returns a CodeBuild Environment Variable with that data.
+    // Throws an
+    private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev) throws InvalidInputException {
+        if(ev.replaceAll("[^,]", "").length() != 1) {
+            throw new InvalidInputException(envVariableSyntaxError);
+        }
+        String[] keyAndValue = ev.split(",");
+        if(keyAndValue.length != 2 || keyAndValue[0].isEmpty() || keyAndValue[1].isEmpty()) {
+            throw new InvalidInputException(envVariableSyntaxError);
+        }
+        return new EnvironmentVariable().withName(keyAndValue[0]).withValue(keyAndValue[1]);
     }
 
     //// Jenkins-specific functions ////

@@ -15,10 +15,15 @@
  */
 
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.codebuild.model.EnvironmentVariable;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
 import hudson.FilePath;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
 import static org.apache.commons.lang.StringEscapeUtils.escapeSql;
@@ -59,6 +64,25 @@ public class Validation {
             return false;
         }
         return true;
+    }
+
+    public static boolean checkEnvVariableConfig(Collection<EnvironmentVariable> envVariables) {
+        for(EnvironmentVariable e: envVariables) {
+            if(e.getName() == null || e.getName().isEmpty() ||
+               e.getValue() == null || e.getValue().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean envVariablesHaveRestrictedPrefix(Collection<EnvironmentVariable> envVariables) {
+        for(EnvironmentVariable e: envVariables) {
+            if(e.getName().startsWith("CODEBUILD_")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     //CloudWatchMonitor
