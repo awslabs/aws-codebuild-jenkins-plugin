@@ -66,7 +66,7 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString());
+        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(), "buildspec.yml");
             // It will be a mock factory during testing.
         return cb;
 

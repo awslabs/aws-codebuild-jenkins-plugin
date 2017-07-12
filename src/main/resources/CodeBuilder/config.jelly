@@ -41,5 +41,9 @@
     <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
                   value="jenkins" checked="${instance.sourceControlTypeEquals('jenkins')}" inline="true">
     </f:radioBlock>
+
+    <f:entry title="Build Spec File (optional)" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
+      <f:textbox />
+    </f:entry>
   </f:section>
 </j:jelly>
