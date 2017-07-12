@@ -150,6 +150,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
+        StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(this.projectName).
+                withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(this.buildSpecFile);
+
         if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
                 LoggingHelper.log(listener, invalidProjectError, "");
@@ -166,6 +169,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             }
 
             S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
+            String uploadedSourceVersion = "";
+
 
             try {
                 LoggingHelper.log(listener, "Uploading source to S3.");
@@ -173,27 +178,27 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 // Override source version to object version id returned by S3
                 LoggingHelper.log(listener, "Source upload finished.");
                 if(uploadToS3Output.getObjectVersionId() != null) {
-                    this.sourceVersion = uploadToS3Output.getObjectVersionId();
+                    uploadedSourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
                     LoggingHelper.log(listener, notVersionsedS3BucketError, "");
                     this.codeBuildResult.setFailure(notVersionsedS3BucketError);
                     return;
                 }
-                LoggingHelper.log(listener, "S3 object version id for uploaded source is " + this.sourceVersion);
+                LoggingHelper.log(listener, "S3 object version id for uploaded source is " + uploadedSourceVersion);
             } catch (Exception e) {
                 LoggingHelper.log(listener, e.getMessage());
                 this.codeBuildResult.setFailure(e.getMessage());
                 return;
             }
+
+            startBuildRequest.setSourceVersion(uploadedSourceVersion);
+            logStartBuildMessage(listener, projectName, uploadedSourceVersion, buildSpecFile);
+
+        } else {
+            startBuildRequest.setSourceVersion(this.sourceVersion);
+            logStartBuildMessage(listener, projectName, sourceVersion, buildSpecFile);
         }
 
-        StartBuildRequest startBuildRequest = new StartBuildRequest()
-                .withProjectName(this.projectName)
-                .withSourceVersion(sourceVersion)
-                .withEnvironmentVariablesOverride(codeBuildEnvVars)
-                .withBuildspecOverride(this.buildSpecFile);
-
-        logStartBuildMessage(listener, projectName, sourceVersion, buildSpecFile);
         final StartBuildResult sbResult;
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
