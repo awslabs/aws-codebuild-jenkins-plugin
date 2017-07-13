@@ -1,4 +1,8 @@
 # AWS CodeBuild Jenkins Plugin
+
+[![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](https://github.com/jenkinsci/aws-codebuild-plugin/blob/master/LICENSE)
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/aws-codebuild-plugin/master)](https://ci.jenkins.io/job/Plugins/job/aws-codebuild-plugin/job/master/)
+
 ## Setup Jenkins
 If you already have a Jenkins server on which you want to use the plugin, you can skip to the Plugin Installation section. If not, you can either:
 
