@@ -20,6 +20,10 @@ import com.amazonaws.services.codebuild.model.StartBuildRequest;
 import hudson.model.Result;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +31,9 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
+@PowerMockIgnore("javax.management.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(CodeBuilder.class)
 public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
@@ -35,7 +42,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -52,7 +58,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         test.setIsPipelineBuild(true);
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
-        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
 
@@ -68,7 +73,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "submit build exception.";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -85,7 +89,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         test.setIsPipelineBuild(true);
         String error = "submit build exception.";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
-        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
 
@@ -101,7 +104,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         String error = "cannot get build";
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -118,7 +120,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         CodeBuilder test = createDefaultCodeBuilder();
         test.setIsPipelineBuild(true);
-        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
 

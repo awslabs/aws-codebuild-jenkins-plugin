@@ -14,16 +14,12 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
-import enums.SourceControlType;
 import hudson.FilePath;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import static enums.SourceControlType.JenkinsSource;
 import static enums.SourceControlType.ProjectSource;
@@ -39,9 +35,14 @@ public class Validation {
     public static final String invalidArtifactsPackagingError = "Artifact packaging override must be one of 'NONE', 'ZIP', ''";
     public static final String invalidArtifactNamespaceTypeError = "Artifact namespace override must be one of 'NONE', 'BUILD_ID', ''";
     public static final String invalidTimeoutOverrideError = "Build timeout override must be a number between 5 and 480 (minutes)";
-    public static final String invalidKeysError = "Enter valid AWS access and secret keys";
+    public static final String invalidDefaultCredentialsError = "AWS credentials couldn't be loaded from the default provider chain";
     public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
+    public static final String invalidCredTypeError = "Invalid credentialsType option; must be 'jenkins' or 'keys'";
+    public static final String invalidCredentialsIdError = "Invalid Jenkins credentials ID. Credentials must be of type CodeBuildCredentials";
+    public static final String basicAWSCredentials = "Using given AWS access and secret key for authorization";
+    public static final String defaultChainCredentials = "Using credentials provided by the DefaultAWSCredentialsProviderChain for authorization";
+    public static final String IAMRoleCredentials = "Authorizing with the IAM role defined in credentials ";
 
     //CodeBuilder
     public static final String projectRequiredError = "CodeBuild project name is required";
@@ -62,7 +63,6 @@ public class Validation {
             return Integer.parseInt(s);
         }
     }
-
 
     //// Configuration-checking functions ////
 
@@ -119,16 +119,6 @@ public class Validation {
         return "";
     }
 
-    public static boolean checkEnvVariableConfig(Collection<EnvironmentVariable> envVariables) {
-        for(EnvironmentVariable e: envVariables) {
-            if(e.getName() == null || e.getName().isEmpty() ||
-               e.getValue() == null || e.getValue().isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public static boolean envVariablesHaveRestrictedPrefix(Collection<EnvironmentVariable> envVariables) {
         for(EnvironmentVariable e: envVariables) {
             if(e.getName().startsWith("CODEBUILD_")) {
@@ -166,13 +156,14 @@ public class Validation {
     }
 
     //AWSClientFactory
-    public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
-        if (region == null) {
-            throw new InvalidInputException(invalidRegionError);
+    public static void checkAWSClientFactoryJenkinsCredentialsConfig(String credentialsId) throws InvalidInputException {
+        if(credentialsId == null || credentialsId.isEmpty()) {
+            throw new InvalidInputException(invalidCredentialsIdError);
         }
-        try {
-            Regions.fromName(region);
-        } catch (IllegalArgumentException e) {
+    }
+
+    public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
+        if (region.isEmpty()) {
             throw new InvalidInputException(invalidRegionError);
         }
     }

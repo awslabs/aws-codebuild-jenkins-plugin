@@ -9,76 +9,126 @@
  *     or in the "license" file accompanying this file.
  *     This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *     See the License for the specific language governing permissions and limitations under the License.
+ *
+ *     Portions copyright Copyright (c) 2015, CloudBees, Inc.
  */
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.auth.*;
 import com.amazonaws.retry.PredefinedBackoffStrategies;
 import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import enums.CredentialsType;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
 
-
 public class AWSClientFactory {
 
-    @Getter private final boolean defaultCredentialsUsed;
-    private final String region;
-    private ClientConfiguration clientConfig;
+
+    @Getter private final String proxyHost;
+    @Getter private final Integer proxyPort;
+    @Getter private final String awsAccessKey;
+    @Getter private final String awsSecretKey;
+    @Getter private final String region;
+
+    private String credentialsDescriptor;
     private AWSCredentialsProvider awsCredentialsProvider;
 
-    public AWSClientFactory(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String region) throws InvalidInputException {
+    public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
+                       String region) {
 
-        // Priority is IAM credential > Credentials provided by the default AWS credentials provider
-        if(StringUtils.isNotEmpty(awsAccessKey) && StringUtils.isNotEmpty(awsSecretKey)) {
-            defaultCredentialsUsed = false;
-            awsCredentialsProvider = new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey,awsSecretKey));
-        } else {
-            defaultCredentialsUsed = true;
-            awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
-            // validate if credentials can be loaded from any provider
-            try {
-                awsCredentialsProvider.getCredentials();
-            } catch (SdkClientException e) {
-                throw new InvalidInputException(Validation.invalidKeysError);
+        this.awsAccessKey = Validation.sanitize(awsAccessKey);
+        this.awsSecretKey = Validation.sanitize(awsSecretKey);
+        this.region = Validation.sanitize(region);
+
+        Validation.checkAWSClientFactoryRegionConfig(this.region);
+        this.credentialsDescriptor = "";
+
+        if(credentialsType.equals(CredentialsType.Jenkins.toString())) {
+            credentialsId = Validation.sanitize(credentialsId);
+            Validation.checkAWSClientFactoryJenkinsCredentialsConfig(credentialsId);
+
+            CodeBuildCredentials codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(SystemCredentialsProvider.getInstance().getCredentials(),
+                    CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+
+            if(codeBuildCredentials != null) {
+                this.awsCredentialsProvider = new AWSStaticCredentialsProvider(codeBuildCredentials.getCredentials());
+            } else {
+                throw new InvalidInputException(Validation.invalidCredentialsIdError);
             }
-        }
-
-        Validation.checkAWSClientFactoryRegionConfig(region);
-        this.region = region;
-
-        Validation.checkAWSClientFactoryProxyConfig(proxyHost, proxyPort);
-        clientConfig = new ClientConfiguration()
-                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin") //tags all calls made from Jenkins plugin.
-                .withProxyHost(proxyHost)
-                .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
-                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(5000, 20000),
-                        10, true));
-        if(Validation.parseInt(proxyPort) != null) {
-            clientConfig = clientConfig.withProxyPort(Validation.parseInt(proxyPort));
+            this.proxyHost = codeBuildCredentials.getProxyHost();
+            this.proxyPort = Validation.parseInt(codeBuildCredentials.getProxyPort());
+            this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
+        } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
+            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), Validation.sanitize(awsSecretKey));
+            this.proxyHost = Validation.sanitize(proxyHost);
+            this.proxyPort = Validation.parseInt(proxyPort);
+        } else {
+            throw new InvalidInputException(Validation.invalidCredTypeError);
         }
     }
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException, IllegalArgumentException {
-        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, clientConfig);
+        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, getClientConfiguration());
         client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
         return client;
     }
 
     public AmazonS3Client getS3Client() throws InvalidInputException {
-        return new AmazonS3Client(awsCredentialsProvider, clientConfig);
+        return new AmazonS3Client(awsCredentialsProvider, getClientConfiguration());
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, clientConfig);
+        AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, getClientConfiguration());
         client.setEndpoint("https://logs." + region + ".amazonaws.com");
         return client;
     }
+
+    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
+        AWSCredentialsProvider result;
+        if(StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+            result = new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
+        } else {
+            result = DefaultAWSCredentialsProviderChain.getInstance();
+            try {
+                result.getCredentials();
+            } catch (SdkClientException e) {
+                throw new InvalidInputException(Validation.invalidDefaultCredentialsError);
+            }
+        }
+        return result;
+    }
+
+    private ClientConfiguration getClientConfiguration() {
+        ClientConfiguration clientConfig = new ClientConfiguration()
+                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin") //tags all calls made from Jenkins plugin.
+                .withProxyHost(proxyHost)
+                .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
+                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(5000, 20000),
+                        10, true));
+
+        if(proxyPort != null) {
+            clientConfig.setProxyPort(proxyPort);
+        }
+        return clientConfig;
+    }
+
+    public String getCredentialsDescriptor() {
+        if(this.credentialsDescriptor.isEmpty()) {
+            if(awsAccessKey.isEmpty() || awsSecretKey.isEmpty()) {
+                return Validation.defaultChainCredentials;
+            } else {
+                return Validation.basicAWSCredentials;
+            }
+        } else {
+            return credentialsDescriptor;
+        }
+    }
+
 }

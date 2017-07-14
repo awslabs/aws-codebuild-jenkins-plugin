@@ -14,95 +14,122 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
+import com.cloudbees.plugins.credentials.CredentialsMatcher;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(DefaultAWSCredentialsProviderChain.class)
+@PrepareForTest({CredentialsMatchers.class, SystemCredentialsProvider.class, DefaultAWSCredentialsProviderChain.class})
 public class AWSClientFactoryTest {
 
     private static final String REGION = "us-east-1";
+    private static final String codeBuildDescriptor = "descriptor";
+    private static final String proxyHost = "host";
+    private static final String proxyPort = "2";
+
+    private final CodeBuildCredentials mockCBCreds = mock(CodeBuildCredentials.class);
+    private final AWSCredentials mockAWSCreds = mock(AWSCredentials.class);
     private final DefaultAWSCredentialsProviderChain cpChain = mock(DefaultAWSCredentialsProviderChain.class);
+    private final SystemCredentialsProvider mockSysCreds = mock(SystemCredentialsProvider.class);
 
-    @Test
-    public void testValidConfigDefaultCredentialsUsed() {
-        // Given
-        setUpInstanceWithDefaultCredentials();
+    @Before
+    public void setUp() {
+        PowerMockito.mockStatic(CredentialsMatchers.class);
+        PowerMockito.mockStatic(SystemCredentialsProvider.class);
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(CredentialsMatchers.firstOrNull(any(Iterable.class), any(CredentialsMatcher.class))).thenReturn(mockCBCreds);
+        when(mockCBCreds.getCredentials()).thenReturn(mockAWSCreds);
+        when(mockCBCreds.getCredentialsDescriptor()).thenReturn(codeBuildDescriptor);
+        when(mockCBCreds.getProxyHost()).thenReturn(proxyHost);
+        when(mockCBCreds.getProxyPort()).thenReturn(proxyPort);
 
-        AWSClientFactory cf = new AWSClientFactory("", "", "", "", REGION);
+        when(mockAWSCreds.getAWSAccessKeyId()).thenReturn("a");
+        when(mockAWSCreds.getAWSSecretKey()).thenReturn("s");
+        when(SystemCredentialsProvider.getInstance()).thenReturn(mockSysCreds);
 
-        // Then
-        assertTrue(cf.isDefaultCredentialsUsed());
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
     }
 
     @Test
-    public void testValidConfigIAMCredentialsUsedOverDefaultCredentials() {
-        // Given
-        setUpInstanceWithDefaultCredentials();
-
-        AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
-
-        // Then
-        assertFalse(cf.isDefaultCredentialsUsed());
+    public void testNullInput() {
+        try {
+            new AWSClientFactory(null, null, null, null, null, null, null);
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidRegionError));
+        }
     }
 
     @Test
-    public void testValidConfigNoDefaultCredentialsIAMUsed() {
-        // Given
-        setUpInstanceWithNoDefaultCredentials();
-
-        AWSClientFactory cf = new AWSClientFactory("", "", "iamId", "iamKey", REGION);
-
-        // Then
-        assertFalse(cf.isDefaultCredentialsUsed());
+    public void testBlankInput() {
+        try {
+            new AWSClientFactory("", "", "", "", "", "", "");
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidRegionError));
+        }
     }
 
-    @Test(expected=InvalidInputException.class)
-    public void testInvalidConfigNoDefaultCredentialsNullKeys() {
-        setUpInstanceWithNoDefaultCredentials();
-
-        new AWSClientFactory(null, null, null, null, null);
-    }
-
-    @Test(expected=InvalidInputException.class)
-    public void testInvalidConfigNoDefaultCredentialsEmptyKeys() {
-        setUpInstanceWithNoDefaultCredentials();
-
-        new AWSClientFactory("", "", "", "", REGION);
-    }
-
-    @Test(expected=InvalidInputException.class)
+    @Test(expected=NumberFormatException.class)
     public void testInvalidProxyPort() {
-        new AWSClientFactory("host", "-2", "", "", REGION);
+        new AWSClientFactory("keys", "", "", "port", "", "", REGION);
     }
 
-    protected void setUpInstanceWithNoDefaultCredentials() {
-        when(cpChain.getCredentials()).thenThrow(new SdkClientException("Unable to load AWS credentials from any provider in the chain"));
-        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
-        when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
+    @Test
+    public void testInvalidCredsOption() {
+        try {
+            new AWSClientFactory("bad", "", "", "", "", "", REGION);
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidCredTypeError));
+        }
     }
 
-    protected void setUpInstanceWithDefaultCredentials() {
-        when(cpChain.getCredentials()).thenReturn(new AWSCredentials() {
-            @Override
-            public String getAWSAccessKeyId() { return "default";}
-
-            @Override
-            public String getAWSSecretKey() { return "default";}
-        });
-        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
-        when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
+    @Test
+    public void testInvalidCredsId() {
+        try {
+            new AWSClientFactory("jenkins", "", "", "", "", "", REGION);
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+        }
     }
+
+    @Test
+    public void testJenkinsCreds() {
+        String credentialsId = "id";
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION);
+
+        assert(awsClientFactory.getProxyHost().equals(proxyHost));
+        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(codeBuildDescriptor));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(credentialsId));
+    }
+
+    @Test
+    public void testSpecifyCreds() {
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", "s", REGION);
+        assert(awsClientFactory.getProxyHost().equals(proxyHost));
+        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+
+    }
+
+    @Test
+    public void testDefaultCreds() {
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", "", REGION);
+        assert(awsClientFactory.getProxyHost().equals(proxyHost));
+        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+    }
+
 }

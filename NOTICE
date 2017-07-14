@@ -43,4 +43,8 @@ This program is made available under the terms of the MIT License.
 Copyright (c) 2009-, Kohsuke Kawaguchi and other contributors
 All rights reserved.
 
+-com/cloudbees/jenkins/plugins/awscredentials/
+Copyright (c) 2015 CloudBees, Inc.
+This program is made available under the terms of the MIT License.
+
 The licenses for these third party components are included in the LICENSE.txt

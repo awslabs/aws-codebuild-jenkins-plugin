@@ -21,6 +21,10 @@ import com.amazonaws.services.codebuild.model.StatusType;
 import hudson.model.Result;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Date;
 
@@ -30,6 +34,9 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@PowerMockIgnore("javax.management.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(CodeBuilder.class)
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
@@ -37,7 +44,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         setUpBuildEnvironment();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
         verify(build).setResult(savedResult.capture());
@@ -48,7 +54,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
     public void testBuildSuccessPipeline() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
@@ -67,7 +72,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(succeeded));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -87,7 +91,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(succeeded));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
@@ -102,7 +105,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -116,7 +118,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
-        fixCodeBuilderFactories(test, mockFactory);
         test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
@@ -135,7 +136,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(failed));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener);
@@ -154,7 +154,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(failed));
         CodeBuilder test = createDefaultCodeBuilder();
-        fixCodeBuilderFactories(test, mockFactory);
         test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);

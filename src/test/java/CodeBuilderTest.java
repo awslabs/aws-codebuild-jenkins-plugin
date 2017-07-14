@@ -26,6 +26,8 @@ import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import org.junit.Before;
+import org.mockito.Mock;
+import org.powermock.api.mockito.PowerMockito;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -67,10 +69,11 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s",
+        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
                 "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(),
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "buildspec.yml", "5");
+
             // It will be a mock factory during testing.
         return cb;
 
@@ -78,6 +81,7 @@ public class CodeBuilderTest {
 
     //sets up a basic mock environment for calling perform()
     protected void setUpBuildEnvironment() throws Exception {
+        PowerMockito.whenNew(AWSClientFactory.class).withAnyArguments().thenReturn(mockFactory);
         ProjectArtifacts artifacts = new ProjectArtifacts();
         artifacts.setLocation("artifactBucket");
         artifacts.setType("S3");
@@ -103,10 +107,6 @@ public class CodeBuilderTest {
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
-    }
-
-    protected void fixCodeBuilderFactories(CodeBuilder b, AWSClientFactory f) {
-        b.setAwsClientFactory(f);
     }
 
     @Before

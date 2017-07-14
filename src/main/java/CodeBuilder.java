@@ -16,14 +16,18 @@
 
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.codebuild.model.Build;
-import com.amazonaws.util.StringUtils;
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import enums.CodeBuildRegions;
 import enums.SourceControlType;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
@@ -42,14 +46,15 @@ import java.util.*;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
-    @Getter private final String sourceControlType;
+    @Getter private final String credentialsType;
+    @Getter private final String credentialsId;
     @Getter private final String proxyHost;
     @Getter private final String proxyPort;
     @Getter private final String awsAccessKey;
     @Getter private final String awsSecretKey;
     @Getter private final String region;
-    @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String projectName;
+    @Getter private final String sourceControlType;
     @Getter private String sourceVersion;
 
     @Getter private String artifactTypeOverride;
@@ -63,8 +68,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
 
-    @Setter private String awsClientInitFailureMessage;
-    @Setter private AWSClientFactory awsClientFactory;
+    @Getter private final CodeBuildResult codeBuildResult;
 
     @Getter@Setter String artifactLocation;
     @Getter@Setter String artifactType;
@@ -74,29 +78,31 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter@Setter Boolean isPipelineBuild;
 
     //These messages are used in the Jenkins console log.
+    public static final String authorizationError = "Authorization error";
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings";
     public static final String s3BucketBaseURL = "https://console.aws.amazon.com/s3/buckets/";
     public static final String envVariableSyntaxError = "CodeBuild environment variable keys and values cannot be empty and the string must be of the form [{key, value}, {key2, value2}]";
     public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
     public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
-    public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
 
 
     @DataBoundConstructor
-    public CodeBuilder(String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
+    public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
                        String region, String projectName, String sourceVersion, String sourceControlType,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
                        String envVariables, String buildSpecFile, String buildTimeoutOverride) {
 
-        this.sourceControlType = Validation.sanitize(sourceControlType);
+        this.credentialsType = Validation.sanitize(credentialsType);
+        this.credentialsId = Validation.sanitize(credentialsId);
         this.proxyHost = Validation.sanitize(proxyHost);
         this.proxyPort = Validation.sanitize(proxyPort);
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
         this.awsSecretKey = awsSecretKey;
         this.region = Validation.sanitize(region);
         this.projectName = Validation.sanitize(projectName);
+        this.sourceControlType = Validation.sanitize(sourceControlType);
         this.sourceVersion = Validation.sanitize(sourceVersion);
         this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
@@ -107,14 +113,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.envVariables = Validation.sanitize(envVariables);
         this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
-        this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
         this.isPipelineBuild = false;
-        try {
-            awsClientFactory = new AWSClientFactory(this.proxyHost, this.proxyPort, this.awsAccessKey, this.awsSecretKey, region);
-        } catch(Exception e) {
-            awsClientInitFailureMessage = e.getMessage(); //catch the message here and throw it when the actual build runs.
-        }
     }
 
     /*
@@ -122,15 +122,19 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        if(!awsClientInitFailureMessage.equals("")) {
-            failBuild(build, listener, configuredImproperlyError, awsClientInitFailureMessage);
+        AWSClientFactory awsClientFactory;
+        try {
+            awsClientFactory = new AWSClientFactory(this.credentialsType, this.credentialsId, this.proxyHost, this.proxyPort,
+                this.awsAccessKey, this.awsSecretKey, this.region);
+        } catch (Exception e) {
+            failBuild(build, listener, authorizationError, e.getMessage());
             return;
         }
         String projectConfigError = Validation.checkCodeBuilderConfig(this);
         if(!projectConfigError.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, projectConfigError);
-            return;
         }
+
         String overridesErrorMessage = Validation.checkCodeBuilderStartBuildOverridesConfig(this);
         if(!overridesErrorMessage.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, overridesErrorMessage);
@@ -149,9 +153,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        if (awsClientFactory.isDefaultCredentialsUsed()) {
-            LoggingHelper.log(listener, defaultCredentialsUsedWarning);
-        }
+        LoggingHelper.log(listener, awsClientFactory.getCredentialsDescriptor());
+
         final AWSCodeBuildClient cbClient;
         try {
             cbClient = awsClientFactory.getCodeBuildClient();
@@ -505,6 +508,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return String.valueOf((sourceControlType != null) && (sourceControlType.equals(given)));
     }
 
+    public String credentialsTypeEquals(String given) {
+        return String.valueOf((credentialsType != null) && (credentialsType.equals(given)));
+    }
+
     // Overridden for better type safety.
     @Override
     public DescriptorImpl getDescriptor() {
@@ -519,27 +526,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
-        private String externalId;
-        private String proxyHost;
-        private String proxyPort;
-
         public DescriptorImpl() {
             load();
-
-            if(externalId == null) {
-                externalId = UUID.randomUUID().toString();
-            }
         }
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            if(formData.has("proxyHost")) {
-              proxyHost = formData.getString("proxyHost");
-            }
-            if(formData.has("proxyPort")) {
-              proxyPort = formData.getString("proxyPort");
-            }
-
             req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
@@ -568,10 +560,31 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         public ListBoxModel doFillArtifactPackagingOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            for(ArtifactPackaging t: ArtifactPackaging.values()) {
+            for (ArtifactPackaging t : ArtifactPackaging.values()) {
                 selections.add(t.toString());
             }
             selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillRegionItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(CodeBuildRegions r: CodeBuildRegions.values()) {
+                selections.add(r.toString());
+            }
+            return selections;
+        }
+
+        public ListBoxModel doFillCredentialsIdItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
+            for (Credentials c: s.getCredentials()) {
+                if (c instanceof CodeBuildCredentials) {
+                    selections.add(((CodeBuildCredentials) c).getId());
+                }
+            }
             return selections;
         }
 

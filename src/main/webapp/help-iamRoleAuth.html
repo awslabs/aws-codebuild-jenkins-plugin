@@ -1,0 +1,40 @@
+<!--
+  ~     Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  ~
+  ~     Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
+  ~     A copy of the License is located at
+  ~
+  ~         http://aws.amazon.com/apache2.0/
+  ~
+  ~     or in the "license" file accompanying this file.
+  ~     This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~     See the License for the specific language governing permissions and limitations under the License.
+  -->
+
+<div>
+    <p>
+        In order to keep your application(s) more secure, this plugin only uses temporary credentials via STS, scoped to each application. To set this up, do one of the following:
+    </p>
+
+    <ul>
+        <li>Log into the AWS Management Console and navigate to the <a href="https://console.aws.amazon.com/iam/">Identity and Access Management console</a>.</li>
+        <li>Click on <a href="https://console.aws.amazon.com/iam/#roles">Roles</a>,  then click <strong>Create New Role</strong>.</li>
+        <li>In the "Select Role Type" screen, click "Role for Cross-Account Access" then select <strong>Allows IAM users from a 3rd party AWS account to access this account.</strong></li>
+        <li>The external ID for this Jenkins instance is listed below</li>
+        <li>In the policy screen, select <strong>Next Step</strong> to skip this step (we'll attach a custom policy later).</li>
+        <li>Give an appropriate name for this role (for example, "JenkinsCodeBuildProject").</li>
+        <li>Click <strong>Create Role</strong>. </li>
+        <li>Click on the newly-created role in the IAM dashboard. Under <strong>Permissions</strong>, click the <strong>Inline Policies</strong>,
+            bar and create a new policy under <strong>Custom Policy</strong> with the following body:
+            <ul>
+                <li><code>
+                    {"Statement": [{"Action": ["codebuild:*","iam:PassRole"],"Resource": "*","Effect": "Allow"},{"Action": ["logs:FilterLogEvents","logs:GetLogEvents"],"Resource": "*","Effect": "Allow"},{"Action": ["s3:CreateBucket","s3:GetObject","s3:List*","s3:PutObject","s3:GetBucket*"],"Resource": "*","Effect": "Allow"}],"Version": "2012-10-17"}
+                </code></li>
+            </ul>
+        </li>
+        <li>Copy-paste the <strong>Role ARN</strong> into this field.</li>
+
+
+    </ul>
+
+</div>

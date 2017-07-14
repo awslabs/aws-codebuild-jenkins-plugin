@@ -1,0 +1,28 @@
+<!--
+  ~     Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  ~
+  ~     Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
+  ~     A copy of the License is located at
+  ~
+  ~         http://aws.amazon.com/apache2.0/
+  ~
+  ~     or in the "license" file accompanying this file.
+  ~     This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~     See the License for the specific language governing permissions and limitations under the License.
+  -->
+
+<div>
+
+    Optional build artifact override. Along with namespaceType and name, the pattern that AWS CodeBuild will use to name and store the output artifact, as follows:
+
+    <ul>
+        <li>If type is set to CODEPIPELINE, then AWS CodePipeline will ignore this value if specified. This is because AWS CodePipeline manages its build output names instead of AWS CodeBuild.
+
+        <li>If type is set to NO_ARTIFACTS, then this value will be ignored if specified, because no build output will be produced.
+
+        <li>If type is set to S3, this is the path to the output artifact. If path is not specified, then path will not be used.
+    </ul>
+
+    For example, if path is set to MyArtifacts, namespaceType is set to NONE, and name is set to MyArtifact.zip, then the output artifact would be stored in the output bucket at MyArtifacts/MyArtifact.zip.
+
+</div>

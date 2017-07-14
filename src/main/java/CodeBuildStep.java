@@ -14,13 +14,20 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.services.codebuild.model.ArtifactNamespace;
+import com.amazonaws.services.codebuild.model.ArtifactPackaging;
+import com.amazonaws.services.codebuild.model.ArtifactsType;
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.google.inject.Inject;
+import enums.CodeBuildRegions;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepExecution;
@@ -30,14 +37,16 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 public class CodeBuildStep extends AbstractStepImpl {
 
+    private String credentialsType;
+    private String credentialsId;
     private String proxyHost;
     private String proxyPort;
     private String awsAccessKey;
     private String awsSecretKey;
     private String region;
     private String projectName;
-    private String sourceVersion;
     private String sourceControlType;
+    private String sourceVersion;
     private String artifactTypeOverride;
     private String artifactLocationOverride;
     private String artifactNameOverride;
@@ -47,6 +56,23 @@ public class CodeBuildStep extends AbstractStepImpl {
     private String envVariables;
     private String buildSpecFile;
     private String buildTimeoutOverride;
+
+    public String getCredentialsType() {
+        return credentialsType;
+    }
+
+    @DataBoundSetter
+    public void setCredentialsType(String credentialsType) {
+        this.credentialsType = credentialsType;
+    }
+    public String getCredentialsId() {
+        return credentialsId;
+    }
+
+    @DataBoundSetter
+    public void setCredentialsId(String credentialsId) {
+        this.credentialsId = credentialsId;
+    }
 
     public String getProxyHost() {
         return proxyHost;
@@ -218,6 +244,57 @@ public class CodeBuildStep extends AbstractStepImpl {
         public String getDisplayName() {
             return "Invoke an AWS CodeBuild build";
         }
+
+        public ListBoxModel doFillArtifactTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(ArtifactsType t: ArtifactsType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillArtifactNamespaceOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(ArtifactNamespace t: ArtifactNamespace.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillArtifactPackagingOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (ArtifactPackaging t : ArtifactPackaging.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillRegionItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(CodeBuildRegions r: CodeBuildRegions.values()) {
+                selections.add(r.toString());
+            }
+            return selections;
+        }
+
+        public ListBoxModel doFillCredentialsIdItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
+            for (Credentials c: s.getCredentials()) {
+                if (c instanceof CodeBuildCredentials) {
+                    selections.add(((CodeBuildCredentials) c).getId());
+                }
+            }
+            return selections;
+        }
     }
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
@@ -242,10 +319,10 @@ public class CodeBuildStep extends AbstractStepImpl {
         @Override
         protected CodeBuildResult run() throws Exception {
             CodeBuilder builder = new CodeBuilder(
+                    step.getCredentialsType(), step.getCredentialsId(),
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
-                    step.getRegion(),
-                    step.getProjectName(),
+                    step.getRegion(), step.getProjectName(),
                     step.sourceVersion, step.sourceControlType,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,

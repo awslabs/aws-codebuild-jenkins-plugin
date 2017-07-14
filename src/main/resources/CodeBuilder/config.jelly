@@ -1,31 +1,58 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:html="jelly:html">
+<!--
+  ~  Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
+  ~  A copy of the License is located at
+  ~
+  ~      http://aws.amazon.com/apache2.0/
+  ~
+  ~  or in the "license" file accompanying this file.
+  ~  This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and limitations under the License.
+  ~
+  -->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials" xmlns:html="jelly:html">
 
   <f:section title="AWS Configuration" >
 
-    <f:entry title="Region" field="region">
-      <f:textbox />
-    </f:entry>
+    <f:radioBlock title="Select credentials from Jenkins" name="credentialsType" help="/plugin/aws-codebuild/help-JenkinsCreds.html"
+                  value="jenkins" checked="${instance.credentialsTypeEquals('jenkins')}" inline="true">
 
-    <f:entry title="Proxy Host (optional)" field="proxyHost">
-      <f:textbox />
-    </f:entry>
+      <f:entry title="Credentials" field="credentialsId">
+        <c:select/>
+      </f:entry>
 
-    <f:entry title="Proxy Port (optional)" field="proxyPort">
-      <f:textbox />
-    </f:entry>
+    </f:radioBlock>
 
-    <f:entry title="AWS Access Key" field="awsAccessKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
-      <f:textbox />
-    </f:entry>
+    <f:radioBlock title="Manually specify access and secret keys" name="credentialsType"
+                  value="keys" checked="${instance.credentialsTypeEquals('keys')}" inline="true">
 
-    <f:entry title="AWS Secret Key" field="awsSecretKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
-      <f:password />
-    </f:entry>
+      <f:entry title="Proxy Host (optional)" field="proxyHost">
+        <f:textbox />
+      </f:entry>
+
+      <f:entry title="Proxy Port (optional)" field="proxyPort">
+        <f:textbox />
+      </f:entry>
+
+      <f:entry title="AWS Access Key" field="awsAccessKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
+        <f:textbox />
+      </f:entry>
+
+      <f:entry title="AWS Secret Key" field="awsSecretKey" help="/plugin/aws-codebuild/help-keyCredsHelp.html">
+        <f:password />
+      </f:entry>
+
+    </f:radioBlock>
 
   </f:section>
 
   <f:section title="Project Configuration" >
+
+    <f:entry title="Region" field="region">
+      <f:select />
+    </f:entry>
 
     <f:entry title="Project Name" field="projectName" help="/plugin/aws-codebuild/help-projectNameHelp.html">
       <f:textbox />
@@ -47,27 +74,27 @@
 
   <f:section title="Build Configuration" >
 
-    <f:entry title="Artifact Type Override" field="artifactTypeOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Type Override" field="artifactTypeOverride" help="/plugin/aws-codebuild/help-artifactTypeOverride.html">
       <f:select />
     </f:entry>
 
-    <f:entry title="Artifact Location Override" field="artifactLocationOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Location Override" field="artifactLocationOverride" help="/plugin/aws-codebuild/help-artifactLocationOverride.html">
       <f:textbox />
     </f:entry>
 
-    <f:entry title="Artifact Name Override" field="artifactNameOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Name Override" field="artifactNameOverride" help="/plugin/aws-codebuild/help-artifactNameOverride.html">
       <f:textbox />
     </f:entry>
 
-    <f:entry title="Artifact Namespace Override" field="artifactNamespaceOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Namespace Override" field="artifactNamespaceOverride" help="/plugin/aws-codebuild/help-artifactNamespaceOverride.html">
       <f:select />
     </f:entry>
 
-    <f:entry title="Artifact Packaging Override" field="artifactPackagingOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Packaging Override" field="artifactPackagingOverride" help="/plugin/aws-codebuild/help-artifactPackagingOverride.html">
       <f:select />
     </f:entry>
 
-    <f:entry title="Artifact Path Override" field="artifactPathOverride" help="/plugin/aws-codebuild/help-.html">
+    <f:entry title="Artifact Path Override" field="artifactPathOverride" help="/plugin/aws-codebuild/help-artifactPathOverride.html">
       <f:textbox />
     </f:entry>
 
