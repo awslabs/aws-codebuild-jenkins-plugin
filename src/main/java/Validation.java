@@ -15,8 +15,7 @@
  */
 
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.codebuild.model.EnvironmentVariable;
-import com.amazonaws.services.codebuild.model.InvalidInputException;
+import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
 import hudson.FilePath;
@@ -32,11 +31,13 @@ public class Validation {
 
     public static final String validSourceUrlPrefix = "https://";
 
-    public static final String invalidIAMRoleError = "Enter a valid IAM Role ARN";
+    public static final String invalidArtifactTypeError = "Artifact type override must be one of 'NO_ARTIFACTS', 'S3', ''";
+    public static final String invalidArtifactsPackagingError = "Artifact packaging override must be one of 'NONE', 'ZIP', ''";
+    public static final String invalidArtifactNamespaceTypeError = "Artifact namespace override must be one of 'NONE', 'BUILD_ID', ''";
+    public static final String invalidTimeoutOverrideError = "Build timeout override must be a number between 5 and 480 (minutes)";
     public static final String invalidKeysError = "Enter valid AWS access and secret keys";
     public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
-    public static final String invalidCredTypeError = "Invalid credentialsType option";
 
     public static String sanitize(final String s) {
         if(s == null) {
@@ -64,6 +65,46 @@ public class Validation {
             return false;
         }
         return true;
+    }
+
+    // Returns empty string if configuration valid
+    public static String checkCodeBuilderStartBuildOverridesConfig(CodeBuilder cb) {
+        if(!cb.getArtifactTypeOverride().isEmpty()) {
+            try {
+                ArtifactsType.fromValue(cb.getArtifactTypeOverride());
+            } catch(IllegalArgumentException e) {
+                return invalidArtifactTypeError;
+            }
+        }
+        if(!cb.getArtifactPackagingOverride().isEmpty()) {
+            try {
+                ArtifactPackaging.fromValue(cb.getArtifactPackagingOverride());
+            } catch(IllegalArgumentException e) {
+                return invalidArtifactsPackagingError;
+            }
+        }
+        if(!cb.getArtifactNamespaceOverride().isEmpty()) {
+            try {
+                ArtifactNamespace.fromValue(cb.getArtifactNamespaceOverride());
+            } catch(IllegalArgumentException e) {
+                return invalidArtifactNamespaceTypeError;
+            }
+        }
+
+        String timeout = cb.getBuildTimeoutOverride();
+        if(timeout != null && !timeout.isEmpty()) {
+            Integer t;
+            try {
+                t = Integer.parseInt(timeout);
+            } catch(NumberFormatException e) {
+                return invalidTimeoutOverrideError;
+            }
+            if(t < 5 || t > 480) {
+                return invalidTimeoutOverrideError;
+            }
+        }
+
+        return "";
     }
 
     public static boolean checkEnvVariableConfig(Collection<EnvironmentVariable> envVariables) {

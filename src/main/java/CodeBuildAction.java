@@ -42,6 +42,7 @@ public class CodeBuildAction implements Action {
     private String buildARN;
     private String s3BucketName;
     private String s3ArtifactURL;
+    private String artifactTypeOverride;
     private String codeBuildDashboardURL;
     private Boolean jenkinsBuildSucceeds;
 

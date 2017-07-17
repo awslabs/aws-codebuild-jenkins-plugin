@@ -42,12 +42,45 @@
                   value="jenkins" checked="${instance.sourceControlTypeEquals('jenkins')}" inline="true">
     </f:radioBlock>
 
+
+  </f:section>
+
+  <f:section title="Build Configuration" >
+
+    <f:entry title="Artifact Type Override" field="artifactTypeOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Artifact Location Override" field="artifactLocationOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Artifact Name Override" field="artifactNameOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Artifact Namespace Override" field="artifactNamespaceOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Artifact Packaging Override" field="artifactPackagingOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Artifact Path Override" field="artifactPathOverride" help="/plugin/aws-codebuild/help-.html">
+      <f:textbox />
+    </f:entry>
+
     <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
       <f:textbox />
     </f:entry>
 
-    <f:entry title="Environment Variable Overrides" field="envVariables" help="/plugin/aws-codebuild/help-envVariablesHelp.html">
+    <f:entry title="Environment Variables Override" field="envVariables" help="/plugin/aws-codebuild/help-envVariablesHelp.html">
       <f:textarea />
+    </f:entry>
+
+    <f:entry title="Timeout Override" field="buildTimeoutOverride" help="/plugin/aws-codebuild/help-buildTimeout.html">
+      <f:textbox />
     </f:entry>
 
   </f:section>

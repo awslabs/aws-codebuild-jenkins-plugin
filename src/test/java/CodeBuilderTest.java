@@ -18,6 +18,7 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import enums.ArtifactType;
 import hudson.FilePath;
 import enums.SourceControlType;
 import hudson.Launcher;
@@ -66,7 +67,10 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s", "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(), "[{k, v}]", "buildspec.yml");
+        CodeBuilder cb = new CodeBuilder("host", "60", "a", "s",
+                "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(),
+                ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "buildspec.yml", "5");
             // It will be a mock factory during testing.
         return cb;
 
