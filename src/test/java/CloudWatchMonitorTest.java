@@ -20,9 +20,12 @@ import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.logs.model.GetLogEventsRequest;
 import com.amazonaws.services.logs.model.GetLogEventsResult;
 import com.amazonaws.services.logs.model.OutputLogEvent;
+import hudson.model.TaskListener;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.*;
 
 import static org.mockito.Mockito.mock;
@@ -32,6 +35,7 @@ import static org.mockito.Matchers.any;
 public class CloudWatchMonitorTest {
 
     private AWSLogsClient mockClient = mock(AWSLogsClient.class);
+    TaskListener listener = mock(TaskListener.class);
 
     private void assertLogsContainErrorMessage(CloudWatchMonitor c) {
         assert(c.getLatestLogs().get(0).equals(CloudWatchMonitor.failedConfigurationLogsMessage));
@@ -43,7 +47,7 @@ public class CloudWatchMonitorTest {
 
     @Before
     public void setUp() {
-
+        when(listener.getLogger()).thenReturn(new PrintStream(new ByteArrayOutputStream()));
     }
 
     @Test
@@ -58,7 +62,7 @@ public class CloudWatchMonitorTest {
         c.setLogsLocation(new LogsLocation());
         InvalidInputException e = new InvalidInputException("no logs");
         when(mockClient.getLogEvents(any(GetLogEventsRequest.class))).thenThrow(e);
-        c.pollForLogs();
+        c.pollForLogs(listener);
         assertLogsContainExceptionMessage(c, e);
     }
 
@@ -68,13 +72,45 @@ public class CloudWatchMonitorTest {
         c.setLogsLocation(new LogsLocation());
         List<OutputLogEvent> logs = new ArrayList<OutputLogEvent>();
         logs.add(new OutputLogEvent().withMessage("[Container] entry 1"));
-        logs.add(new OutputLogEvent().withMessage("[Container] entry2"));
+        logs.add(new OutputLogEvent().withMessage("[Container] entry2").withIngestionTime(1L));
         GetLogEventsResult result = new GetLogEventsResult().withEvents(logs);
         when(mockClient.getLogEvents(any(GetLogEventsRequest.class))).thenReturn(result);
-        c.pollForLogs();
+        c.pollForLogs(listener);
         assert(c.getLatestLogs().size() == 2);
         assert(c.getLatestLogs().get(0).equals("entry 1"));
         assert(c.getLatestLogs().get(1).equals("entry2"));
+        assert(c.getLastPollTime() == 1L);
     }
 
+    @Test
+    public void testFormatLogsTwoCalls() throws Exception {
+        CloudWatchMonitor c = new CloudWatchMonitor(mockClient);
+        c.setLogsLocation(new LogsLocation());
+
+        List<OutputLogEvent> logsFirst = new ArrayList();
+        logsFirst.add(new OutputLogEvent().withMessage("[Container] entry 1"));
+        logsFirst.add(new OutputLogEvent().withMessage("[Container] entry2").withIngestionTime(1L));
+        List<OutputLogEvent> logsSecond = new ArrayList();
+        logsSecond.add(new OutputLogEvent().withMessage("[Container] entry 3").withIngestionTime(3L));
+
+        GetLogEventsResult resultFirst = new GetLogEventsResult().withEvents(logsFirst);
+        GetLogEventsResult resultSecond = new GetLogEventsResult().withEvents(logsSecond).withNextForwardToken(null);
+
+        GetLogEventsRequest requestFirst = new GetLogEventsRequest().withStartTime(0L).withStartFromHead(true);
+        GetLogEventsRequest requestSecond = new GetLogEventsRequest().withStartTime(1L).withStartFromHead(true);
+
+        when(mockClient.getLogEvents(requestFirst)).thenReturn(resultFirst);
+        when(mockClient.getLogEvents(requestSecond)).thenReturn(resultSecond);
+
+        c.pollForLogs(listener);
+        assert(c.getLatestLogs().size() == 2);
+        assert(c.getLatestLogs().get(0).equals("entry 1"));
+        assert(c.getLatestLogs().get(1).equals("entry2"));
+        assert(c.getLastPollTime() == 1L);
+
+        c.pollForLogs(listener);
+        assert(c.getLatestLogs().size() == 1);
+        assert(c.getLatestLogs().get(0).equals("entry 3"));
+        assert(c.getLastPollTime() == 3L);
+    }
 }

@@ -20,6 +20,7 @@ import hudson.model.Action;
 import hudson.model.Run;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -117,9 +118,8 @@ public class CodeBuildAction implements Action {
             return "";
         } else {
             if (!errorPhase.getContexts().isEmpty()) {
-                String ret = errorPhase.getContexts().get(0).getMessage().replace("'", "").replace("\n", "") + " (status code: " +
+                return errorPhase.getContexts().get(0).getMessage().replace("'", "").replace("\n", "") + " (status code: " +
                         errorPhase.getContexts().get(0).getStatusCode() + ")";
-                return ret;
             } else {
                 return "";
             }
@@ -157,5 +157,18 @@ public class CodeBuildAction implements Action {
             return "IN PROGRESS"; //instead of in_progress
         }
         return currentStatus;
+    }
+
+    public void updateLogs(List<String> newLogs) {
+        if(logs != null) {
+            if(logs.size() == 1 && logs.get(0).equals(CloudWatchMonitor.noLogsMessage)) { //no logs message already displayed
+                if(newLogs.size() > 0 && !newLogs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
+                    logs = new ArrayList();
+                } else {
+                    return;
+                }
+            }
+            this.logs.addAll(newLogs);
+        }
     }
 }

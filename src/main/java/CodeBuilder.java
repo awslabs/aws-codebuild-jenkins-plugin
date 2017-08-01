@@ -173,10 +173,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
 
             try {
-                LoggingHelper.log(listener, "Uploading source to S3.");
                 UploadToS3Output uploadToS3Output = s3DataManager.uploadSourceToS3(listener, ws);
                 // Override source version to object version id returned by S3
-                LoggingHelper.log(listener, "Source upload finished.");
                 if(uploadToS3Output.getObjectVersionId() != null) {
                     uploadedSourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
@@ -210,6 +208,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         Build currentBuild;
         String buildId = sbResult.getBuild().getId();
+        LoggingHelper.log(listener, "Build Id: " + buildId);
+
         boolean haveInitializedAction = false;
         CodeBuildAction action = null;
         CloudWatchMonitor logMonitor = null;
@@ -227,7 +227,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(!haveInitializedAction) {
                     logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
                     action = new CodeBuildAction(build);
-                    updateDashboard(currentBuild, action, logMonitor, listener);
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
@@ -240,13 +239,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
                     action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
                     action.setS3BucketName(artifactLocation);
+                    action.setLogs(new ArrayList());
 
                     build.addAction(action);
                     haveInitializedAction = true;
                 }
-                Thread.sleep(5000L);
-                logMonitor.pollForLogs();
+
                 updateDashboard(currentBuild, action, logMonitor, listener);
+                Thread.sleep(5000L);
 
             } catch(Exception e) {
                 if(e.getClass().equals(InterruptedException.class)) {
@@ -260,7 +260,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                             buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
                             currentBuild = buildsForId.get(0);
                             Thread.sleep(5000L);
-                            logMonitor.pollForLogs();
+                            logMonitor.pollForLogs(listener);
                             updateDashboard(currentBuild, action, logMonitor, listener);
                         } while(!currentBuild.getBuildStatus().equals(StatusType.STOPPED.toString()));
                         LoggingHelper.log(listener, "CodeBuild build stopped");
@@ -286,7 +286,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             this.codeBuildResult.setSuccess();
         } else {
             action.setJenkinsBuildSucceeds(false);
-            String errorMessage = buildFailedError + " for " + this.projectName + " and source version " + this.sourceVersion;
+            String errorMessage = "Build " + currentBuild.getId() + " failed" + "\n\t> " + action.getPhaseErrorMessage();
             LoggingHelper.log(listener, errorMessage);
             this.codeBuildResult.setFailure(errorMessage);
         }
@@ -316,9 +316,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     private void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor, TaskListener listener) {
         if(action != null) {
             action.setCurrentStatus(b.getBuildStatus());
-            action.setLogs(logMonitor.getLatestLogs());
-            action.setPhases(b.getPhases());
             logMonitor.setLogsLocation(b.getLogs());
+
+            logMonitor.pollForLogs(listener);
+            action.updateLogs(logMonitor.getLatestLogs());
+
+            action.setPhases(b.getPhases());
             if (logMonitor.getLogsLocation() != null) {
                 if(action.getLogURL() == null){
                     String logUrl = logMonitor.getLogsLocation().getDeepLink();
