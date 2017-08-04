@@ -8,7 +8,8 @@ public class CodeBuildResult implements Serializable {
     public static final String IN_PROGRESS = "IN_PROGRESS";
     public static final String SUCCESS = "SUCCESS";
     public static final String FAILURE = "FAILURE";
-    
+    public static final String STOPPED = "STOPPED";
+
     private String status = IN_PROGRESS;
     private String errorMessage;
     private String buildId;
@@ -46,6 +47,10 @@ public class CodeBuildResult implements Serializable {
 
     public void setSuccess() {
         this.status = SUCCESS;
+    }
+
+    public void setStopped() {
+        this.status = STOPPED;
     }
 
     public void setBuildInformation(String buildId, String arn) {

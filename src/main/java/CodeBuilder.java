@@ -231,6 +231,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
+                    codeBuildResult.setBuildInformation(currentBuild.getId(), buildARN);
+                    BuildArtifacts artifacts = currentBuild.getArtifacts();
+                    codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
                     action.setBuildId(buildId);
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
@@ -246,18 +249,37 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 updateDashboard(currentBuild, action, logMonitor, listener);
 
             } catch(Exception e) {
-                LoggingHelper.log(listener, e.getMessage());
-                if(action != null) {
-                    action.setJenkinsBuildSucceeds(false);
+                if(e.getClass().equals(InterruptedException.class)) {
+                    //Request to stop Jenkins build has been made. First make sure the build is stoppable
+                    List<Build> buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
+                    currentBuild = buildsForId.get(0);
+                    if(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString())) {
+                        cbClient.stopBuild(new StopBuildRequest().withId(buildId));
+                        //Wait for the build to actually stop
+                        do {
+                            buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
+                            currentBuild = buildsForId.get(0);
+                            Thread.sleep(5000L);
+                            logMonitor.pollForLogs();
+                            updateDashboard(currentBuild, action, logMonitor, listener);
+                        } while(!currentBuild.getBuildStatus().equals(StatusType.STOPPED.toString()));
+                        LoggingHelper.log(listener, "CodeBuild build stopped");
+                        if(action != null) {
+                            action.setJenkinsBuildSucceeds(false);
+                        }
+                        this.codeBuildResult.setStopped();
+                        return;
+                    }
+                } else {
+                    LoggingHelper.log(listener, e.getMessage());
+                    if(action != null) {
+                        action.setJenkinsBuildSucceeds(false);
+                    }
+                    this.codeBuildResult.setFailure(e.getMessage());
+                    return;
                 }
-                this.codeBuildResult.setFailure(e.getMessage());
-                return;
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
-
-        this.codeBuildResult.setBuildInformation(currentBuild.getId(), currentBuild.getArn());
-        BuildArtifacts artifacts = currentBuild.getArtifacts();
-        this.codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);

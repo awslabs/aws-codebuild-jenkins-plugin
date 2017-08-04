@@ -25,6 +25,9 @@
                         document.write("The build failed. ")
                         document.write('Consult the CloudWatch logs or the <a href="../console">console output.</a>');
                         document.write('<br />');
+                    } else if("${it.buildStatus}" == "STOPPED") {
+                        document.write('<h2>Current Build Status: <font color="red">STOPPED</font></h2>');
+                        document.write('<br />');
                     } else {
                         if("${it.jenkinsBuildSucceeds}" == "false") {
                             document.write('<h2>Current Build Status: <font color="red">FAILED</font></h2>');
@@ -33,12 +36,6 @@
                             document.write('<br />');
                         }
                     }
-                }
-            </script>
-
-            <script type="text/javascript">
-                if("${it.currentStatus}" == "IN_PROGRESS") {
-                    document.write('<h3>Stop Build: <a href="${it.codeBuildDashboardURL}" target="_blank">AWS Console</a></h3>');
                 }
             </script>
 

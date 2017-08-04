@@ -33,7 +33,7 @@ public class CloudWatchMonitor {
 
     private static final int LOG_LIMIT = 15;
     private static final int htmlMaxLineLength = 197;
-    public static final String noLogsMessage = "Fetching CloudWatch logs for this build.";
+    public static final String noLogsMessage = "No CloudWatch logs found for this build.";
     public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
     public CloudWatchMonitor(AWSLogsClient client) {
