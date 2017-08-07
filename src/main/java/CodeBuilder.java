@@ -19,6 +19,7 @@ import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.util.StringUtils;
 import enums.SourceControlType;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -70,16 +71,16 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter@Setter String projectSourceLocation;
     @Getter@Setter String projectSourceType;
 
+    @Getter@Setter Boolean isPipelineBuild;
+
     //These messages are used in the Jenkins console log.
-    public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings \n";
-    public static final String generalConfigInvalidError = "Valid credentials and project name are required parameters";
+    public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings";
     public static final String s3BucketBaseURL = "https://console.aws.amazon.com/s3/buckets/";
     public static final String envVariableSyntaxError = "CodeBuild environment variable keys and values cannot be empty and the string must be of the form [{key, value}, {key2, value2}]";
     public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
-    public static final String invalidProjectError = "Please select a project with S3 source type.\n";
+    public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String defaultCredentialsUsedWarning = "AWS access and secret keys were not provided. Using credentials provided by DefaultAWSCredentialsProviderChain.";
-    public static final String buildFailedError = "Build failed";
 
 
     @DataBoundConstructor
@@ -108,6 +109,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.awsClientInitFailureMessage = "";
         this.codeBuildResult = new CodeBuildResult();
+        this.isPipelineBuild = false;
         try {
             awsClientFactory = new AWSClientFactory(this.proxyHost, this.proxyPort, this.awsAccessKey, this.awsSecretKey, region);
         } catch(Exception e) {
@@ -121,22 +123,17 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         if(!awsClientInitFailureMessage.equals("")) {
-            LoggingHelper.log(listener, configuredImproperlyError, awsClientInitFailureMessage);
-            String errorMessage = configuredImproperlyError + "\n" + awsClientInitFailureMessage;
-            this.codeBuildResult.setFailure(errorMessage);
+            failBuild(build, listener, configuredImproperlyError, awsClientInitFailureMessage);
             return;
         }
-        if(!Validation.checkCodeBuilderConfig(this)) {
-            LoggingHelper.log(listener, configuredImproperlyError, generalConfigInvalidError);
-            String errorMessage = configuredImproperlyError + "\n" + generalConfigInvalidError;
-            this.codeBuildResult.setFailure(errorMessage);
+        String projectConfigError = Validation.checkCodeBuilderConfig(this);
+        if(!projectConfigError.isEmpty()) {
+            failBuild(build, listener, configuredImproperlyError, projectConfigError);
             return;
         }
         String overridesErrorMessage = Validation.checkCodeBuilderStartBuildOverridesConfig(this);
         if(!overridesErrorMessage.isEmpty()) {
-            LoggingHelper.log(listener, configuredImproperlyError, overridesErrorMessage);
-            String errorMessage = configuredImproperlyError + "\n" + overridesErrorMessage;
-            this.codeBuildResult.setFailure(errorMessage);
+            failBuild(build, listener, configuredImproperlyError, overridesErrorMessage);
             return;
         }
 
@@ -144,15 +141,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             codeBuildEnvVars = mapEnvVariables(envVariables);
         } catch(InvalidInputException e) {
-            LoggingHelper.log(listener, configuredImproperlyError, e.getMessage());
-            String errorMessage = configuredImproperlyError + "\n" + e.getMessage();
-            this.codeBuildResult.setFailure(errorMessage);
+            failBuild(build, listener, configuredImproperlyError, e.getMessage());
             return;
         }
         if(Validation.envVariablesHaveRestrictedPrefix(codeBuildEnvVars)) {
-            LoggingHelper.log(listener, configuredImproperlyError, envVariableNameSpaceError);
-            String errorMessage = configuredImproperlyError + "\n" + envVariableNameSpaceError;
-            this.codeBuildResult.setFailure(errorMessage);
+            failBuild(build, listener, configuredImproperlyError, envVariableNameSpaceError);
             return;
         }
 
@@ -163,17 +156,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
-            LoggingHelper.log(listener, e.getMessage());
-            this.codeBuildResult.setFailure(e.getMessage());
+            failBuild(build, listener, e.getMessage(), "");
             return;
         }
 
         try {
             retrieveArtifactAndSourceInfo(cbClient);
         } catch (Exception e) {
-            LoggingHelper.log(listener, e.getMessage());
-            this.codeBuildResult.setFailure(e.getMessage());
-
+            failBuild(build, listener, e.getMessage(), "");
             return;
         }
 
@@ -188,22 +178,19 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
-                LoggingHelper.log(listener, invalidProjectError, "");
-                this.codeBuildResult.setFailure(invalidProjectError);
+                failBuild(build, listener, invalidProjectError, "");
                 return;
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
             if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
-                LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                this.codeBuildResult.setFailure(notVersionsedS3BucketError);
+                failBuild(build, listener, notVersionsedS3BucketError, "");
                 return;
             }
 
             S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
             String uploadedSourceVersion = "";
-
 
             try {
                 UploadToS3Output uploadToS3Output = s3DataManager.uploadSourceToS3(listener, ws);
@@ -211,14 +198,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(uploadToS3Output.getObjectVersionId() != null) {
                     uploadedSourceVersion = uploadToS3Output.getObjectVersionId();
                 } else {
-                    LoggingHelper.log(listener, notVersionsedS3BucketError, "");
-                    this.codeBuildResult.setFailure(notVersionsedS3BucketError);
+                    failBuild(build, listener, notVersionsedS3BucketError, "");
                     return;
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + uploadedSourceVersion);
             } catch (Exception e) {
-                LoggingHelper.log(listener, e.getMessage());
-                this.codeBuildResult.setFailure(e.getMessage());
+                failBuild(build, listener, e.getMessage(), "");
                 return;
             }
 
@@ -234,8 +219,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
-            LoggingHelper.log(listener, e.getMessage());
-            this.codeBuildResult.setFailure(e.getMessage());
+            failBuild(build, listener, e.getMessage(), "");
             return;
         }
 
@@ -297,19 +281,21 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                             logMonitor.pollForLogs(listener);
                             updateDashboard(currentBuild, action, logMonitor, listener);
                         } while(!currentBuild.getBuildStatus().equals(StatusType.STOPPED.toString()));
-                        LoggingHelper.log(listener, "CodeBuild build stopped");
                         if(action != null) {
                             action.setJenkinsBuildSucceeds(false);
                         }
-                        this.codeBuildResult.setStopped();
+                        if(isPipelineBuild) {
+                            this.codeBuildResult.setStopped();
+                        } else {
+                            build.setResult(Result.FAILURE);
+                        }
                         return;
                     }
                 } else {
-                    LoggingHelper.log(listener, e.getMessage());
                     if(action != null) {
                         action.setJenkinsBuildSucceeds(false);
                     }
-                    this.codeBuildResult.setFailure(e.getMessage());
+                    failBuild(build, listener, e.getMessage(), "");
                     return;
                 }
             }
@@ -317,12 +303,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
-            this.codeBuildResult.setSuccess();
+            if(isPipelineBuild) {
+                this.codeBuildResult.setSuccess();
+            } else {
+                build.setResult(Result.SUCCESS);
+            }
         } else {
             action.setJenkinsBuildSucceeds(false);
             String errorMessage = "Build " + currentBuild.getId() + " failed" + "\n\t> " + action.getPhaseErrorMessage();
-            LoggingHelper.log(listener, errorMessage);
-            this.codeBuildResult.setFailure(errorMessage);
+            failBuild(build, listener, errorMessage, "");
         }
         return;
     }
@@ -392,36 +381,36 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
-        StringBuilder message = new StringBuilder().append("Starting build with \n\t>project name " + projectName);
+        StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name " + projectName);
         if(!sourceVersion.isEmpty()) {
-            message.append("\n\t>source version " + sourceVersion);
+            message.append("\n\t> source version: " + sourceVersion);
         }
         if(!artifactTypeOverride.isEmpty()) {
-            message.append("\n\t>artifact type " + artifactTypeOverride);
+            message.append("\n\t> artifact type: " + artifactTypeOverride);
         }
         if(!artifactLocationOverride.isEmpty()) {
-            message.append("\n\t>artifact location " + artifactLocationOverride);
+            message.append("\n\t> artifact location: " + artifactLocationOverride);
         }
         if(!artifactNameOverride.isEmpty()) {
-            message.append("\n\t>artifact name " + artifactNameOverride);
+            message.append("\n\t> artifact name: " + artifactNameOverride);
         }
         if(!artifactNamespaceOverride.isEmpty()) {
-            message.append("\n\t>artifact namespace " + artifactNamespaceOverride);
+            message.append("\n\t> artifact namespace: " + artifactNamespaceOverride);
         }
         if(!artifactPackagingOverride.isEmpty()) {
-            message.append("\n\t>artifact packaging " + artifactPackagingOverride);
+            message.append("\n\t> artifact packaging: " + artifactPackagingOverride);
         }
         if(!artifactPathOverride.isEmpty()) {
-            message.append("\n\t>artifact path " + artifactPathOverride);
+            message.append("\n\t> artifact path: " + artifactPathOverride);
         }
         if(!buildSpecFile.isEmpty()) {
-            message.append("\n\t>build spec " + buildSpecFile);
+            message.append("\n\t> build spec: " + buildSpecFile);
         }
         if(!envVariables.isEmpty()) {
-            message.append("\n\t>environment variables " + envVariables);
+            message.append("\n\t> environment variables: " + envVariables);
         }
         if(!buildTimeoutOverride.isEmpty()) {
-            message.append("\n\t>build timeout " + buildTimeoutOverride);
+            message.append("\n\t> build timeout: " + buildTimeoutOverride);
         }
         LoggingHelper.log(listener, message.toString());
     }
@@ -489,7 +478,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     // Given a string of the form "key,value", returns a CodeBuild Environment Variable with that data.
-    // Throws an
+    // Throws an InvalidInputException when the input string doesn't match the form described in mapEnvVariables
     private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev) throws InvalidInputException {
         if(ev.replaceAll("[^,]", "").length() != 1) {
             throw new InvalidInputException(envVariableSyntaxError);
@@ -499,6 +488,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             throw new InvalidInputException(envVariableSyntaxError);
         }
         return new EnvironmentVariable().withName(keyAndValue[0]).withValue(keyAndValue[1]);
+    }
+
+    private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
+        if(isPipelineBuild) {
+            this.codeBuildResult.setFailure(errorMessage, secondaryError);
+        } else {
+            build.setResult(Result.FAILURE);
+        }
+        LoggingHelper.log(listener, errorMessage, secondaryError);
     }
 
     //// Jenkins-specific functions ////

@@ -40,9 +40,13 @@ public class CodeBuildResult implements Serializable {
     @Whitelisted
     public String getArtifactsLocation() { return artifactsLocation; }
 
-    public void setFailure(String errorMessage){
+    public void setFailure(String errorMessage, String secondaryError){
         this.status = FAILURE;
-        this.errorMessage = errorMessage;
+        if(secondaryError != null && !secondaryError.isEmpty()) {
+            this.errorMessage = errorMessage + "\n\t> " + secondaryError;
+        } else {
+            this.errorMessage = errorMessage;
+        }
     }
 
     public void setSuccess() {

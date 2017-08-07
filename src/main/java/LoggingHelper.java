@@ -27,7 +27,7 @@ public class LoggingHelper {
         if(secondary == null || secondary.isEmpty()) {
             completeMessage = "[AWS CodeBuild Plugin] " + message;
         } else {
-            completeMessage = "[AWS CodeBuild Plugin] " + message + "\n> " + secondary;
+            completeMessage = "[AWS CodeBuild Plugin] " + message + "\n\t> " + secondary;
         }
 
         if(listener == null) {

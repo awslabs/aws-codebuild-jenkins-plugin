@@ -16,7 +16,9 @@
 
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
+import hudson.model.Result;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -24,9 +26,11 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderConfigurationTest extends CodeBuilderTest {
+
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
@@ -35,6 +39,24 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                 null, null, null, null,
                 null, null, null, null);
 
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertTrue(log.toString().contains(CodeBuilder.configuredImproperlyError));
+    }
+
+    @Test
+    public void testConfigAllNullPipeline() throws IOException, ExecutionException, InterruptedException {
+        CodeBuilder test = new CodeBuilder(null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null,
+                null, null, null, null);
+
+        test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
 
         CodeBuildResult result = test.getCodeBuildResult();
@@ -49,6 +71,21 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                 "", "", "", "", "", "",
                 "","","","","",     "", "");
 
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
+    }
+
+    @Test
+    public void testConfigAllBlankPipeline() throws IOException, ExecutionException, InterruptedException {
+        CodeBuilder test = new CodeBuilder("", "", "", "",
+                "", "", "", "", "", "",
+                "","","","","",     "", "");
+
+        test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
 
         assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
@@ -65,7 +102,25 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
                         "the request is invalid"));
 
         CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         fixCodeBuilderFactories(test, mockFactory);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testInvalidAWSCredentialsPipeline() throws IOException, InterruptedException {
+        when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
+        when(mockClient.startBuild(any(StartBuildRequest.class)))
+                .thenThrow(new com.amazonaws.AmazonServiceException("The security token included in " +
+                        "the request is invalid"));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 
@@ -81,6 +136,23 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testInvalidGitLocationPipeline() throws IOException, InterruptedException {
+        when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
+        when(mockClient.startBuild(any(StartBuildRequest.class)))
+                .thenThrow(new InvalidInputException("service only supports https protocol for GIT endpoints"));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 
@@ -96,6 +168,23 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testInvalidEnvARNPipeline() throws IOException, InterruptedException {
+        when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
+        when(mockClient.startBuild(any(StartBuildRequest.class)))
+                .thenThrow(new InvalidInputException("The provided ARN(" + "123" + ") is invalid."));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 
@@ -103,3 +192,4 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 }
+

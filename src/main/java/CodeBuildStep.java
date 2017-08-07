@@ -251,6 +251,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
                     step.envVariables, step.buildSpecFile, step.buildTimeoutOverride
             );
+            builder.setIsPipelineBuild(true);
             builder.perform(run, ws, launcher, listener);
 
             CodeBuildResult result = builder.getCodeBuildResult();

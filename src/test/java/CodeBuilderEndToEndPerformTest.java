@@ -18,24 +18,40 @@ import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
+import hudson.model.Result;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
+
     @Test
     public void testBuildSuccess() throws Exception {
         setUpBuildEnvironment();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
+    }
 
+    @Test
+    public void testBuildSuccessPipeline() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
+
+        test.perform(build, ws, launcher, listener);
         assertNull(build.getResult());
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.SUCCESS, result.getStatus());
@@ -52,6 +68,27 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(succeeded));
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
+    }
+
+    @Test
+    public void testBuildThenWaitThenSuccessPipeline() throws Exception {
+        setUpBuildEnvironment();
+
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
+                new BatchGetBuildsResult().withBuilds(inProgress),
+                new BatchGetBuildsResult().withBuilds(inProgress),
+                new BatchGetBuildsResult().withBuilds(succeeded));
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 
@@ -66,6 +103,21 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testBuildFailsPipeline() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = createDefaultCodeBuilder();
+        when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 
@@ -84,6 +136,26 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 new BatchGetBuildsResult().withBuilds(failed));
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testBuildThenWaitThenFailsPipeline() throws Exception {
+        setUpBuildEnvironment();
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build failed = new Build().withBuildStatus(StatusType.FAILED).withStartTime(new Date(2));
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
+                new BatchGetBuildsResult().withBuilds(inProgress),
+                new BatchGetBuildsResult().withBuilds(inProgress),
+                new BatchGetBuildsResult().withBuilds(failed));
+        CodeBuilder test = createDefaultCodeBuilder();
+        fixCodeBuilderFactories(test, mockFactory);
+        test.setIsPipelineBuild(true);
 
         test.perform(build, ws, launcher, listener);
 

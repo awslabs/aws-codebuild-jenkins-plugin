@@ -17,12 +17,15 @@
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
+import hudson.model.Result;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 
 public class CodeBuilderPerformTest extends CodeBuilderTest {
 
@@ -30,6 +33,23 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testGetCBClientExcepts() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
+        String error = "failed to instantiate cb client.";
+        doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
+        fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        assert(log.toString().contains(error));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testGetCBClientExceptsPipeline() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = createDefaultCodeBuilder();
+        test.setIsPipelineBuild(true);
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
         fixCodeBuilderFactories(test, mockFactory);
@@ -49,6 +69,23 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         String error = "submit build exception.";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        assert(log.toString().contains(error));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testStartBuildExceptsPipeline() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = createDefaultCodeBuilder();
+        test.setIsPipelineBuild(true);
+        String error = "submit build exception.";
+        doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
+        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
 
@@ -65,6 +102,23 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         CodeBuilder test = createDefaultCodeBuilder();
         fixCodeBuilderFactories(test, mockFactory);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+
+        assert(log.toString().contains(error));
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+    }
+
+    @Test
+    public void testGetBuildExceptsPipeline() throws Exception {
+        setUpBuildEnvironment();
+        String error = "cannot get build";
+        doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
+        CodeBuilder test = createDefaultCodeBuilder();
+        test.setIsPipelineBuild(true);
+        fixCodeBuilderFactories(test, mockFactory);
 
         test.perform(build, ws, launcher, listener);
 
@@ -74,5 +128,4 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         assertTrue(result.getErrorMessage().contains(error));
 
     }
-
 }

@@ -18,12 +18,15 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
+import enums.SourceControlType;
 import hudson.FilePath;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static enums.SourceControlType.JenkinsSource;
+import static enums.SourceControlType.ProjectSource;
 import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
 import static org.apache.commons.lang.StringEscapeUtils.escapeSql;
 
@@ -31,6 +34,7 @@ public class Validation {
 
     public static final String validSourceUrlPrefix = "https://";
 
+    //AWSClientFactory
     public static final String invalidArtifactTypeError = "Artifact type override must be one of 'NO_ARTIFACTS', 'S3', ''";
     public static final String invalidArtifactsPackagingError = "Artifact packaging override must be one of 'NONE', 'ZIP', ''";
     public static final String invalidArtifactNamespaceTypeError = "Artifact namespace override must be one of 'NONE', 'BUILD_ID', ''";
@@ -38,6 +42,10 @@ public class Validation {
     public static final String invalidKeysError = "Enter valid AWS access and secret keys";
     public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
+
+    //CodeBuilder
+    public static final String projectRequiredError = "CodeBuild project name is required";
+    public static final String sourceControlTypeRequiredError = "Source control type is required and must be 'jenkins' or 'project'";
 
     public static String sanitize(final String s) {
         if(s == null) {
@@ -60,11 +68,15 @@ public class Validation {
 
     // CodeBuilder: if any of the parameters in CodeBuilder are bad, this will cause the build to end in failure in CodeBuilder.perform()
 
-    public static boolean checkCodeBuilderConfig(CodeBuilder cb) {
+    public static String checkCodeBuilderConfig(CodeBuilder cb) {
         if(cb.getProjectName() == null || cb.getProjectName().isEmpty()) {
-            return false;
+            return projectRequiredError;
         }
-        return true;
+        if(!cb.getSourceControlType().equals(JenkinsSource.toString()) &&
+            !cb.getSourceControlType().equals(ProjectSource.toString())) {
+            return sourceControlTypeRequiredError;
+        }
+        return "";
     }
 
     // Returns empty string if configuration valid
