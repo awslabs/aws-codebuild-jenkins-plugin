@@ -19,6 +19,7 @@ import com.amazonaws.services.codebuild.model.*;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import enums.CodeBuildRegions;
+import enums.EncryptionAlgorithm;
 import enums.SourceControlType;
 import hudson.AbortException;
 import hudson.Extension;
@@ -56,6 +57,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String projectName;
     @Getter private final String sourceControlType;
     @Getter private String sourceVersion;
+    @Getter private String sseAlgorithm;
 
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
@@ -89,7 +91,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region, String projectName, String sourceVersion, String sourceControlType,
+                       String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
                        String envVariables, String buildSpecFile, String buildTimeoutOverride) {
@@ -104,6 +106,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.projectName = Validation.sanitize(projectName);
         this.sourceControlType = Validation.sanitize(sourceControlType);
         this.sourceVersion = Validation.sanitize(sourceVersion);
+        this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
         this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
         this.artifactNameOverride = Validation.sanitize(artifactNameOverride);
@@ -192,7 +195,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key);
+            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, sseAlgorithm);
             String uploadedSourceVersion = "";
 
             try {
@@ -585,6 +588,16 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     selections.add(((CodeBuildCredentials) c).getId());
                 }
             }
+            return selections;
+        }
+
+        public ListBoxModel doFillSseAlgorithmItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(EncryptionAlgorithm e: EncryptionAlgorithm.values()) {
+                selections.add(e.toString());
+            }
+
             return selections;
         }
 

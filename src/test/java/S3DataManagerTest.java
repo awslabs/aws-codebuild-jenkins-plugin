@@ -17,6 +17,7 @@
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import enums.EncryptionAlgorithm;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -49,6 +50,7 @@ public class S3DataManagerTest {
     Map<String, String> s3ARNs = new HashMap<String, String>();
     private String s3InputBucketName = "Inputbucket";
     private String s3InputKeyName = "InputKey";
+    private String sseAlgorithm = EncryptionAlgorithm.AES256.toString();
 
     AbstractBuild build = mock(AbstractBuild.class);
     Launcher launcher = mock(Launcher.class);
@@ -67,7 +69,7 @@ public class S3DataManagerTest {
     }
 
     private S3DataManager createDefault() throws Exception {
-        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm);
     }
 
     //creates S3DataManager with parameters that won't throw a FileNotFoundException for below tests.
@@ -77,12 +79,12 @@ public class S3DataManagerTest {
         PutObjectResult mockedResponse = new PutObjectResult();
         mockedResponse.setVersionId("some-version-id");
         when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
-        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm);
     }
 
     @Test(expected=Exception.class)
     public void testNullConfig() throws Exception {
-        S3DataManager d = new S3DataManager(null, null, null);
+        S3DataManager d = new S3DataManager(null, null, null, null);
         d.uploadSourceToS3(listener, testWorkSpace);
     }
 

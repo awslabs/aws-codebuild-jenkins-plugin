@@ -67,6 +67,11 @@
 
     <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
                   value="jenkins" checked="${instance.sourceControlTypeEquals('jenkins')}" inline="true">
+
+        <f:entry title="Server-side encryption algorithm" field="sseAlgorithm" help="/plugin/aws-codebuild/help-sseAlgorithm.html">
+          <f:select />
+        </f:entry>
+
     </f:radioBlock>
 
 

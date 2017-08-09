@@ -21,6 +21,7 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.google.inject.Inject;
 import enums.CodeBuildRegions;
+import enums.EncryptionAlgorithm;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
@@ -28,6 +29,7 @@ import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.ListBoxModel;
+import lombok.Getter;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepExecution;
@@ -37,36 +39,30 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 public class CodeBuildStep extends AbstractStepImpl {
 
-    private String credentialsType;
-    private String credentialsId;
-    private String proxyHost;
-    private String proxyPort;
-    private String awsAccessKey;
-    private String awsSecretKey;
-    private String region;
-    private String projectName;
-    private String sourceControlType;
-    private String sourceVersion;
-    private String artifactTypeOverride;
-    private String artifactLocationOverride;
-    private String artifactNameOverride;
-    private String artifactNamespaceOverride;
-    private String artifactPackagingOverride;
-    private String artifactPathOverride;
-    private String envVariables;
-    private String buildSpecFile;
-    private String buildTimeoutOverride;
-
-    public String getCredentialsType() {
-        return credentialsType;
-    }
+    @Getter private String credentialsType;
+    @Getter private String credentialsId;
+    @Getter private String proxyHost;
+    @Getter private String proxyPort;
+    @Getter private String awsAccessKey;
+    @Getter private String awsSecretKey;
+    @Getter private String region;
+    @Getter private String projectName;
+    @Getter private String sourceControlType;
+    @Getter private String sourceVersion;
+    @Getter private String sseAlgorithm;
+    @Getter private String artifactTypeOverride;
+    @Getter private String artifactLocationOverride;
+    @Getter private String artifactNameOverride;
+    @Getter private String artifactNamespaceOverride;
+    @Getter private String artifactPackagingOverride;
+    @Getter private String artifactPathOverride;
+    @Getter private String envVariables;
+    @Getter private String buildSpecFile;
+    @Getter private String buildTimeoutOverride;
 
     @DataBoundSetter
     public void setCredentialsType(String credentialsType) {
         this.credentialsType = credentialsType;
-    }
-    public String getCredentialsId() {
-        return credentialsId;
     }
 
     @DataBoundSetter
@@ -74,17 +70,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.credentialsId = credentialsId;
     }
 
-    public String getProxyHost() {
-        return proxyHost;
-    }
-
     @DataBoundSetter
     public void setProxyHost(String proxyHost) {
         this.proxyHost = proxyHost;
-    }
-
-    public String getProxyPort() {
-        return proxyPort;
     }
 
     @DataBoundSetter
@@ -92,17 +80,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.proxyPort = proxyPort;
     }
 
-    public String getAwsAccessKey() {
-        return awsAccessKey;
-    }
-
     @DataBoundSetter
     public void setAwsAccessKey(String awsAccessKey) {
         this.awsAccessKey = awsAccessKey;
-    }
-
-    public String getAwsSecretKey() {
-        return awsSecretKey;
     }
 
     @DataBoundSetter
@@ -110,17 +90,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.awsSecretKey = awsSecretKey;
     }
 
-    public String getRegion() {
-        return region;
-    }
-
     @DataBoundSetter
     public void setRegion(String region) {
         this.region = region;
-    }
-
-    public String getProjectName() {
-        return projectName;
     }
 
     @DataBoundConstructor
@@ -128,17 +100,14 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.projectName = projectName;
     }
 
-    public String getSourceVersion() {
-        return sourceVersion;
-    }
-
     @DataBoundSetter
     public void setSourceVersion(String sourceVersion) {
         this.sourceVersion = sourceVersion;
     }
 
-    public String getSourceControlType() {
-        return sourceControlType;
+    @DataBoundSetter
+    public void setSseAlgorithm(String sseAlgorithm) {
+        this.sseAlgorithm = sseAlgorithm;
     }
 
     @DataBoundSetter
@@ -146,18 +115,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.sourceControlType = sourceControlType;
     }
 
-
-    public String getArtifactTypeOverride() {
-        return artifactTypeOverride;
-    }
-
     @DataBoundSetter
     public void setArtifactTypeOverride(String artifactTypeOverride) {
         this.artifactTypeOverride = artifactTypeOverride;
-    }
-
-    public String getArtifactLocationOverride() {
-        return artifactLocationOverride;
     }
 
     @DataBoundSetter
@@ -165,17 +125,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.artifactLocationOverride = artifactLocationOverride;
     }
 
-    public String getArtifactNameOverride() {
-        return this.artifactNameOverride;
-    }
-
     @DataBoundSetter
     public void setArtifactNameOverride(String artifactNameOverride) {
         this.artifactNameOverride = artifactNameOverride;
-    }
-
-    public String getArtifactNamespaceOverride() {
-        return this.artifactNamespaceOverride;
     }
 
     @DataBoundSetter
@@ -183,17 +135,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.artifactNamespaceOverride = artifactNamespaceOverride;
     }
 
-    public String getArtifactPackagingOverride() {
-        return this.artifactPackagingOverride;
-    }
-
     @DataBoundSetter
     public void setArtifactPackagingOverride(String artifactPackagingOverride) {
         this.artifactPackagingOverride = artifactPackagingOverride;
-    }
-
-    public String getArtifactPathOverride() {
-        return this.artifactPathOverride;
     }
 
     @DataBoundSetter
@@ -201,26 +145,14 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.artifactPathOverride = artifactPathOverride;
     }
 
-    public String getEnvVariables() {
-        return envVariables;
-    }
-
     @DataBoundSetter
     public void setEnvVariables(String envVariables) {
         this.envVariables = envVariables;
     }
 
-    public String getBuildSpecFile() {
-        return buildSpecFile;
-    }
-
     @DataBoundSetter
     public void setBuildSpecFile(String buildSpecFile) {
         this.buildSpecFile = buildSpecFile;
-    }
-
-    public String getBuildTimeoutOverride() {
-        return buildTimeoutOverride;
     }
 
     @DataBoundSetter
@@ -295,6 +227,17 @@ public class CodeBuildStep extends AbstractStepImpl {
             }
             return selections;
         }
+
+        public ListBoxModel doFillSseAlgorithmItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(EncryptionAlgorithm e: EncryptionAlgorithm.values()) {
+                selections.add(e.toString());
+            }
+
+            return selections;
+        }
+
     }
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
@@ -323,7 +266,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
                     step.getRegion(), step.getProjectName(),
-                    step.sourceVersion, step.sourceControlType,
+                    step.sourceVersion, step.sseAlgorithm, step.sourceControlType,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
                     step.envVariables, step.buildSpecFile, step.buildTimeoutOverride

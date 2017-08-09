@@ -34,7 +34,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder(null, null, null, null,
+        CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null, null, null);
@@ -49,7 +49,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllNullPipeline() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder(null, null, null, null,
+        CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null,
                 null, null, null, null, null, null);
@@ -64,7 +64,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlank() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder("", "", "", "",
+        CodeBuilder test = new CodeBuilder("", "", "", "", "",
                 "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 
@@ -78,7 +78,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlankPipeline() throws IOException, ExecutionException, InterruptedException {
-        CodeBuilder test = new CodeBuilder("", "", "", "",
+        CodeBuilder test = new CodeBuilder("", "", "", "", "",
                 "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 

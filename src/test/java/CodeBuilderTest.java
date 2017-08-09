@@ -70,7 +70,7 @@ public class CodeBuilderTest {
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
         CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
-                "us-east-1", "existingProject", "sourceVersion", SourceControlType.ProjectSource.toString(),
+                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "buildspec.yml", "5");
 

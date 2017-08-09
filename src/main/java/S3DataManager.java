@@ -42,6 +42,7 @@ public class S3DataManager {
     private final AmazonS3Client s3Client;
     private final String s3InputBucket;
     private final String s3InputKey;
+    private final String sseAlgorithm;
 
     public static final String zipSourceError = "zipSource usage: prefixToTrim must be contained in the given directory.";
 
@@ -67,6 +68,9 @@ public class S3DataManager {
         ObjectMetadata objectMetadata = new ObjectMetadata();
         objectMetadata.setContentMD5(zipFileMD5);
         objectMetadata.setContentLength(jenkinsZipFile.length());
+        if(!sseAlgorithm.isEmpty()) {
+            objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
+        }
 
         PutObjectRequest putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, jenkinsZipFile.read(), objectMetadata);
         putObjectRequest.setMetadata(objectMetadata);
