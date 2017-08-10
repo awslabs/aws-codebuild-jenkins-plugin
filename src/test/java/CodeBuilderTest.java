@@ -16,15 +16,15 @@
 
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
+import com.amazonaws.services.codebuild.model.Build;
+import com.amazonaws.services.codebuild.model.Project;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
 import enums.ArtifactType;
 import hudson.FilePath;
 import enums.SourceControlType;
 import hudson.Launcher;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import org.junit.Before;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
@@ -63,6 +63,8 @@ public class CodeBuilderTest {
     FilePath ws = new FilePath(new File("/path/to"));
     Launcher launcher = mock(Launcher.class);
     TaskListener listener = mock(TaskListener.class);
+
+    ParametersAction mockParameterAction = mock(ParametersAction.class);
 
     //mock console log
     protected ByteArrayOutputStream log;
@@ -107,6 +109,8 @@ public class CodeBuilderTest {
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
+        when(mockParameterAction.getParameters()).thenReturn(new ArrayList());
+        when(build.getAction(ParametersAction.class)).thenReturn(mockParameterAction);
     }
 
     @Before

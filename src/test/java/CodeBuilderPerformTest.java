@@ -14,10 +14,16 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.services.codebuild.model.ArtifactsType;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
+import enums.SourceControlType;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Result;
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.junit.runner.RunWith;
@@ -25,11 +31,13 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
@@ -129,4 +137,44 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         assertTrue(result.getErrorMessage().contains(error));
 
     }
+
+    @Test
+    public void testBuildParameters() throws Exception {
+        setUpBuildEnvironment();
+        List<ParameterValue> params = new ArrayList();
+        Parameter one = new Parameter("foo", "");
+        one.setValue("bar");
+        Parameter two = new Parameter("foo2", "");
+        two.setValue("bar2");
+        Parameter three = new Parameter("foo3", "");
+        three.setValue("bar3");
+
+        params.add(one);
+        params.add(two);
+        params.add(three);
+
+        ParametersAction mockParameterAction = mock(ParametersAction.class);
+        when(mockParameterAction.getParameters()).thenReturn(params);
+        when(build.getAction(ParametersAction.class)).thenReturn(mockParameterAction);
+
+        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
+                "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(),
+                ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "buildspec.yml", "5");
+
+        cb.perform(build, ws, launcher, listener);
+
+        assertEquals(one.getValue(), cb.getParameterized(cb.getProjectName()));
+        assertEquals(two.getValue() + "-" + three.getValue(), cb.getParameterized(cb.getSourceVersion()));
+    }
+
+
+    private class Parameter extends ParameterValue {
+        @Getter @Setter String value;
+
+        protected Parameter(String name, String description) {
+            super(name, description);
+        }
+    }
+
 }

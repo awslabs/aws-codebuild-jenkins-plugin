@@ -69,11 +69,13 @@ public class Validation {
     // CodeBuilder: if any of the parameters in CodeBuilder are bad, this will cause the build to end in failure in CodeBuilder.perform()
 
     public static String checkCodeBuilderConfig(CodeBuilder cb) {
-        if(cb.getProjectName() == null || cb.getProjectName().isEmpty()) {
+        String projectName = cb.getParameterized(cb.getProjectName());
+        if(projectName == null || projectName.isEmpty()) {
             return projectRequiredError;
         }
-        if(!cb.getSourceControlType().equals(JenkinsSource.toString()) &&
-            !cb.getSourceControlType().equals(ProjectSource.toString())) {
+        String sourceControlType = cb.getParameterized(cb.getSourceControlType());
+        if(!sourceControlType.equals(JenkinsSource.toString()) &&
+            !sourceControlType.equals(ProjectSource.toString())) {
             return sourceControlTypeRequiredError;
         }
         return "";
@@ -81,29 +83,33 @@ public class Validation {
 
     // Returns empty string if configuration valid
     public static String checkCodeBuilderStartBuildOverridesConfig(CodeBuilder cb) {
-        if(!cb.getArtifactTypeOverride().isEmpty()) {
+        String artifactTypeOverride = cb.getParameterized(cb.getArtifactTypeOverride());
+        if(!artifactTypeOverride.isEmpty()) {
             try {
-                ArtifactsType.fromValue(cb.getArtifactTypeOverride());
+                ArtifactsType.fromValue(artifactTypeOverride);
             } catch(IllegalArgumentException e) {
                 return invalidArtifactTypeError;
             }
         }
-        if(!cb.getArtifactPackagingOverride().isEmpty()) {
+        String artifactPackagingOverride = cb.getParameterized(cb.getArtifactPackagingOverride());
+        if(!artifactPackagingOverride.isEmpty()) {
             try {
-                ArtifactPackaging.fromValue(cb.getArtifactPackagingOverride());
+                ArtifactPackaging.fromValue(artifactPackagingOverride);
             } catch(IllegalArgumentException e) {
                 return invalidArtifactsPackagingError;
             }
         }
-        if(!cb.getArtifactNamespaceOverride().isEmpty()) {
+
+        String artifactNamespaceOverride = cb.getParameterized(cb.getArtifactNamespaceOverride());
+        if(!artifactNamespaceOverride.isEmpty()) {
             try {
-                ArtifactNamespace.fromValue(cb.getArtifactNamespaceOverride());
+                ArtifactNamespace.fromValue(artifactNamespaceOverride);
             } catch(IllegalArgumentException e) {
                 return invalidArtifactNamespaceTypeError;
             }
         }
 
-        String timeout = cb.getBuildTimeoutOverride();
+        String timeout = cb.getParameterized(cb.getBuildTimeoutOverride());
         if(timeout != null && !timeout.isEmpty()) {
             Integer t;
             try {

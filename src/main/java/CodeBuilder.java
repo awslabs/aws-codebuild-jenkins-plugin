@@ -16,6 +16,7 @@
 
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
+import com.amazonaws.services.codebuild.model.Build;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import enums.CodeBuildRegions;
@@ -25,10 +26,7 @@ import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractProject;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
@@ -47,15 +45,15 @@ import java.util.*;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
-    @Getter private final String credentialsType;
-    @Getter private final String credentialsId;
-    @Getter private final String proxyHost;
-    @Getter private final String proxyPort;
-    @Getter private final String awsAccessKey;
-    @Getter private final String awsSecretKey;
-    @Getter private final String region;
+    @Getter private String credentialsType;
+    @Getter private String credentialsId;
+    @Getter private String proxyHost;
+    @Getter private String proxyPort;
+    @Getter private String awsAccessKey;
+    @Getter private String awsSecretKey;
+    @Getter private String region;
     @Getter private String projectName;
-    @Getter private final String sourceControlType;
+    @Getter private String sourceControlType;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
 
@@ -71,6 +69,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String buildTimeoutOverride;
 
     @Getter private final CodeBuildResult codeBuildResult;
+    private List<ParameterValue> buildParameters;
 
     @Getter@Setter String artifactLocation;
     @Getter@Setter String artifactType;
@@ -101,7 +100,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.proxyHost = Validation.sanitize(proxyHost);
         this.proxyPort = Validation.sanitize(proxyPort);
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
-        this.awsSecretKey = awsSecretKey;
+        this.awsSecretKey = Validation.sanitize(awsSecretKey);
         this.region = Validation.sanitize(region);
         this.projectName = Validation.sanitize(projectName);
         this.sourceControlType = Validation.sanitize(sourceControlType);
@@ -117,6 +116,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.codeBuildResult = new CodeBuildResult();
+        this.buildParameters = new ArrayList();
         this.isPipelineBuild = false;
     }
 
@@ -125,10 +125,28 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        try {
+            ParametersAction parametersAction = build.getAction(ParametersAction.class);
+            if(parametersAction != null &&
+                parametersAction.getParameters()!= null ) {
+
+                buildParameters = parametersAction.getParameters();
+            }
+        } catch (Exception e) {
+            failBuild(build, listener, e.getMessage(), "");
+            return;
+        }
+
         AWSClientFactory awsClientFactory;
         try {
-            awsClientFactory = new AWSClientFactory(this.credentialsType, this.credentialsId, this.proxyHost, this.proxyPort,
-                this.awsAccessKey, this.awsSecretKey, this.region);
+            awsClientFactory = new AWSClientFactory(
+                    getParameterized(this.credentialsType),
+                    getParameterized(this.credentialsId),
+                    getParameterized(this.proxyHost),
+                    getParameterized(this.proxyPort),
+                    getParameterized(this.awsAccessKey),
+                    getParameterized(this.awsSecretKey),
+                    getParameterized(this.region));
         } catch (Exception e) {
             failBuild(build, listener, authorizationError, e.getMessage());
             return;
@@ -146,7 +164,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         Collection<EnvironmentVariable> codeBuildEnvVars = null;
         try {
-            codeBuildEnvVars = mapEnvVariables(envVariables);
+            codeBuildEnvVars = mapEnvVariables(getParameterized(envVariables));
         } catch(InvalidInputException e) {
             failBuild(build, listener, configuredImproperlyError, e.getMessage());
             return;
@@ -173,16 +191,16 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(this.projectName).
-                withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(this.buildSpecFile).
-                withTimeoutInMinutesOverride(Validation.parseInt(this.buildTimeoutOverride));
+        StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
+                withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
+                withTimeoutInMinutesOverride(Validation.parseInt(getParameterized(buildTimeoutOverride)));
 
         ProjectArtifacts artifactsOverride = generateStartBuildArtifactOverride();
         if(artifactsOverride != null) {
             startBuildRequest.setArtifactsOverride(artifactsOverride);
         }
 
-        if(SourceControlType.JenkinsSource.toString().equals(sourceControlType)) {
+        if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
             if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
                 failBuild(build, listener, invalidProjectError, "");
                 return;
@@ -195,7 +213,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, sseAlgorithm);
+            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, getParameterized(sseAlgorithm));
             String uploadedSourceVersion = "";
 
             try {
@@ -217,8 +235,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             logStartBuildMessage(listener, uploadedSourceVersion);
 
         } else {
-            startBuildRequest.setSourceVersion(this.sourceVersion);
-            logStartBuildMessage(listener, sourceVersion);
+            startBuildRequest.setSourceVersion(getParameterized(sourceVersion));
+            logStartBuildMessage(listener, getParameterized(sourceVersion));
         }
 
         final StartBuildResult sbResult;
@@ -260,7 +278,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
                     action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
-                    action.setArtifactTypeOverride(this.artifactTypeOverride);
+                    action.setArtifactTypeOverride(getParameterized(artifactTypeOverride));
                     action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
                     action.setS3BucketName(artifactLocation);
                     action.setLogs(new ArrayList());
@@ -327,10 +345,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     // @param cbClient: the CodeBuild client used by this build.
     private void retrieveArtifactAndSourceInfo(AWSCodeBuildClient cbClient) throws Exception {
         BatchGetProjectsResult bgpResult = cbClient.batchGetProjects(
-                new BatchGetProjectsRequest().withNames(this.projectName));
+                new BatchGetProjectsRequest().withNames(getParameterized(projectName)));
 
         if(bgpResult.getProjects().isEmpty()) {
-            throw new RuntimeException("Project " + this.projectName + " does not exist.");
+            throw new RuntimeException("Project " + getParameterized(projectName) + " does not exist.");
         } else {
             this.artifactLocation = bgpResult.getProjects().get(0).getArtifacts().getLocation();
             this.artifactType = bgpResult.getProjects().get(0).getArtifacts().getType();
@@ -378,45 +396,45 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     private String generateDashboardURL(String buildId) {
         return new StringBuilder()
             .append("https://")
-            .append(this.region)
+            .append(getParameterized(region))
             .append(".console.aws.amazon.com/codebuild/home?region=")
-            .append(this.region)
+            .append(getParameterized(region))
             .append("#builds/")
             .append(buildId)
             .append("/view/new").toString();
     }
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
-        StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name " + projectName);
+        StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name " + getParameterized(projectName));
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);
         }
         if(!artifactTypeOverride.isEmpty()) {
-            message.append("\n\t> artifact type: " + artifactTypeOverride);
+            message.append("\n\t> artifact type: " + getParameterized(artifactTypeOverride));
         }
         if(!artifactLocationOverride.isEmpty()) {
-            message.append("\n\t> artifact location: " + artifactLocationOverride);
+            message.append("\n\t> artifact location: " + getParameterized(artifactLocationOverride));
         }
         if(!artifactNameOverride.isEmpty()) {
-            message.append("\n\t> artifact name: " + artifactNameOverride);
+            message.append("\n\t> artifact name: " + getParameterized(artifactNameOverride));
         }
         if(!artifactNamespaceOverride.isEmpty()) {
-            message.append("\n\t> artifact namespace: " + artifactNamespaceOverride);
+            message.append("\n\t> artifact namespace: " + getParameterized(artifactNamespaceOverride));
         }
         if(!artifactPackagingOverride.isEmpty()) {
-            message.append("\n\t> artifact packaging: " + artifactPackagingOverride);
+            message.append("\n\t> artifact packaging: " + getParameterized(artifactPackagingOverride));
         }
         if(!artifactPathOverride.isEmpty()) {
-            message.append("\n\t> artifact path: " + artifactPathOverride);
+            message.append("\n\t> artifact path: " + getParameterized(artifactPathOverride));
         }
         if(!buildSpecFile.isEmpty()) {
-            message.append("\n\t> build spec: " + buildSpecFile);
+            message.append("\n\t> build spec: " + getParameterized(buildSpecFile));
         }
         if(!envVariables.isEmpty()) {
-            message.append("\n\t> environment variables: " + envVariables);
+            message.append("\n\t> environment variables: " + getParameterized(envVariables));
         }
         if(!buildTimeoutOverride.isEmpty()) {
-            message.append("\n\t> build timeout: " + buildTimeoutOverride);
+            message.append("\n\t> build timeout: " + getParameterized(buildTimeoutOverride));
         }
         LoggingHelper.log(listener, message.toString());
     }
@@ -424,28 +442,28 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     private ProjectArtifacts generateStartBuildArtifactOverride() {
         ProjectArtifacts artifacts = new ProjectArtifacts();
         boolean overridesSpecified = false;
-        if(!this.artifactTypeOverride.isEmpty()) {
-            artifacts.setType(this.artifactTypeOverride);
+        if(!getParameterized(artifactTypeOverride).isEmpty()) {
+            artifacts.setType(getParameterized(artifactTypeOverride));
             overridesSpecified = true;
         }
-        if(!this.artifactLocationOverride.isEmpty()) {
-            artifacts.setLocation(this.artifactLocationOverride);
+        if(!getParameterized(artifactLocationOverride).isEmpty()) {
+            artifacts.setLocation(getParameterized(artifactLocationOverride));
             overridesSpecified = true;
         }
-        if(!this.artifactNameOverride.isEmpty()) {
-            artifacts.setName(this.artifactNameOverride);
+        if(!getParameterized(artifactNameOverride).isEmpty()) {
+            artifacts.setName(getParameterized(artifactNameOverride));
             overridesSpecified = true;
         }
-        if(!this.artifactNamespaceOverride.isEmpty()) {
-            artifacts.setNamespaceType(this.artifactNamespaceOverride);
+        if(!getParameterized(artifactNamespaceOverride).isEmpty()) {
+            artifacts.setNamespaceType(getParameterized(artifactNamespaceOverride));
             overridesSpecified = true;
         }
-        if(!this.artifactPackagingOverride.isEmpty()) {
-            artifacts.setPackaging(this.artifactPackagingOverride);
+        if(!getParameterized(artifactPackagingOverride).isEmpty()) {
+            artifacts.setPackaging(getParameterized(artifactPackagingOverride));
             overridesSpecified = true;
         }
-        if(!this.artifactPathOverride.isEmpty()) {
-            artifacts.setPath(this.artifactPathOverride);
+        if(!getParameterized(artifactPathOverride).isEmpty()) {
+            artifacts.setPath(getParameterized(artifactPathOverride));
             overridesSpecified = true;
         }
         return overridesSpecified ? artifacts : null;
@@ -503,6 +521,19 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             build.setResult(Result.FAILURE);
         }
         LoggingHelper.log(listener, errorMessage, secondaryError);
+    }
+
+    //Given a CodeBuild build parameter, checks if it contains any Jenkins parameters and if so, evaluates and returns the
+    //value.
+    public String getParameterized(String codeBuildParam) {
+        for(ParameterValue param: buildParameters) {
+            String p = "$" + param.getName();
+
+            if(codeBuildParam.contains(p)) {
+                codeBuildParam = codeBuildParam.replace(p, param.getValue().toString());
+            }
+        }
+        return codeBuildParam;
     }
 
     //// Jenkins-specific functions ////
