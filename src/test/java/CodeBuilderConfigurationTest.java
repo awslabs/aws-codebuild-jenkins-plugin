@@ -77,7 +77,8 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     }
 
     @Test
-    public void testConfigAllBlankPipeline() throws IOException, ExecutionException, InterruptedException {
+    public void testConfigAllBlankPipeline() throws Exception {
+        setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
                 "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");

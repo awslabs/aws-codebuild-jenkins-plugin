@@ -22,10 +22,7 @@ import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import enums.CodeBuildRegions;
 import enums.EncryptionAlgorithm;
 import enums.SourceControlType;
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
+import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -69,7 +66,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String buildTimeoutOverride;
 
     @Getter private final CodeBuildResult codeBuildResult;
-    private List<ParameterValue> buildParameters;
+    private EnvVars envVars;
 
     @Getter@Setter String artifactLocation;
     @Getter@Setter String artifactType;
@@ -116,7 +113,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.codeBuildResult = new CodeBuildResult();
-        this.buildParameters = new ArrayList();
         this.isPipelineBuild = false;
     }
 
@@ -125,17 +121,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        try {
-            ParametersAction parametersAction = build.getAction(ParametersAction.class);
-            if(parametersAction != null &&
-                parametersAction.getParameters()!= null ) {
 
-                buildParameters = parametersAction.getParameters();
-            }
-        } catch (Exception e) {
-            failBuild(build, listener, e.getMessage(), "");
-            return;
-        }
+        envVars = build.getEnvironment(listener);
 
         AWSClientFactory awsClientFactory;
         try {
@@ -526,14 +513,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     //Given a CodeBuild build parameter, checks if it contains any Jenkins parameters and if so, evaluates and returns the
     //value.
     public String getParameterized(String codeBuildParam) {
-        for(ParameterValue param: buildParameters) {
-            String p = "$" + param.getName();
-
-            if(codeBuildParam.contains(p)) {
-                codeBuildParam = codeBuildParam.replace(p, param.getValue().toString());
-            }
-        }
-        return codeBuildParam;
+        return envVars.expand(codeBuildParam);
     }
 
     //// Jenkins-specific functions ////
