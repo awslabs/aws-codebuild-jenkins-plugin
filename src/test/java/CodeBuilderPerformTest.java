@@ -141,21 +141,11 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testBuildParameters() throws Exception {
         setUpBuildEnvironment();
-        List<ParameterValue> params = new ArrayList();
-        Parameter one = new Parameter("foo", "");
-        one.setValue("bar");
-        Parameter two = new Parameter("foo2", "");
-        two.setValue("bar2");
-        Parameter three = new Parameter("foo3", "");
-        three.setValue("bar3");
 
-        params.add(one);
-        params.add(two);
-        params.add(three);
+        envVars.put("foo", "bar");
+        envVars.put("foo2", "bar2");
+        envVars.put("foo3", "bar3");
 
-        ParametersAction mockParameterAction = mock(ParametersAction.class);
-        when(mockParameterAction.getParameters()).thenReturn(params);
-        when(build.getAction(ParametersAction.class)).thenReturn(mockParameterAction);
 
         CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
                 "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(),
@@ -164,8 +154,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         cb.perform(build, ws, launcher, listener);
 
-        assertEquals(one.getValue(), cb.getParameterized(cb.getProjectName()));
-        assertEquals(two.getValue() + "-" + three.getValue(), cb.getParameterized(cb.getSourceVersion()));
+        assertEquals(envVars.get("foo"), cb.getParameterized(cb.getProjectName()));
+        assertEquals(envVars.get("foo2") + "-" + envVars.get("foo3"), cb.getParameterized(cb.getSourceVersion()));
     }
 
 

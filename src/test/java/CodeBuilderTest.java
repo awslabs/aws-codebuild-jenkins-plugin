@@ -21,6 +21,7 @@ import com.amazonaws.services.codebuild.model.Project;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
 import enums.ArtifactType;
+import hudson.EnvVars;
 import hudson.FilePath;
 import enums.SourceControlType;
 import hudson.Launcher;
@@ -64,7 +65,8 @@ public class CodeBuilderTest {
     Launcher launcher = mock(Launcher.class);
     TaskListener listener = mock(TaskListener.class);
 
-    ParametersAction mockParameterAction = mock(ParametersAction.class);
+
+    EnvVars envVars = new EnvVars();
 
     //mock console log
     protected ByteArrayOutputStream log;
@@ -109,8 +111,7 @@ public class CodeBuilderTest {
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
-        when(mockParameterAction.getParameters()).thenReturn(new ArrayList());
-        when(build.getAction(ParametersAction.class)).thenReturn(mockParameterAction);
+        when(build.getEnvironment(any(TaskListener.class))).thenReturn(envVars);
     }
 
     @Before
