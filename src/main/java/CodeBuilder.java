@@ -62,6 +62,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String artifactPathOverride;
 
     @Getter private String envVariables;
+    @Getter private String envParameters;
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
 
@@ -90,7 +91,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
-                       String envVariables, String buildSpecFile, String buildTimeoutOverride) {
+                       String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride) {
 
         this.credentialsType = Validation.sanitize(credentialsType);
         this.credentialsId = Validation.sanitize(credentialsId);
@@ -110,6 +111,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
         this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
         this.envVariables = Validation.sanitize(envVariables);
+        this.envParameters = Validation.sanitize(envParameters);
         this.buildSpecFile = Validation.sanitize(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.codeBuildResult = new CodeBuildResult();
@@ -151,7 +153,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         Collection<EnvironmentVariable> codeBuildEnvVars = null;
         try {
-            codeBuildEnvVars = mapEnvVariables(getParameterized(envVariables));
+            codeBuildEnvVars = mapEnvVariables(getParameterized(envVariables), EnvironmentVariableType.PLAINTEXT);
+            codeBuildEnvVars.addAll(mapEnvVariables(getParameterized(envParameters), EnvironmentVariableType.PARAMETER_STORE));
         } catch(InvalidInputException e) {
             failBuild(build, listener, configuredImproperlyError, e.getMessage());
             return;
@@ -458,7 +461,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Given a String representing environment variables, returns a list of com.amazonaws.services.codebuild.model.EnvironmentVariable
     // objects with the same data. The input string must be in the form [{Key, value}, {k2, v2}] or else null is returned
-    public static Collection<EnvironmentVariable> mapEnvVariables(String envVars) throws InvalidInputException {
+    public static Collection<EnvironmentVariable> mapEnvVariables(String envVars, EnvironmentVariableType envVarType) throws InvalidInputException {
         Collection<EnvironmentVariable> result = new HashSet<EnvironmentVariable>();
         if(envVars == null || envVars.isEmpty()) {
             return result;
@@ -478,11 +481,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
         //single environment variable case vs multiple
         if(numCommas == 1) {
-            result.add(deserializeCodeBuildEnvVar(envVars));
+            result.add(deserializeCodeBuildEnvVar(envVars, envVarType));
         } else {
             String[] evs = envVars.split("\\},\\{");
             for(int i = 0; i < evs.length; i++) {
-                result.add(deserializeCodeBuildEnvVar(evs[i]));
+                result.add(deserializeCodeBuildEnvVar(evs[i], envVarType));
             }
         }
         return result;
@@ -490,7 +493,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Given a string of the form "key,value", returns a CodeBuild Environment Variable with that data.
     // Throws an InvalidInputException when the input string doesn't match the form described in mapEnvVariables
-    private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev) throws InvalidInputException {
+    private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev, EnvironmentVariableType envVarType) throws InvalidInputException {
         if(ev.replaceAll("[^,]", "").length() != 1) {
             throw new InvalidInputException(envVariableSyntaxError);
         }
@@ -498,7 +501,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(keyAndValue.length != 2 || keyAndValue[0].isEmpty() || keyAndValue[1].isEmpty()) {
             throw new InvalidInputException(envVariableSyntaxError);
         }
-        return new EnvironmentVariable().withName(keyAndValue[0]).withValue(keyAndValue[1]);
+        return new EnvironmentVariable().withName(keyAndValue[0]).withValue(keyAndValue[1]).withType(envVarType);
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {

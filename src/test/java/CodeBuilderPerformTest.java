@@ -150,7 +150,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
                 "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(),
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
-                "","[{k, v}]", "buildspec.yml", "5");
+                "","[{k, v}]", "", "buildspec.yml", "5");
 
         cb.perform(build, ws, launcher, listener);
 

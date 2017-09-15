@@ -57,6 +57,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String artifactPackagingOverride;
     @Getter private String artifactPathOverride;
     @Getter private String envVariables;
+    @Getter private String envParameters;
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
 
@@ -148,6 +149,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setEnvVariables(String envVariables) {
         this.envVariables = envVariables;
+    }
+
+    @DataBoundSetter
+    public void setEnvParameters(String envParameters) {
+        this.envParameters = envParameters;
     }
 
     @DataBoundSetter
@@ -269,7 +275,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.sourceVersion, step.sseAlgorithm, step.sourceControlType,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
-                    step.envVariables, step.buildSpecFile, step.buildTimeoutOverride
+                    step.envVariables, step.envParameters, step.buildSpecFile, step.buildTimeoutOverride
             );
             builder.setIsPipelineBuild(true);
             builder.perform(run, ws, launcher, listener);

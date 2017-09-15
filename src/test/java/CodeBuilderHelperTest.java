@@ -15,6 +15,7 @@
  */
 
 import com.amazonaws.services.codebuild.model.EnvironmentVariable;
+import com.amazonaws.services.codebuild.model.EnvironmentVariableType;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import org.junit.Test;
 import org.powermock.core.classloader.annotations.PrepareEverythingForTest;
@@ -24,6 +25,8 @@ import java.util.Collection;
 import java.util.List;
 
 public class CodeBuilderHelperTest extends CodeBuilderTest {
+
+    EnvironmentVariableType evType = EnvironmentVariableType.PLAINTEXT;
 
     @Test
     public void TestGenerateS3URLNull() throws Exception {
@@ -50,42 +53,42 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     @Test
     public void TestMapEnvVarsEmpty() throws InvalidInputException {
         String evs = "";
-        CodeBuilder.mapEnvVariables(evs);
+        CodeBuilder.mapEnvVariables(evs, evType);
     }
 
     @Test
     public void TestMapEnvVarsNull() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables(null);
+        CodeBuilder.mapEnvVariables(null, evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsEmptyBrackets() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[]");
+        CodeBuilder.mapEnvVariables("[]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsNestedEmptyBrackets() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{}]");
+        CodeBuilder.mapEnvVariables("[{}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsNestedEmptyBracketsWithComma() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{,}]");
+        CodeBuilder.mapEnvVariables("[{,}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsSingleNameEmpty() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{,value}]");
+        CodeBuilder.mapEnvVariables("[{,value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsSingleValueEmpty() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name,}]");
+        CodeBuilder.mapEnvVariables("[{name,}]", evType);
     }
 
     @Test
     public void TestMapEnvVarsSingle() throws InvalidInputException {
-        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}]");
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}]", evType);
         assert(result.size() == 1);
         List<EnvironmentVariable> evs = new ArrayList<>(result);
         assert(evs.get(0).getName().equals("name"));
@@ -94,7 +97,7 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsSingleWithWhitespace() throws InvalidInputException {
-        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("  [{   name, value \n} \t] ");
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("  [{   name, value \n} \t] ", evType);
         assert(result.size() == 1);
         List<EnvironmentVariable> evs = new ArrayList<>(result);
         assert(evs.get(0).getName().equals("name"));
@@ -103,9 +106,9 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsTwo() throws InvalidInputException {
-        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}]");
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value");
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2");
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}]", evType);
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
+        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
         assert(result.size() == 2);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -114,11 +117,11 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     @Test
     public void TestMapEnvVarsMultiple() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
-                CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}, {key, val}, {k2, v2}]");
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value");
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2");
-        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val");
-        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2");
+                CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}, {key, val}, {k2, v2}]", evType);
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
+        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
+        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val").withType(evType);
+        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2").withType(evType);
         assert(result.size() == 4);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -129,11 +132,11 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     @Test
     public void TestMapEnvVarsMultipleWhitespace() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
-                CodeBuilder.mapEnvVariables("\n [{ name   , value}, { name2\t, value2}, {  key, val},  {k2, v2 }]");
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value");
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2");
-        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val");
-        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2");
+                CodeBuilder.mapEnvVariables("\n [{ name   , value}, { name2\t, value2}, {  key, val},  {k2, v2 }]", evType);
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
+        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
+        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val").withType(evType);
+        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2").withType(evType);
         assert(result.size() == 4);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -143,67 +146,67 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value}, bad{name2, value2}, {key, val}, {k2, v2}]");
+        CodeBuilder.mapEnvVariables("[{name, value}, bad{name2, value2}, {key, val}, {k2, v2}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid2() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[name, value]");
+        CodeBuilder.mapEnvVariables("[name, value]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid3() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[name{name,, value}]");
+        CodeBuilder.mapEnvVariables("[name{name,, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid4() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, anem, value}]");
+        CodeBuilder.mapEnvVariables("[{name, anem, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid5() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, {name, value}, value}]");
+        CodeBuilder.mapEnvVariables("[{name, {name, value}, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid8() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value} name, value}]");
+        CodeBuilder.mapEnvVariables("[{name, value} name, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid6() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value} {name, value}]");
+        CodeBuilder.mapEnvVariables("[{name, value} {name, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid7() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value},,{name, value}]");
+        CodeBuilder.mapEnvVariables("[{name, value},,{name, value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid9() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value},{name, value, }]");
+        CodeBuilder.mapEnvVariables("[{name, value},{name, value, }]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid10() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value},}]");
+        CodeBuilder.mapEnvVariables("[{name, value},}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid11() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, value,}]");
+        CodeBuilder.mapEnvVariables("[{name, value,}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid12() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{name, ,value}]");
+        CodeBuilder.mapEnvVariables("[{name, ,value}]", evType);
     }
 
     @Test(expected=InvalidInputException.class)
     public void TestMapEnvVarsInvalid13() throws InvalidInputException {
-        CodeBuilder.mapEnvVariables("[{,name value,}]");
+        CodeBuilder.mapEnvVariables("[{,name value,}]", evType);
     }
 
 }

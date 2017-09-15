@@ -111,6 +111,10 @@
       <f:textarea />
     </f:entry>
 
+    <f:entry title="Parameter Store Variables Override" field="envParameters" help="/plugin/aws-codebuild/help-envParametersHelp.html">
+      <f:textarea />
+    </f:entry>
+
     <f:entry title="Timeout Override" field="buildTimeoutOverride" help="/plugin/aws-codebuild/help-buildTimeout.html">
       <f:textbox />
     </f:entry>
