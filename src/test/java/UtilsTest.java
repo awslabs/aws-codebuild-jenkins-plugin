@@ -22,16 +22,16 @@ public class UtilsTest {
 
     @Test
     public void testExtractS3Bucket() {
-        String objectArn = "arn:aws:s3:::my_corporate_bucket/exampleobject.png";
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/exampleobject.png";
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
-        assertEquals("my_corporate_bucket", bucket);
+        assertEquals("my-corporate-bucket", bucket);
     }
 
     @Test
     public void testExtractS3BucketNoArnPrefix() {
-        String objectArn = "my_corporate_bucket/exampleobject.png";
+        String objectArn = "my-corporate-bucket/exampleobject.png";
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
-        assertEquals("my_corporate_bucket", bucket);
+        assertEquals("my-corporate-bucket", bucket);
     }
 
     @Test(expected=RuntimeException.class)
@@ -42,21 +42,37 @@ public class UtilsTest {
 
     @Test(expected=RuntimeException.class)
     public void testExtractS3BucketInvalid() {
-        String objectArn = "arn:aws:s3:::my_corporate_bucketexampleobject.png";
+        String objectArn = "arn:aws:s3:::my-corporate-bucketexampleobject.png";
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
     }
 
     @Test
     public void testExtractS3Key() {
-        String objectArn = "arn:aws:s3:::my_corporate_bucket/exampleobject.png";
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/exampleobject.png";
         String key = Utils.getS3KeyFromObjectArn(objectArn);
         assertEquals("exampleobject.png", key);
     }
 
     @Test
     public void testExtractS3KeyWithFolder() {
-        String objectArn = "arn:aws:s3:::my_corporate_bucket/somefolder/exampleobject.png";
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/somefolder/exampleobject.png";
         String key = Utils.getS3KeyFromObjectArn(objectArn);
         assertEquals("somefolder/exampleobject.png", key);
+    }
+
+    @Test
+    public void testExtractS3BucketWithFolder() {
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/somefolder/exampleobject.png";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+        assertEquals("my-corporate-bucket", bucket);
+    }
+
+    @Test
+    public void testExtractWithMultipleFolder() {
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/somefolder/folder/sub/exampleobject.png";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+        assertEquals("my-corporate-bucket", bucket);
+        String key = Utils.getS3KeyFromObjectArn(objectArn);
+        assertEquals("somefolder/folder/sub/exampleobject.png", key);
     }
 }
