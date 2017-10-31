@@ -132,16 +132,25 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     @Test
     public void TestMapEnvVarsMultipleWhitespace() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
-                CodeBuilder.mapEnvVariables("\n [{ name   , value}, { name2\t, value2}, {  key, val},  {k2, v2 }]", evType);
+                CodeBuilder.mapEnvVariables("\n [{ name   , value}    , { name2\t, value2}  ,{  key, val ue},  {ke y, value }]", evType);
         EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
         EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
-        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val").withType(evType);
-        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2").withType(evType);
+        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val ue").withType(evType);
+        EnvironmentVariable ev4 = new EnvironmentVariable().withName("ke y").withValue("value").withType(evType);
         assert(result.size() == 4);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
         assert(result.contains(ev3));
         assert(result.contains(ev4));
+    }
+
+    @Test
+    public void TestMapEnvVarWithWhitespaceInKeyAndValue() throws InvalidInputException {
+        Collection<EnvironmentVariable> result =
+                CodeBuilder.mapEnvVariables("[{ n a m e   , v a l u e }]", evType);
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("n a m e").withValue("v a l u e").withType(evType);
+        assert(result.size() == 1);
+        assert(result.contains(ev1));
     }
 
     @Test(expected=InvalidInputException.class)

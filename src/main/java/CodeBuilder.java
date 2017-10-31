@@ -467,7 +467,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return result;
         }
 
-        envVars = envVars.replaceAll("\\s+", "");
+        envVars = envVars.replaceAll("\\}\\s*,\\s*\\{", "},{");
+        envVars = envVars.replaceAll("\\[\\s*\\{", "[{");
+        envVars = envVars.replaceAll("\\}\\s*\\]", "}]");
+        envVars = envVars.replaceAll("[\\n|\\t]", "").trim();
         if(envVars.length() < 4 || envVars.charAt(0) != '[' || envVars.charAt(envVars.length()-1) != ']' ||
            envVars.charAt(1) != '{' || envVars.charAt(envVars.length()-2) != '}') {
             throw new InvalidInputException(envVariableSyntaxError);
@@ -501,7 +504,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(keyAndValue.length != 2 || keyAndValue[0].isEmpty() || keyAndValue[1].isEmpty()) {
             throw new InvalidInputException(envVariableSyntaxError);
         }
-        return new EnvironmentVariable().withName(keyAndValue[0]).withValue(keyAndValue[1]).withType(envVarType);
+        return new EnvironmentVariable().withName(keyAndValue[0].trim()).withValue(keyAndValue[1].trim()).withType(envVarType);
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
