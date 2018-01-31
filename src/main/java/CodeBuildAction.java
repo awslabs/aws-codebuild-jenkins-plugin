@@ -40,6 +40,10 @@ public class CodeBuildAction implements Action {
 
     private String environmentARN;
     private String buildARN;
+    private String sourceType;
+    private String sourceLocation;
+    private String sourceVersion;
+    private String gitCloneDepth;
     private String s3BucketName;
     private String s3ArtifactURL;
     private String artifactTypeOverride;

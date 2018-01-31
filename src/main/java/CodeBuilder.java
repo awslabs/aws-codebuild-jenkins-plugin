@@ -53,6 +53,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String sourceControlType;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
+    @Getter private String gitCloneDepthOverride;
 
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
@@ -88,7 +89,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType,
+                       String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String gitCloneDepthOverride,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride) {
@@ -104,6 +105,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.sourceControlType = Validation.sanitize(sourceControlType);
         this.sourceVersion = Validation.sanitize(sourceVersion);
         this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
+        this.gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
         this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
         this.artifactNameOverride = Validation.sanitize(artifactNameOverride);
@@ -182,6 +184,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
+                withGitCloneDepthOverride(generateStartBuildGitCloneDepthOverride()).
                 withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
                 withTimeoutInMinutesOverride(Validation.parseInt(getParameterized(buildTimeoutOverride)));
 
@@ -267,6 +270,26 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action.setBuildId(buildId);
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
+
+                    ProjectSource source = currentBuild.getSource();
+                    if(source != null) {
+                        action.setSourceType(source.getType());
+                        action.setSourceLocation(source.getLocation());
+
+                        if(currentBuild.getSourceVersion() == null) {
+                            action.setSourceVersion("");
+                        } else {
+                            action.setSourceVersion(currentBuild.getSourceVersion());
+                        }
+
+                        Integer depth = source.getGitCloneDepth();
+                        if(depth == null || depth == 0) {
+                            action.setGitCloneDepth("Full");
+                        } else {
+                            action.setGitCloneDepth(String.valueOf(depth));
+                        }
+                    }
+
                     action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
                     action.setArtifactTypeOverride(getParameterized(artifactTypeOverride));
                     action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
@@ -399,6 +422,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);
         }
+        if(!SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
+            if(gitCloneDepthOverride.isEmpty()) {
+                message.append("\n\t> git clone depth: " + "Full");
+            } else {
+                message.append("\n\t> git clone depth: " + getParameterized(gitCloneDepthOverride));
+            }
+            message.append(" (git clone depth is omitted when source provider is Amazon S3)");
+        }
         if(!artifactTypeOverride.isEmpty()) {
             message.append("\n\t> artifact type: " + getParameterized(artifactTypeOverride));
         }
@@ -427,6 +458,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             message.append("\n\t> build timeout: " + getParameterized(buildTimeoutOverride));
         }
         LoggingHelper.log(listener, message.toString());
+    }
+
+    private Integer generateStartBuildGitCloneDepthOverride() {
+        String depth = getParameterized(gitCloneDepthOverride);
+        if(depth.isEmpty() || depth.equals("Full")) {
+            return 0;
+        }
+
+        return Integer.parseInt(depth);
     }
 
     private ProjectArtifacts generateStartBuildArtifactOverride() {
@@ -555,6 +595,18 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
+        }
+
+        public ListBoxModel doFillGitCloneDepthOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("1");
+            selections.add("5");
+            selections.add("25");
+            selections.add("Full");
+            selections.add("");
+
+            return selections;
         }
 
         public ListBoxModel doFillArtifactTypeOverrideItems() {

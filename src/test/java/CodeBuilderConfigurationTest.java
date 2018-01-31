@@ -36,7 +36,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     public void testConfigAllNull() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null,
+                null, null, null, null, null,
                 null, null, null, null, null, null, null);
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -51,7 +51,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     public void testConfigAllNullPipeline() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null,
+                null, null, null, null, null, null,
                 null, null, null, null, null, null);
 
         test.setIsPipelineBuild(true);
@@ -65,7 +65,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     @Test
     public void testConfigAllBlank() throws IOException, ExecutionException, InterruptedException {
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -80,7 +80,7 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
     public void testConfigAllBlankPipeline() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 
         test.setIsPipelineBuild(true);

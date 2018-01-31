@@ -50,6 +50,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String sourceControlType;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
+    @Getter private String gitCloneDepthOverride;
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
     @Getter private String artifactNameOverride;
@@ -117,6 +118,9 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
+    public void setGitCloneDepthOverride(String gitCloneDepthOverride) { this.gitCloneDepthOverride = gitCloneDepthOverride; }
+
+    @DataBoundSetter
     public void setArtifactTypeOverride(String artifactTypeOverride) {
         this.artifactTypeOverride = artifactTypeOverride;
     }
@@ -181,6 +185,18 @@ public class CodeBuildStep extends AbstractStepImpl {
         @Override
         public String getDisplayName() {
             return "Invoke an AWS CodeBuild build";
+        }
+
+        public ListBoxModel doFillGitCloneDepthOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("1");
+            selections.add("5");
+            selections.add("25");
+            selections.add("Full");
+            selections.add("");
+
+            return selections;
         }
 
         public ListBoxModel doFillArtifactTypeOverrideItems() {
@@ -272,7 +288,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), step.getAwsSecretKey(),
                     step.getRegion(), step.getProjectName(),
-                    step.sourceVersion, step.sseAlgorithm, step.sourceControlType,
+                    step.sourceVersion, step.sseAlgorithm, step.sourceControlType, step.gitCloneDepthOverride,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
                     step.envVariables, step.envParameters, step.buildSpecFile, step.buildTimeoutOverride

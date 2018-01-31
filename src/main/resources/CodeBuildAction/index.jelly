@@ -77,6 +77,15 @@
                         <td>Current Phase</td>
                         <td> ${it.currentPhase} </td>
                     </tr>
+                    <script type="text/javascript">
+                        document.write('<tr><td>Source Location</td><td> ${it.sourceLocation} </td></tr>');
+                        if("${it.sourceVersion}" != "") {
+                            document.write('<tr><td>Source Version</td><td> ${it.sourceVersion} </td></tr>');
+                        }
+                        if("${it.sourceType}" != "S3") {
+                            document.write('<tr><td>Git Clone Depth</td><td> ${it.gitCloneDepth} </td></tr>');
+                        }
+                    </script>
                 </tbody>
             </table>
 

@@ -75,7 +75,7 @@ public class CodeBuilderTest {
     protected CodeBuilder createDefaultCodeBuilder() {
         CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
-                ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5");
 
             // It will be a mock factory during testing.

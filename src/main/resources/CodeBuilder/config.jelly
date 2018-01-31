@@ -63,6 +63,9 @@
         <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/help-sourceVersionHelp.html">
           <f:textbox />
         </f:entry>
+        <f:entry title="Git Clone Depth Override (optional)" field="gitCloneDepthOverride" help="/plugin/aws-codebuild/help-gitCloneDepthHelp.html">
+          <f:select />
+        </f:entry>
     </f:radioBlock>
 
     <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
