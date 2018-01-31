@@ -21,6 +21,7 @@ public enum CodeBuildRegions {
     DUB("eu-west-1"),
     FRA("eu-central-1"),
     NRT("ap-northeast-1"),
+    ICN("ap-northeast-2"),
     SIN("ap-southeast-1"),
     SYD("ap-southeast-2"),
     LHR("eu-west-2"),
