@@ -1,7 +1,7 @@
 # AWS CodeBuild Jenkins Plugin
 The AWS CodeBuild plugin for Jenkins provides a build step for your Jenkins project.
 
-![Build Status](https://codebuild.us-west-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiSEI1aXdhaHJ6QlRmMlR0UFZNUFM5NzUrckVBWUgyRlVvanN1Sm9LMXhNZWhWOC9MTHlJYlJmSkY2SVkrTlJiVWxVTGFPTlVIVC9hbnQzUG4xUDA4UlFNPSIsIml2UGFyYW1ldGVyU3BlYyI6IktibWhwaXRicjJEQnV3UlkiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master) [![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](https://github.com/jenkinsci/aws-codebuild-plugin/blob/master/LICENSE) 
+![Build Status](https://codebuild.us-west-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiK0hKUGVGdFlLS0ZmWTY3TnpIaitFcHZydlg1THlsK1dYNGN4dEtxSHZPQzBna0EwWkwzY3JQMUdGaGF3THVkd3NSYmFKT2NmOFRaNmFTak9Ma1VZd0xzPSIsIml2UGFyYW1ldGVyU3BlYyI6IlVvZ0Fpc3NvdGxLY002UjIiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master) [![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](https://github.com/jenkinsci/aws-codebuild-plugin/blob/master/LICENSE)
 [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/aws-codebuild-plugin/master)](https://ci.jenkins.io/job/Plugins/job/aws-codebuild-plugin/job/master/)
 
 ## Setup Jenkins
@@ -39,7 +39,7 @@ Configure the build step.
 	* Save the configuration and run a build from Jenkins.
 
 Policy sample for IAM user:
-``` 
+```
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -72,7 +72,7 @@ Policy sample for IAM user:
         }
 	]
 }
-``` 
+```
 ### Using the AWS CodeBuild plugin with the Jenkins Pipeline plugin
 
 Use the snippet generator (click "Pipeline Syntax" on your pipeline project page) to generate the pipeline script that adds CodeBuild as a step in your pipeline. It should generate something like
