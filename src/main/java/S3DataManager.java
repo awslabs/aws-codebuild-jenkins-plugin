@@ -116,7 +116,7 @@ public class S3DataManager {
         FilePath dir = new FilePath(workspace, directory);
         List<FilePath> dirFiles = dir.list();
         if (dirFiles == null) {
-            throw new Exception("Invalid directory path provided: " + directory);
+            throw new Exception("Empty or invalid source directory: " + directory + ". Did you download any source as part of your build?");
         }
         byte[] buffer = new byte[1024];
         int bytesRead;

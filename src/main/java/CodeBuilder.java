@@ -242,7 +242,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         Build currentBuild;
         String buildId = sbResult.getBuild().getId();
-        LoggingHelper.log(listener, "Build Id: " + buildId);
+        LoggingHelper.log(listener, "Build id: " + buildId);
+        LoggingHelper.log(listener, "CodeBuild dashboard: " + generateDashboardURL(buildId));
 
         boolean haveInitializedAction = false;
         CodeBuildAction action = null;
@@ -386,7 +387,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 if(action.getLogURL() == null){
                     String logUrl = logMonitor.getLogsLocation().getDeepLink();
                     action.setLogURL(logUrl);
-                    LoggingHelper.log(listener, "Logs url: " + logUrl);
+                    LoggingHelper.log(listener, "CloudWatch dashboard: " + logUrl);
                 }
             }
         }
@@ -418,7 +419,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
-        StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name " + getParameterized(projectName));
+        StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name: " + getParameterized(projectName));
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);
         }
