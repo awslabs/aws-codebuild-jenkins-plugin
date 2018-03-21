@@ -28,15 +28,11 @@
     <name>AWS CodeBuild Plugin</name>
     <description>Adds a build step to integrate Jenkins with AWS CodeBuild.</description>
 
-    <properties>
-        <jenkins.version>1.642.3</jenkins.version>
-    </properties>
-
     <developers>
         <developer>
-            <id>johnhankataws</id>
-            <name>John Hanks</name>
-            <email>johnhank@amazon.com</email>
+            <id>leobaran</id>
+            <name>Leo Baran</name>
+            <email>leobaran@amazon.com</email>
         </developer>
     </developers>
 
@@ -242,6 +238,32 @@
             <artifactId>lombok</artifactId>
             <version>1.16.8</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.4</version>
+        </dependency>
+                <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.9.4</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-cbor</artifactId>
+            <version>2.9.4</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.ion</groupId>
+            <artifactId>ion-java</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>2.9.9</version>
         </dependency>
     </dependencies>
 </project>
