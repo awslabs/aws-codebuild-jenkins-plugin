@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
@@ -86,6 +87,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
 
+    private static final int MIN_SLEEP_TIME = 2500;
+    private static final int MAX_SLEEP_TIME = 60000;
+    private static final int SLEEP_JITTER = 5000;
+    private int batchGetBuildsCalls;
+
 
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
@@ -118,6 +124,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.codeBuildResult = new CodeBuildResult();
         this.isPipelineBuild = false;
+        this.batchGetBuildsCalls = 0;
     }
 
     /*
@@ -302,7 +309,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
 
                 updateDashboard(currentBuild, action, logMonitor, listener);
-                Thread.sleep(5000L);
+                Thread.sleep(getSleepTime());
 
             } catch(Exception e) {
                 if(e.getClass().equals(InterruptedException.class)) {
@@ -352,6 +359,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             failBuild(build, listener, errorMessage, "");
         }
         return;
+    }
+
+    private int getSleepTime() {
+        // 5s + 1s per BatchGetBuilds call already made + jitter for concurrent builds
+        int sleepTime = MIN_SLEEP_TIME + batchGetBuildsCalls++*1000 + ThreadLocalRandom.current().nextInt(SLEEP_JITTER);
+        return Math.min(sleepTime, MAX_SLEEP_TIME);
     }
 
     // finds the name of the artifact S3 bucket associated with this project.

@@ -130,7 +130,7 @@ public class AWSClientFactory {
                 .withUserAgentPrefix("CodeBuild-Jenkins-Plugin") //tags all calls made from Jenkins plugin.
                 .withProxyHost(proxyHost)
                 .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
-                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(5000, 20000),
+                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(10000, 30000),
                         10, true));
 
         if(proxyPort != null) {
