@@ -16,17 +16,20 @@ package enums;
 public enum CodeBuildRegions {
 
     IAD("us-east-1"),
-    PDX("us-west-2"),
     CMH("us-east-2"),
-    DUB("eu-west-1"),
-    FRA("eu-central-1"),
+    SFO("us-west-1"),
+    PDX("us-west-2"),
+    YUL("ca-central-1"),
     NRT("ap-northeast-1"),
     ICN("ap-northeast-2"),
     SIN("ap-southeast-1"),
     SYD("ap-southeast-2"),
+    BOM("ap-south-1"),
+    DUB("eu-west-1"),
     LHR("eu-west-2"),
-    YUL("ca-central-1"),
-    SFO("us-west-1");
+    CDG("eu-west-3"),
+    FRA("eu-central-1"),
+    GRU("sa-east-1");
 
     private String value;
 
