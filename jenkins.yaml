@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Administrator Configuration"
+        Parameters:
+          - PhoneNumber
+      -
+        Label:
+          default: "Instance Configuration"
+        Parameters:
+          - InstanceName
+          - InstanceTypeParameter
+          - SSHKey
+          - Subnet
+          - VPC
+          - Role
+      -
+        Label:
+          default: "Storage Configuration"
+        Parameters:
+          - VolumeType
+          - VolumeSize
+          - VolumeIOPS
+          - KeyName
+Parameters:
+  PhoneNumber:
+    Type: String
+    Default: +1555-555-5555
+    Description: Enter your phone number to be sent your Jenkins Login Info. Must be formatted like +1xxx-xxx-xxxx
+  InstanceName:
+    Type: String
+    Default: Jenkins
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.large
+    AllowedValues:
+      - t2.large
+      - m4.large
+    Description: Enter t2.large, m4.large. t2.large is default.
+  SSHKey:
+    Description: Amazon EC2 Key Pair
+    Type: "AWS::EC2::KeyPair::KeyName"
+  Subnet:
+    Description: Select a Subnet
+    Type: "AWS::EC2::Subnet::Id"
+  VPC:
+    Description: Select a VPC
+    Type: "AWS::EC2::VPC::Id"
+  VolumeType:
+    Description: EBS volume type
+    Type: String
+    Default: gp2
+    AllowedValues:
+      - gp2
+      - st1
+      - io1
+  VolumeSize:
+    Description: Size of EBS volume
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+  VolumeIOPS:
+    Description: IOPS for io1 Volumes
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 20000
+  Role:
+    Description: Enter a role that has permissions to CodeCommit, CodeBuild, S3, and CloudWatch
+    Type: String
+    Default: CodeBuildDemo
+
+
+Mappings:
+  AmazonLinuxAMI2017030:
+    us-east-1:
+      ami: ami-22ce4934
+    us-east-2:
+      ami: ami-7bfcd81e
+    us-west-1:
+      ami: ami-9e247efe
+    us-west-2:
+      ami: ami-8ca83fec
+
+Conditions:
+  CreateNewVolume: !Not [!Equals [!Ref VolumeType, io1]]
+
+Resources:
+  Jenkins:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref Role
+      InstanceType:
+        Ref: InstanceTypeParameter
+      ImageId: !FindInMap [AmazonLinuxAMI2017030, !Ref "AWS::Region", ami]
+      KeyName: !Ref SSHKey
+      InstanceInitiatedShutdownBehavior: stop
+      Tags:
+        -
+          Key: Name
+          Value: !Ref InstanceName
+      BlockDeviceMappings:
+        -
+          DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            DeleteOnTermination: true
+            VolumeType: !Ref VolumeType
+            Iops: !If [CreateNewVolume, !Ref "AWS::NoValue", !Ref VolumeIOPS]
+      NetworkInterfaces:
+        -
+          AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref SSHSecurityGroup
+          SubnetId: !Ref Subnet
+      UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            cd ~ec2-user
+            yum -y install java-1.8.0 java-1.8.0-openjdk-devel git
+            alternatives --remove java /usr/lib/jvm/jre-1.7.0-openjdk.x86_64/bin/java
+            wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+            rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+            yum install jenkins -y
+            sed -i '/JENKINS_ARGS/ s/""/"jenkins.install.runSetupWizard=false"/' /etc/sysconfig/jenkins
+            service jenkins start
+
+            sleep 30
+            cd ~ec2-user
+            wget http://localhost:8080/jnlpJars/jenkins-cli.jar
+            java -jar jenkins-cli.jar -s http://localhost:8080 install-plugin \
+            http://updates.jenkins-ci.org/latest/aws-codebuild.hpi script-security workflow-step-api \
+            cloudbees-folder antisamy-markup-formatter build-timeout credentials-binding timestamper \
+            ws-cleanup ant gradle workflow-aggregator github-organization-folder \
+            pipeline-stage-view git subversion ssh-slaves matrix-auth pam-auth ldap \
+            email-ext mailer \
+            --username admin --password `cat /var/lib/jenkins/secrets/initialAdminPassword` -restart
+
+            sed -i 's/JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true"/JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"/' /etc/sysconfig/jenkins
+            /etc/init.d/jenkins restart
+
+            cd ~jenkins
+            sudo -u jenkins git config --global credential.helper '!aws codecommit credential-helper $@'
+            sudo -u jenkins git config --global credential.useHttpPath true
+
+            export AWS_DEFAULT_REGION=us-west-2
+            aws sns publish --phone-number ${PhoneNumber} --message "Your Jenkins Username is \"admin\" and Password is: $(cat /var/lib/jenkins/secrets/initialAdminPassword)"
+
+
+
+
+  SSHSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: CodeBuildDemo
+      GroupName: !Ref AWS::StackName
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '8080'
+          ToPort: '8080'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
