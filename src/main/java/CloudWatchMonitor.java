@@ -86,7 +86,7 @@ public class CloudWatchMonitor {
                 LoggingHelper.log(listener, entry.replace("\n", ""));
                 latestLogs.add(entry);
             }
-            this.lastPollTime = logs.get(logs.size()-1).getIngestionTime();
+            this.lastPollTime = logs.get(logs.size()-1).getTimestamp() + 1;
         }
     }
 
