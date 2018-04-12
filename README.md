@@ -81,6 +81,12 @@ Use the snippet generator (click "Pipeline Syntax" on your pipeline project page
 awsCodeBuild projectName: 'project', credentialsType: 'keys', region: 'us-west-2', sourceControlType: 'jenkins'
 ```
 
+Additionally, this returns a result object which exposes the following methods which can be useful to later steps:
+
+* `getBuildId()`: returns the build ID of the build (similar to `codebuild-project-name:12346789-ffff-0000-aaaa-bbbbccccdddd`)
+* `getArn()`: returns the ARN of the build (similar to `arn:aws:codebuild:AWS_REGION:AWS_ACCOUNT_ID:build/CODEBUILD_BUILD_ID`, where `CODEBUILD_BUILD_ID` is the same information returned in getBuildId)
+* `getArtifactsLocation()`: returns the S3 ARN of the artifacts location (similar to `arn:aws:s3:::s3-bucket-name/path/to/my/artifacts`)
+
 ### AWS Credentials in Jenkins
 
 When using `credentialsType: 'keys'` or creating new `CodeBuild Credentials` in Jenkins, the plugin will attempt to use the [default credentials provider chain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html) if AWS access and secret keys are not defined. If you are running Jenkins on an EC2 instance, leave the `AWS Access Key` and `AWS Secret Key` fields blank to use your EC2 instance profile. 
