@@ -17,9 +17,12 @@
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.*;
+import hudson.model.AbstractProject;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
+import hudson.model.Run;
+import jenkins.model.Jenkins;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,13 +31,16 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.List;
+
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({CredentialsMatchers.class, SystemCredentialsProvider.class, DefaultAWSCredentialsProviderChain.class})
+@PrepareForTest({CredentialsMatchers.class, CredentialsProvider.class, SystemCredentialsProvider.class, DefaultAWSCredentialsProviderChain.class, Jenkins.class})
 public class AWSClientFactoryTest {
 
     private static final String REGION = "us-east-1";
@@ -46,6 +52,7 @@ public class AWSClientFactoryTest {
     private final AWSCredentials mockAWSCreds = mock(AWSCredentials.class);
     private final DefaultAWSCredentialsProviderChain cpChain = mock(DefaultAWSCredentialsProviderChain.class);
     private final SystemCredentialsProvider mockSysCreds = mock(SystemCredentialsProvider.class);
+    private final Run<?, ?> build = mock(Run.class);
 
     @Before
     public void setUp() {
@@ -68,7 +75,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullInput() {
         try {
-            new AWSClientFactory(null, null, null, null, null, null, null);
+            new AWSClientFactory(null, null, null, null, null, null, null, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -77,7 +84,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testBlankInput() {
         try {
-            new AWSClientFactory("", "", "", "", "", "", "");
+            new AWSClientFactory("", "", "", "", "", "", "", build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -85,22 +92,48 @@ public class AWSClientFactoryTest {
 
     @Test(expected=NumberFormatException.class)
     public void testInvalidProxyPort() {
-        new AWSClientFactory("keys", "", "", "port", "", "", REGION);
+        new AWSClientFactory("keys", "", "", "port", "", "", REGION, build);
     }
 
     @Test
     public void testInvalidCredsOption() {
         try {
-            new AWSClientFactory("bad", "", "", "", "", "", REGION);
+            new AWSClientFactory("bad", "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredTypeError));
         }
     }
 
     @Test
-    public void testInvalidCredsId() {
+    public void testSpecifyCreds() {
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", "s", REGION, build);
+        assert(awsClientFactory.getProxyHost().equals(proxyHost));
+        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+
+    }
+
+    @Test
+    public void testDefaultCreds() {
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", "", REGION, build);
+        assert(awsClientFactory.getProxyHost().equals(proxyHost));
+        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+    }
+
+
+
+    @Test
+    public void testNullCredsId() {
         try {
-            new AWSClientFactory("jenkins", "", "", "", "", "", REGION);
+            new AWSClientFactory("jenkins", null, "", "", "", "", REGION, build);
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+        }
+    }
+
+    @Test
+    public void testEmptyCredsId() {
+        try {
+            new AWSClientFactory("jenkins", "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
         }
@@ -109,7 +142,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testJenkinsCreds() {
         String credentialsId = "id";
-        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
@@ -118,18 +151,69 @@ public class AWSClientFactoryTest {
     }
 
     @Test
-    public void testSpecifyCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", "s", REGION);
+    public void testJenkinsFolderCreds() {
+        String credentialsId = "folder-creds";
+        String folder = "folder";
+
+        Jenkins mockInstance = mock(Jenkins.class);
+        Item mockFolder = mock(Item.class);
+        PowerMockito.mockStatic(Jenkins.class);
+        when(Jenkins.getInstance()).thenReturn(mockInstance);
+        when(mockInstance.getItemByFullName(folder)).thenReturn(mockFolder);
+
+        PowerMockito.mockStatic(CredentialsProvider.class);
+        List<Credentials> mockFolderCredsList = mock(List.class);
+        when(CredentialsProvider.lookupCredentials(Credentials.class, mockFolder)).thenReturn(mockFolderCredsList);
+
+        List<Credentials> mockCredsList = mock(List.class);
+        when(mockSysCreds.getCredentials()).thenReturn(mockCredsList);
+
+        when(CredentialsMatchers.firstOrNull(eq(mockCredsList), any(CredentialsMatcher.class))).thenReturn(null);
+        when(CredentialsMatchers.firstOrNull(eq(mockFolderCredsList), any(CredentialsMatcher.class))).thenReturn(mockCBCreds);
+
+        AbstractProject mockProject = mock(AbstractProject.class);
+        ItemGroup mockFolderItem = mock(ItemGroup.class);
+
+        when(build.getParent()).thenReturn(mockProject);
+        when(mockProject.getParent()).thenReturn(mockFolderItem);
+        when(mockFolderItem.getFullName()).thenReturn(folder);
+
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
+
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
-
+        assert(awsClientFactory.getCredentialsDescriptor().contains(codeBuildDescriptor));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(credentialsId));
     }
 
-    @Test
-    public void testDefaultCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", "", REGION);
-        assert(awsClientFactory.getProxyHost().equals(proxyHost));
-        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+    @Test(expected=InvalidInputException.class)
+    public void testNonExistentCreds() {
+        String credentialsId = "folder-creds";
+        String folder = "folder";
+
+        when(CredentialsMatchers.firstOrNull(any(Iterable.class), any(CredentialsMatcher.class))).thenReturn(null);
+
+        Jenkins mockInstance = mock(Jenkins.class);
+        Item mockFolder = mock(Item.class);
+        PowerMockito.mockStatic(Jenkins.class);
+        when(Jenkins.getInstance()).thenReturn(mockInstance);
+        when(mockInstance.getItemByFullName(credentialsId)).thenReturn(mockFolder);
+
+        PowerMockito.mockStatic(CredentialsProvider.class);
+
+        AbstractProject mockProject = mock(AbstractProject.class);
+        ItemGroup mockFolderItem = mock(ItemGroup.class);
+
+        when(build.getParent()).thenReturn(mockProject);
+        when(mockProject.getParent()).thenReturn(mockFolderItem);
+        when(mockFolder.getFullName()).thenReturn(folder);
+
+        try {
+            new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
+        } catch (InvalidInputException e) {
+            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+            throw e;
+        }
     }
 
 }

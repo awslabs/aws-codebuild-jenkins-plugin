@@ -17,8 +17,12 @@
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
+import com.cloudbees.hudson.plugins.folder.Folder;
+import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
 import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.domains.Domain;
 import enums.CodeBuildRegions;
 import enums.EncryptionAlgorithm;
 import enums.SourceControlType;
@@ -27,6 +31,7 @@ import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import lombok.Getter;
 import lombok.Setter;
@@ -144,11 +149,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     getParameterized(this.proxyPort),
                     getParameterized(this.awsAccessKey),
                     getParameterized(this.awsSecretKey),
-                    getParameterized(this.region));
+                    getParameterized(this.region),
+                    build);
         } catch (Exception e) {
             failBuild(build, listener, authorizationError, e.getMessage());
             return;
         }
+
         String projectConfigError = Validation.checkCodeBuilderConfig(this);
         if(!projectConfigError.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, projectConfigError);
@@ -666,11 +673,32 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
+            Set<String> displayCredentials = new HashSet();
+
             for (Credentials c: s.getCredentials()) {
                 if (c instanceof CodeBuildCredentials) {
-                    selections.add(((CodeBuildCredentials) c).getId());
+                    displayCredentials.add(((CodeBuildCredentials) c).getId());
                 }
             }
+
+            Jenkins instance = Jenkins.getInstance();
+            if(instance != null) {
+                List<Folder> folders = instance.getAllItems(Folder.class);
+                for(Folder folder: folders) {
+                    List<Credentials> creds = CredentialsProvider.lookupCredentials(Credentials.class, (Item) folder);
+                    for(Credentials cred: creds) {
+                        if (cred instanceof CodeBuildCredentials) {
+                            displayCredentials.add(((CodeBuildCredentials) cred).getId());
+                        }
+                    }
+                }
+            }
+
+
+            for(String credString: displayCredentials) {
+                selections.add(credString);
+            }
+
             return selections;
         }
 

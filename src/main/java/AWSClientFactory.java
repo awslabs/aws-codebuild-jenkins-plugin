@@ -42,9 +42,18 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+
+import com.cloudbees.plugins.credentials.Credentials.*;
+import com.cloudbees.hudson.plugins.folder.*;
+
+
 import enums.CredentialsType;
+import hudson.model.*;
+import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
 
@@ -61,7 +70,7 @@ public class AWSClientFactory {
     private AWSCredentialsProvider awsCredentialsProvider;
 
     public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
-                       String region) {
+                       String region, Run<?, ?> build) {
 
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
         this.awsSecretKey = Validation.sanitize(awsSecretKey);
@@ -73,18 +82,29 @@ public class AWSClientFactory {
         if(credentialsType.equals(CredentialsType.Jenkins.toString())) {
             credentialsId = Validation.sanitize(credentialsId);
             Validation.checkAWSClientFactoryJenkinsCredentialsConfig(credentialsId);
+            CodeBuildCredentials codeBuildCredentials;
 
-            CodeBuildCredentials codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(SystemCredentialsProvider.getInstance().getCredentials(),
+            codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(SystemCredentialsProvider.getInstance().getCredentials(),
                     CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+
+            if(codeBuildCredentials == null) {
+                Item folder;
+                Jenkins instance = Jenkins.getInstance();
+                if(instance != null) {
+                    folder = instance.getItemByFullName(build.getParent().getParent().getFullName());
+                    codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(Credentials.class, folder),
+                            CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+                }
+            }
 
             if(codeBuildCredentials != null) {
                 this.awsCredentialsProvider = new AWSStaticCredentialsProvider(codeBuildCredentials.getCredentials());
+                this.proxyHost = codeBuildCredentials.getProxyHost();
+                this.proxyPort = Validation.parseInt(codeBuildCredentials.getProxyPort());
+                this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
             } else {
                 throw new InvalidInputException(Validation.invalidCredentialsIdError);
             }
-            this.proxyHost = codeBuildCredentials.getProxyHost();
-            this.proxyPort = Validation.parseInt(codeBuildCredentials.getProxyPort());
-            this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
         } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
             awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), Validation.sanitize(awsSecretKey));
             this.proxyHost = Validation.sanitize(proxyHost);

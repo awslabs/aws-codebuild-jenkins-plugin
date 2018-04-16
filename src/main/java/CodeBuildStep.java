@@ -17,7 +17,9 @@
 import com.amazonaws.services.codebuild.model.ArtifactNamespace;
 import com.amazonaws.services.codebuild.model.ArtifactPackaging;
 import com.amazonaws.services.codebuild.model.ArtifactsType;
+import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.google.inject.Inject;
 import enums.CodeBuildRegions;
@@ -26,9 +28,11 @@ import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -36,6 +40,10 @@ import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepEx
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class CodeBuildStep extends AbstractStepImpl {
 
@@ -242,11 +250,31 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
+            Set<String> displayCredentials = new HashSet();
+
             for (Credentials c: s.getCredentials()) {
                 if (c instanceof CodeBuildCredentials) {
-                    selections.add(((CodeBuildCredentials) c).getId());
+                    displayCredentials.add(((CodeBuildCredentials) c).getId());
                 }
             }
+
+            Jenkins instance = Jenkins.getInstance();
+            if(instance != null) {
+                List<Folder> folders = instance.getAllItems(Folder.class);
+                for (Folder folder : folders) {
+                    List<Credentials> creds = CredentialsProvider.lookupCredentials(Credentials.class, (Item) folder);
+                    for (Credentials cred : creds) {
+                        if (cred instanceof CodeBuildCredentials) {
+                            displayCredentials.add(((CodeBuildCredentials) cred).getId());
+                        }
+                    }
+                }
+            }
+
+            for(String credString: displayCredentials) {
+                selections.add(credString);
+            }
+
             return selections;
         }
 
