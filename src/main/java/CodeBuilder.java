@@ -159,6 +159,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         String projectConfigError = Validation.checkCodeBuilderConfig(this);
         if(!projectConfigError.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, projectConfigError);
+            return;
         }
 
         String overridesErrorMessage = Validation.checkCodeBuilderStartBuildOverridesConfig(this);

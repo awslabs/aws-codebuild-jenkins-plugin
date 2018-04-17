@@ -16,6 +16,7 @@
 
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
+import enums.SourceControlType;
 import hudson.model.Result;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,8 +27,7 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class CodeBuilderConfigurationTest extends CodeBuilderTest {
 
@@ -90,6 +90,42 @@ public class CodeBuilderConfigurationTest extends CodeBuilderTest {
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.authorizationError));
+    }
+
+    @Test
+    public void testNoProjectName() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+                "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
+                "", "", "", "", "", "",
+                "","", "", "", "");
+
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        verify(listener, times(1)).getLogger();
+        assertTrue(log.toString().contains(CodeBuilder.configuredImproperlyError));
+        assertTrue(log.toString().contains(Validation.projectRequiredError));
+    }
+
+    @Test
+    public void testNoSourceType() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+                "us-east-1", "project", "", "", "",
+                "", "", "", "", "", "",
+                "","", "", "", "");
+
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        verify(listener, times(1)).getLogger();
+        assertTrue(log.toString().contains(CodeBuilder.configuredImproperlyError));
+        assertTrue(log.toString().contains(Validation.sourceControlTypeRequiredError));
     }
 
     @Test
