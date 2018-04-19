@@ -125,7 +125,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
         this.envVariables = Validation.sanitize(envVariables);
         this.envParameters = Validation.sanitize(envParameters);
-        this.buildSpecFile = Validation.sanitize(buildSpecFile);
+        this.buildSpecFile = Validation.sanitizeYAML(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.codeBuildResult = new CodeBuildResult();
         this.isPipelineBuild = false;
