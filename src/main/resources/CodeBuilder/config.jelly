@@ -107,7 +107,7 @@
     </f:entry>
 
     <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
-      <f:textbox />
+      <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
     </f:entry>
 
     <f:entry title="Environment Variables Override" field="envVariables" help="/plugin/aws-codebuild/help-envVariablesHelp.html">
