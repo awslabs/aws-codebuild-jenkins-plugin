@@ -65,6 +65,15 @@ public class Validation {
         }
     }
 
+
+    public static String sanitizeYAML(final String s) {
+        if(s == null) {
+            return "";
+        } else {
+            return s.replace("\t", " ");
+        }
+    }
+
     //// Configuration-checking functions ////
 
     // CodeBuilder: if any of the parameters in CodeBuilder are bad, this will cause the build to end in failure in CodeBuilder.perform()
