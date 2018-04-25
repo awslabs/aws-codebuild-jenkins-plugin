@@ -98,7 +98,7 @@ public class AWSClientFactory {
             }
 
             if(codeBuildCredentials != null) {
-                this.awsCredentialsProvider = new AWSStaticCredentialsProvider(codeBuildCredentials.getCredentials());
+                this.awsCredentialsProvider = codeBuildCredentials;
                 this.proxyHost = codeBuildCredentials.getProxyHost();
                 this.proxyPort = Validation.parseInt(codeBuildCredentials.getProxyPort());
                 this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
