@@ -42,22 +42,27 @@ import com.amazonaws.services.codebuild.model.ListProjectsRequest;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.securitytoken.model.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsDescriptor;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+
+import java.util.Date;
+import java.util.UUID;
+
 import hudson.Extension;
 import hudson.util.FormValidation;
 import lombok.Getter;
 import lombok.Setter;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
-import java.util.UUID;
 
 public class CodeBuildCredentials extends BaseStandardCredentials implements AWSCredentialsProvider {
 
     public static final long serialVersionUID = 555L;
     private static final int ERROR_MESSAGE_MAX_LENGTH = 178;
+    private static final int MIN_VALIDITY_ALLOWED = 60 * 3 * 1000; //3 minutes in miliseconds
 
     @Getter @Setter private final String accessKey;
     @Getter @Setter private final String secretKey;
@@ -65,6 +70,8 @@ public class CodeBuildCredentials extends BaseStandardCredentials implements AWS
     @Getter @Setter private final String proxyPort;
     @Getter @Setter private final String iamRoleArn;
     @Getter @Setter private final String externalId;
+
+    transient private Credentials roleCredentials = null;
 
     @DataBoundConstructor
     public CodeBuildCredentials(CredentialsScope scope, String id, String description, String accessKey, String secretKey,
@@ -93,29 +100,50 @@ public class CodeBuildCredentials extends BaseStandardCredentials implements AWS
     @Override
     public AWSCredentials getCredentials() {
         AWSCredentialsProvider credentialsProvider = AWSClientFactory.getBasicCredentialsOrDefaultChain(accessKey, secretKey);
-        AWSCredentials initialCredentials = credentialsProvider.getCredentials();
+        AWSCredentials credentials = credentialsProvider.getCredentials();
 
-        if (iamRoleArn.isEmpty()) {
-            return initialCredentials;
-        } else {
+        if (!iamRoleArn.isEmpty()) {
+            if (haveCredentialsExpired()) {
+                refresh();
+            }
+            credentials = new BasicSessionCredentials(
+                    roleCredentials.getAccessKeyId(),
+                    roleCredentials.getSecretAccessKey(),
+                    roleCredentials.getSessionToken());
+        }
+
+        return credentials;
+    }
+
+    @Override
+    public void refresh() {
+        if (!iamRoleArn.isEmpty()) {
+            if (!haveCredentialsExpired()) {
+                return;
+            }
+
+            AWSCredentialsProvider credentialsProvider = AWSClientFactory.getBasicCredentialsOrDefaultChain(accessKey, secretKey);
+            AWSCredentials credentials = credentialsProvider.getCredentials();
+
             AssumeRoleRequest assumeRequest = new AssumeRoleRequest()
                     .withRoleArn(iamRoleArn)
                     .withExternalId(externalId)
                     .withDurationSeconds(3600)
                     .withRoleSessionName("CodeBuild-Jenkins-Plugin");
 
-            AssumeRoleResult assumeResult = new AWSSecurityTokenServiceClient(initialCredentials).assumeRole(assumeRequest);
+            AssumeRoleResult assumeResult = new AWSSecurityTokenServiceClient(credentials).assumeRole(assumeRequest);
 
-            return new BasicSessionCredentials(
-                    assumeResult.getCredentials().getAccessKeyId(),
-                    assumeResult.getCredentials().getSecretAccessKey(),
-                    assumeResult.getCredentials().getSessionToken());
+            roleCredentials = assumeResult.getCredentials();
         }
     }
 
-    @Override
-    public void refresh() {
+    private boolean haveCredentialsExpired() {
+        if (roleCredentials == null
+                || roleCredentials.getExpiration().getTime() < (new Date().getTime() + MIN_VALIDITY_ALLOWED)) {
+            return true;
+        }
 
+        return false;
     }
 
     @Extension
