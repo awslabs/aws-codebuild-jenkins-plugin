@@ -54,6 +54,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String proxyPort;
     @Getter private String awsAccessKey;
     @Getter private String awsSecretKey;
+    @Getter private String awsSessionToken;
     @Getter private String region;
     @Getter private String projectName;
     @Getter private String sourceControlType;
@@ -99,7 +100,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
 
     @DataBoundConstructor
-    public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
+    public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String awsSessionToken,
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String gitCloneDepthOverride,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
@@ -111,6 +112,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.proxyPort = Validation.sanitize(proxyPort);
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
         this.awsSecretKey = Validation.sanitize(awsSecretKey);
+        this.awsSessionToken = Validation.sanitize(awsSessionToken);
         this.region = Validation.sanitize(region);
         this.projectName = Validation.sanitize(projectName);
         this.sourceControlType = Validation.sanitize(sourceControlType);
@@ -149,6 +151,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     getParameterized(this.proxyPort),
                     getParameterized(this.awsAccessKey),
                     getParameterized(this.awsSecretKey),
+                    getParameterized(this.awsSessionToken),
                     getParameterized(this.region),
                     build);
         } catch (Exception e) {

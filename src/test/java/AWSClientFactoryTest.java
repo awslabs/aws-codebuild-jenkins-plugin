@@ -15,6 +15,8 @@
  */
 
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.cloudbees.plugins.credentials.*;
@@ -49,7 +51,7 @@ public class AWSClientFactoryTest {
     private static final String proxyPort = "2";
 
     private final CodeBuildCredentials mockCBCreds = mock(CodeBuildCredentials.class);
-    private final AWSCredentials mockAWSCreds = mock(AWSCredentials.class);
+    private final AWSSessionCredentials mockAWSCreds = mock(BasicSessionCredentials.class);
     private final DefaultAWSCredentialsProviderChain cpChain = mock(DefaultAWSCredentialsProviderChain.class);
     private final SystemCredentialsProvider mockSysCreds = mock(SystemCredentialsProvider.class);
     private final Run<?, ?> build = mock(Run.class);
@@ -67,6 +69,7 @@ public class AWSClientFactoryTest {
 
         when(mockAWSCreds.getAWSAccessKeyId()).thenReturn("a");
         when(mockAWSCreds.getAWSSecretKey()).thenReturn("s");
+        when(mockAWSCreds.getSessionToken()).thenReturn("t");
         when(SystemCredentialsProvider.getInstance()).thenReturn(mockSysCreds);
 
         when(DefaultAWSCredentialsProviderChain.getInstance()).thenReturn(cpChain);
@@ -75,7 +78,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullInput() {
         try {
-            new AWSClientFactory(null, null, null, null, null, null, null, build);
+            new AWSClientFactory(null, null, null, null, null, null, null, null, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -84,7 +87,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testBlankInput() {
         try {
-            new AWSClientFactory("", "", "", "", "", "", "", build);
+            new AWSClientFactory("", "", "", "", "", "", "", "", build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -92,13 +95,13 @@ public class AWSClientFactoryTest {
 
     @Test(expected=NumberFormatException.class)
     public void testInvalidProxyPort() {
-        new AWSClientFactory("keys", "", "", "port", "", "", REGION, build);
+        new AWSClientFactory("keys", "", "", "port", "", "", "", REGION, build);
     }
 
     @Test
     public void testInvalidCredsOption() {
         try {
-            new AWSClientFactory("bad", "", "", "", "", "", REGION, build);
+            new AWSClientFactory("bad", "", "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredTypeError));
         }
@@ -106,7 +109,7 @@ public class AWSClientFactoryTest {
 
     @Test
     public void testSpecifyCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", "s", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", "s", "t", REGION, build);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
 
@@ -114,7 +117,7 @@ public class AWSClientFactoryTest {
 
     @Test
     public void testDefaultCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", "", "", REGION, build);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
     }
@@ -124,7 +127,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullCredsId() {
         try {
-            new AWSClientFactory("jenkins", null, "", "", "", "", REGION, build);
+            new AWSClientFactory("jenkins", null, "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
         }
@@ -133,7 +136,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testEmptyCredsId() {
         try {
-            new AWSClientFactory("jenkins", "", "", "", "", "", REGION, build);
+            new AWSClientFactory("jenkins", "", "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
         }
@@ -142,7 +145,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testJenkinsCreds() {
         String credentialsId = "id";
-        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", "", REGION, build);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
@@ -178,7 +181,7 @@ public class AWSClientFactoryTest {
         when(mockProject.getParent()).thenReturn(mockFolderItem);
         when(mockFolderItem.getFullName()).thenReturn(folder);
 
-        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", "", "", REGION, build);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
@@ -209,7 +212,7 @@ public class AWSClientFactoryTest {
         when(mockFolder.getFullName()).thenReturn(folder);
 
         try {
-            new AWSClientFactory("jenkins", credentialsId, "", "", "", "", REGION, build);
+            new AWSClientFactory("jenkins", credentialsId, "", "", "", "", "", REGION, build);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
             throw e;

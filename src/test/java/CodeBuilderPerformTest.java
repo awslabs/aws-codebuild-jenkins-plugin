@@ -49,7 +49,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testConfigAllNull() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
-                null, null, null, null, null,
+                null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null, null, null, null, null);
 
@@ -65,7 +65,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testConfigAllNullPipeline() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
-                null, null, null, null, null,
+                null, null,null, null, null, null,
                 null, null, null, null, null, null,
                 null, null, null, null, null, null);
 
@@ -82,7 +82,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testConfigAllBlank() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -97,7 +97,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testConfigAllBlankPipeline() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "", "", "", "", "", "",
+                "", "", "","", "", "", "", "", "",
                 "","","","","",     "", "", "", "");
 
         test.setIsPipelineBuild(true);
@@ -112,7 +112,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoProjectName() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
                 "", "", "", "", "", "",
                 "","", "", "", "");
@@ -130,7 +130,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoProjectNamePipeline() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
                 "", "", "", "", "", "",
                 "","", "", "", "");
@@ -150,7 +150,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoSourceType() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "",
                 "","", "", "", "");
@@ -169,7 +169,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoSourceTypePipeline() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "",
+        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "",
                 "","", "", "", "");
@@ -288,7 +288,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         envVars.put("foo2", "bar2");
         envVars.put("foo3", "bar3");
 
-        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s",
+        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
                 "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(), "1",
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "", "buildspec.yml", "5");

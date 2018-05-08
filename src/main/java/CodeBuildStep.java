@@ -53,6 +53,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String proxyPort;
     @Getter private String awsAccessKey;
     @Getter private String awsSecretKey;
+    @Getter private String awsSessionToken;
     @Getter private String region;
     @Getter private String projectName;
     @Getter private String sourceControlType;
@@ -98,6 +99,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setAwsSecretKey(String awsSecretKey) {
         this.awsSecretKey = awsSecretKey;
+    }
+
+    @DataBoundSetter
+    public void setAwsSessionToken(String awsSessionToken) {
+        this.awsSessionToken = awsSessionToken;
     }
 
     @DataBoundSetter
@@ -314,7 +320,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             CodeBuilder builder = new CodeBuilder(
                     step.getCredentialsType(), step.getCredentialsId(),
                     step.getProxyHost(), step.getProxyPort(),
-                    step.getAwsAccessKey(), step.getAwsSecretKey(),
+                    step.getAwsAccessKey(), step.getAwsSecretKey(), step.getAwsSessionToken(),
                     step.getRegion(), step.getProjectName(),
                     step.sourceVersion, step.sseAlgorithm, step.sourceControlType, step.gitCloneDepthOverride,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,

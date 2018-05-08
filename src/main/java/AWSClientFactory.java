@@ -64,16 +64,18 @@ public class AWSClientFactory {
     @Getter private final Integer proxyPort;
     @Getter private final String awsAccessKey;
     @Getter private final String awsSecretKey;
+    @Getter private final String awsSessionToken;
     @Getter private final String region;
 
     private String credentialsDescriptor;
     private AWSCredentialsProvider awsCredentialsProvider;
 
-    public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey,
+    public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String awsSessionToken,
                        String region, Run<?, ?> build) {
 
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
         this.awsSecretKey = Validation.sanitize(awsSecretKey);
+        this.awsSessionToken = Validation.sanitize(awsSessionToken);
         this.region = Validation.sanitize(region);
 
         Validation.checkAWSClientFactoryRegionConfig(this.region);
@@ -106,7 +108,7 @@ public class AWSClientFactory {
                 throw new InvalidInputException(Validation.invalidCredentialsIdError);
             }
         } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
-            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), Validation.sanitize(awsSecretKey));
+            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), Validation.sanitize(awsSecretKey), Validation.sanitize(awsSessionToken));
             this.proxyHost = Validation.sanitize(proxyHost);
             this.proxyPort = Validation.parseInt(proxyPort);
         } else {
@@ -131,8 +133,15 @@ public class AWSClientFactory {
     }
 
     public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
+        return getBasicCredentialsOrDefaultChain(accessKey, secretKey, "");
+    }
+
+    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {
         AWSCredentialsProvider result;
-        if(StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(awsSessionToken)) {
+            result = new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKey, secretKey, awsSessionToken));
+        }
+        else if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
             result = new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
         } else {
             result = DefaultAWSCredentialsProviderChain.getInstance();
