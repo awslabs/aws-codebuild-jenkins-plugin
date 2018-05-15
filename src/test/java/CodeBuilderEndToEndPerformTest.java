@@ -22,6 +22,8 @@ import com.amazonaws.services.codebuild.model.StatusType;
 import com.amazonaws.services.codebuild.model.BuildPhaseType;
 
 import hudson.model.Result;
+import hudson.util.Secret;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.junit.runner.RunWith;
@@ -38,12 +40,16 @@ import static org.mockito.Mockito.when;
 
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(CodeBuilder.class)
+@PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
+
+    @Before
+    public void SetUp() throws Exception {
+        setUpBuildEnvironment();
+    }
 
     @Test
     public void testBuildSuccess() throws Exception {
-        setUpBuildEnvironment();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         CodeBuilder test = createDefaultCodeBuilder();
 
@@ -56,7 +62,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenSuccess() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
         Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(

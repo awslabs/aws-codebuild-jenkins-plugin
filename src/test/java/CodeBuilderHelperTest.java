@@ -17,31 +17,41 @@
 import com.amazonaws.services.codebuild.model.EnvironmentVariable;
 import com.amazonaws.services.codebuild.model.EnvironmentVariableType;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
+import hudson.util.Secret;
 import org.junit.Test;
-import org.powermock.core.classloader.annotations.PrepareEverythingForTest;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+@PowerMockIgnore("javax.management.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     EnvironmentVariableType evType = EnvironmentVariableType.PLAINTEXT;
 
     @Test
     public void TestGenerateS3URLNull() throws Exception {
+        setUpBuildEnvironment();
         CodeBuilder cb = createDefaultCodeBuilder();
         assert(cb.generateS3ArtifactURL(null, null, null).isEmpty());
     }
 
     @Test
     public void TestGenerateS3URLEmpty() throws Exception {
+        setUpBuildEnvironment();
         CodeBuilder cb = createDefaultCodeBuilder();
         assert(cb.generateS3ArtifactURL("", "", "").isEmpty());
     }
 
     @Test
     public void TestGenerateS3URL() throws Exception {
+        setUpBuildEnvironment();
         String baseURL = "https://url.com/";
         String location = "bucket1";
         String type = "S3";

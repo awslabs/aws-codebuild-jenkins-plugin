@@ -16,21 +16,21 @@
 
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.codebuild.model.Build;
-import com.amazonaws.services.codebuild.model.Project;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
-import enums.ArtifactType;
+import enums.SourceControlType;
 import hudson.EnvVars;
 import hudson.FilePath;
-import enums.SourceControlType;
 import hudson.Launcher;
-import hudson.model.*;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.util.Secret;
 import org.junit.Before;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -44,7 +44,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 
 public class CodeBuilderTest {
 
@@ -65,15 +64,13 @@ public class CodeBuilderTest {
     BatchGetProjectsResult mockBGPResult = mock(BatchGetProjectsResult.class);
     StartBuildResult mockStartBuildResult = mock(StartBuildResult.class);
     BatchGetBuildsResult mockGetBuildsResult = mock(BatchGetBuildsResult.class);
-
     Build mockBuild = mock(Build.class);
 
     Run build = mock(Run.class);
     FilePath ws = new FilePath(new File("/path/to"));
     Launcher launcher = mock(Launcher.class);
     TaskListener listener = mock(TaskListener.class);
-
-
+    Secret awsSecretKey = PowerMockito.mock(Secret.class);
     EnvVars envVars = new EnvVars();
 
     //mock console log
@@ -81,7 +78,7 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s","",
+        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
@@ -96,6 +93,8 @@ public class CodeBuilderTest {
     //sets up a basic mock environment for calling perform()
     protected void setUpBuildEnvironment() throws Exception {
         PowerMockito.whenNew(AWSClientFactory.class).withAnyArguments().thenReturn(mockFactory);
+        when(awsSecretKey.getPlainText()).thenReturn("s");
+
         ProjectArtifacts artifacts = new ProjectArtifacts();
         artifacts.setLocation("artifactBucket");
         artifacts.setType("S3");
@@ -122,9 +121,9 @@ public class CodeBuilderTest {
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
         when(build.getEnvironment(any(TaskListener.class))).thenReturn(envVars);
-
         PowerMockito.mockStatic(Thread.class);
         Thread.sleep(anyLong());
+        when(awsSecretKey.getPlainText()).thenReturn("secretKey");
     }
 
     @Before

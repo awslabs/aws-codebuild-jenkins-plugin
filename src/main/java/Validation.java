@@ -39,6 +39,7 @@ public class Validation {
     public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
     public static final String invalidCredTypeError = "Invalid credentialsType option; must be 'jenkins' or 'keys'";
+    public static final String invalidSecretKeyError = "awsSecretKey cannot be null";
     public static final String invalidCredentialsIdError = "Invalid credentials ID. Verify that the credentials are of type CodeBuildCredentials and are accessible in this project.";
     public static final String unableToGetJobFolder = "Unable to retrieve folder for this job.";
     public static final String basicAWSCredentials = "Using given AWS access and secret key for authorization";

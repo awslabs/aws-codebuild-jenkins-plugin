@@ -24,20 +24,17 @@ import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
 import enums.SourceControlType;
 import hudson.model.ParameterValue;
-import hudson.model.ParametersAction;
 import hudson.model.Result;
+import hudson.util.Secret;
 import lombok.Getter;
 import lombok.Setter;
+import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -46,12 +43,16 @@ import static org.mockito.Mockito.*;
 
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(CodeBuilder.class)
+@PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderPerformTest extends CodeBuilderTest {
+
+    @Before
+    public void SetUp() throws Exception {
+        setUpBuildEnvironment();
+    }
 
     @Test
     public void testConfigAllNull() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null, null,
                 null, null, null, null, null,
@@ -72,9 +73,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlank() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "", "", "", "", "", "", "",
+                null, "", "", "", "", "", "", "", "",
                 "","","","","",     "", "", "", "", "" , "",
                 "", "", "", "", "",
                 "","","","");
@@ -93,7 +93,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoProjectName() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
+        CodeBuilder test = new CodeBuilder("keys", "", "", "", "", null, "",
                 "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
                 "", "", "", "", "", "",
                 "","", "", "", "", "","",
@@ -117,7 +117,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoSourceType() throws Exception {
         setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
+        CodeBuilder test = new CodeBuilder("keys", "", "", "", "", null,"",
                 "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "",
                 "","", "", "", "", "","",
@@ -141,7 +141,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testStartBuildExcepts() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "StartBuild exception";
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
@@ -197,7 +196,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testComputeTypeOverrideException() throws Exception {
         setUpBuildEnvironment();
 
-        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
@@ -218,7 +217,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testCacheTypeOverrideException() throws Exception {
         setUpBuildEnvironment();
 
-        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
@@ -239,7 +238,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testSourceTypeOverrideException() throws Exception {
         setUpBuildEnvironment();
 
-        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidsource","https://1.0.0.0.86/my_repo",
@@ -260,7 +259,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testEnvironmentTypeOverrideException() throws Exception {
         setUpBuildEnvironment();
 
-        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
                 "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
@@ -279,13 +278,11 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildParameters() throws Exception {
-        setUpBuildEnvironment();
-
         envVars.put("foo", "bar");
         envVars.put("foo2", "bar2");
         envVars.put("foo3", "bar3");
 
-        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
                 "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(), "1",
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
                 "","[{k, v}]", "", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
