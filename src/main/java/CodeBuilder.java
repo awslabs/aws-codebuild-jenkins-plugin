@@ -68,7 +68,17 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String artifactNamespaceOverride;
     @Getter private String artifactPackagingOverride;
     @Getter private String artifactPathOverride;
-
+    @Getter private String environmentTypeOverride;
+    @Getter private String imageOverride;
+    @Getter private String computeTypeOverride;
+    @Getter private String certificateOverride;
+    @Getter private String cacheTypeOverride;
+    @Getter private String cacheLocationOverride;
+    @Getter private String serviceRoleOverride;
+    @Getter private String privilegedModeOverride;
+    @Getter private String sourceTypeOverride;
+    @Getter private String sourceLocationOverride;
+    @Getter private String insecureSslOverride;
     @Getter private String envVariables;
     @Getter private String envParameters;
     @Getter private String buildSpecFile;
@@ -104,7 +114,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String gitCloneDepthOverride,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
-                       String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride) {
+                       String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
+                       String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
+                       String cacheTypeOverride, String cacheLocationOverride, String certificateOverride, String serviceRoleOverride,
+                       String insecureSslOverride, String privilegedModeOverride) {
 
         this.credentialsType = Validation.sanitize(credentialsType);
         this.credentialsId = Validation.sanitize(credentialsId);
@@ -125,10 +138,21 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
         this.artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
         this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
+        this.sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
+        this.sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
+        this.environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
+        this.imageOverride = Validation.sanitize(imageOverride);
+        this.computeTypeOverride = Validation.sanitize(computeTypeOverride);
+        this.cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
+        this.cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
+        this.certificateOverride = Validation.sanitize(certificateOverride);
+        this.serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
         this.envVariables = Validation.sanitize(envVariables);
         this.envParameters = Validation.sanitize(envParameters);
         this.buildSpecFile = Validation.sanitizeYAML(buildSpecFile);
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
+        this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
+        this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
         this.codeBuildResult = new CodeBuildResult();
         this.isPipelineBuild = false;
         this.batchGetBuildsCalls = 0;
@@ -209,6 +233,51 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         ProjectArtifacts artifactsOverride = generateStartBuildArtifactOverride();
         if(artifactsOverride != null) {
             startBuildRequest.setArtifactsOverride(artifactsOverride);
+        }
+
+        ProjectCache cacheOverride = generateStartBuildCacheOverride();
+        if(cacheOverride != null) {
+            startBuildRequest.setCacheOverride(cacheOverride);
+        }
+
+        if(!getParameterized(environmentTypeOverride).isEmpty()) {
+            startBuildRequest.setEnvironmentTypeOverride(getParameterized(environmentTypeOverride));
+        }
+
+        if(!getParameterized(imageOverride).isEmpty()) {
+            startBuildRequest.setImageOverride(getParameterized(imageOverride));
+        }
+
+        if(!getParameterized(computeTypeOverride).isEmpty()) {
+            startBuildRequest.setComputeTypeOverride(getParameterized(computeTypeOverride));
+        }
+
+        if(!getParameterized(certificateOverride).isEmpty()) {
+            startBuildRequest.setCertificateOverride(getParameterized(certificateOverride));
+        }
+
+        if(!getParameterized(serviceRoleOverride).isEmpty()) {
+            startBuildRequest.setServiceRoleOverride(getParameterized(serviceRoleOverride));
+        }
+
+        if(!getParameterized(sourceTypeOverride).isEmpty()) {
+            startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
+            SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
+            if(auth != null) {
+                startBuildRequest.setSourceAuthOverride(auth);
+            }
+        }
+
+        if(!getParameterized(sourceLocationOverride).isEmpty()) {
+            startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
+        }
+
+        if(!getParameterized(insecureSslOverride).isEmpty()) {
+            startBuildRequest.setInsecureSslOverride(Boolean.parseBoolean(getParameterized(insecureSslOverride)));
+        }
+
+        if(!getParameterized(privilegedModeOverride).isEmpty()) {
+            startBuildRequest.setPrivilegedModeOverride(Boolean.parseBoolean(getParameterized(privilegedModeOverride)));
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
@@ -444,6 +513,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
         StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name: " + getParameterized(projectName));
+        if(!getParameterized(sourceTypeOverride).isEmpty()) {
+            message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
+        }
+
+        if(!getParameterized(sourceLocationOverride).isEmpty()) {
+            message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
+        }
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);
         }
@@ -482,6 +558,42 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!buildTimeoutOverride.isEmpty()) {
             message.append("\n\t> build timeout: " + getParameterized(buildTimeoutOverride));
         }
+
+        if(!getParameterized(cacheTypeOverride).isEmpty()) {
+            message.append("\n\t> cache type: " + getParameterized(cacheTypeOverride));
+        }
+
+        if(!getParameterized(cacheLocationOverride).isEmpty()) {
+            message.append("\n\t> cache location: " + getParameterized(cacheLocationOverride));
+        }
+
+        if(!getParameterized(environmentTypeOverride).isEmpty()) {
+            message.append("\n\t> environment type: " + getParameterized(environmentTypeOverride));
+        }
+
+        if(!getParameterized(imageOverride).isEmpty()) {
+            message.append("\n\t> image: " + getParameterized(imageOverride));
+        }
+
+        if(!getParameterized(privilegedModeOverride).isEmpty()) {
+            message.append("\n\t> privileged mode override: " + getParameterized(privilegedModeOverride));
+        }
+
+        if(!getParameterized(computeTypeOverride).isEmpty()) {
+            message.append("\n\t> compute type: " + getParameterized(computeTypeOverride));
+        }
+
+        if(!getParameterized(insecureSslOverride).isEmpty()) {
+            message.append("\n\t> insecure ssl override: " + getParameterized(insecureSslOverride));
+        }
+
+        if(!getParameterized(certificateOverride).isEmpty()) {
+            message.append("\n\t> certificate: " + getParameterized(certificateOverride));
+        }
+        if(!getParameterized(serviceRoleOverride).isEmpty()) {
+            message.append("\n\t> service role: " + getParameterized(serviceRoleOverride));
+        }
+
         LoggingHelper.log(listener, message.toString());
     }
 
@@ -522,6 +634,28 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             overridesSpecified = true;
         }
         return overridesSpecified ? artifacts : null;
+    }
+
+    private ProjectCache generateStartBuildCacheOverride() {
+        ProjectCache cache = new ProjectCache();
+        boolean overridesSpecified = false;
+        if(!getParameterized(cacheTypeOverride).isEmpty()) {
+            cache.setType(getParameterized(cacheTypeOverride));
+            overridesSpecified = true;
+        }
+        if(!getParameterized(cacheLocationOverride).isEmpty()) {
+            cache.setLocation(getParameterized(cacheLocationOverride));
+            overridesSpecified = true;
+        }
+        return overridesSpecified ? cache : null;
+    }
+
+    private SourceAuth generateStartBuildSourceAuthOverride(String sourceType) {
+        SourceAuth auth = null;
+        if(sourceType.equals(SourceType.GITHUB.toString()) || sourceType.equals(SourceType.BITBUCKET.toString())) {
+            auth = new SourceAuth().withType(SourceAuthType.OAUTH.toString());
+        }
+        return auth;
     }
 
     // Given a String representing environment variables, returns a list of com.amazonaws.services.codebuild.model.EnvironmentVariable
@@ -634,6 +768,26 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return selections;
         }
 
+        public ListBoxModel doFillPrivilegedModeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("False");
+            selections.add("True");
+            selections.add("");
+
+            return selections;
+        }
+
+        public ListBoxModel doFillInsecureSslOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("False");
+            selections.add("True");
+            selections.add("");
+
+            return selections;
+        }
+
         public ListBoxModel doFillArtifactTypeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
@@ -658,6 +812,48 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ArtifactPackaging t : ArtifactPackaging.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillSourceTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (SourceType t : SourceType.values()) {
+                if(!t.equals(SourceType.CODEPIPELINE)) {
+                    selections.add(t.toString());
+                }
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillComputeTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (ComputeType t : ComputeType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillCacheTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (CacheType t : CacheType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillEnvironmentTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (EnvironmentType t : EnvironmentType.values()) {
                 selections.add(t.toString());
             }
             selections.add("");

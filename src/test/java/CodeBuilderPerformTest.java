@@ -15,6 +15,10 @@
  */
 
 import com.amazonaws.services.codebuild.model.ArtifactsType;
+import com.amazonaws.services.codebuild.model.SourceType;
+import com.amazonaws.services.codebuild.model.CacheType;
+import com.amazonaws.services.codebuild.model.ComputeType;
+import com.amazonaws.services.codebuild.model.EnvironmentType;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.codebuild.model.StartBuildRequest;
@@ -51,7 +55,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null, null, null, null, null,
                 null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null, null);
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
@@ -67,7 +73,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder(null, null, null, null, null,
                 null, null,null, null, null, null,
                 null, null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, null);
 
         test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
@@ -83,7 +92,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
                 "", "", "", "", "", "", "", "", "",
-                "","","","","",     "", "", "", "");
+                "","","","","",     "", "", "", "", "" , "",
+                "", "", "", "", "",
+                "","","","");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
@@ -98,7 +109,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("", "", "", "", "",
                 "", "", "","", "", "", "", "", "",
-                "","","","","",     "", "", "", "");
+                "","","","",    "", "", "", "", "",
+                "","","","", "","","",
+                "","","","");
 
         test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
@@ -115,7 +128,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
                 "", "", "", "", "", "",
-                "","", "", "", "");
+                "","", "", "", "", "","",
+                "","", "", "", "",
+                "","","","");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
@@ -133,7 +148,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
                 "", "", "", "", "", "",
-                "","", "", "", "");
+                "","", "", "", "",
+                "","",
+                "","", "","","",
+                "","","","");
 
         test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
@@ -153,7 +171,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "",
-                "","", "", "", "");
+                "","", "", "", "", "","",
+                "","", "","","",
+                "","","","");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
@@ -172,7 +192,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
                 "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "",
-                "","", "", "", "");
+                "","", "", "", "", "","",
+                "","", "","","",
+                "","","","");
 
         test.setIsPipelineBuild(true);
         test.perform(build, ws, launcher, listener);
@@ -281,6 +303,74 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     }
 
     @Test
+    public void testComputeTypeOverrideException() throws Exception {
+        setUpBuildEnvironment();
+
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
+                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
+                EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", "invalidComputeType",CacheType.NO_CACHE.toString(),"",
+                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
+        test.setIsPipelineBuild(true);
+        test.perform(build, ws, launcher, listener);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(Validation.invalidComputeTypeError));
+    }
+
+    @Test
+    public void testCacheTypeOverrideException() throws Exception {
+        setUpBuildEnvironment();
+
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
+                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
+                EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),"invalidtype","",
+                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
+        test.setIsPipelineBuild(true);
+        test.perform(build, ws, launcher, listener);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(Validation.invalidCacheTypeError));
+    }
+
+    @Test
+    public void testSourceTypeOverrideException() throws Exception {
+        setUpBuildEnvironment();
+
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
+                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidsource","https://1.0.0.0.86/my_repo",
+                EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
+                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
+        test.setIsPipelineBuild(true);
+        test.perform(build, ws, launcher, listener);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(Validation.invalidSourceTypeError));
+    }
+
+    @Test
+    public void testEnvironmentTypeOverrideException() throws Exception {
+        setUpBuildEnvironment();
+
+        CodeBuilder test = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
+                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
+                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
+                "invalidtype","aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
+                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
+        test.setIsPipelineBuild(true);
+        test.perform(build, ws, launcher, listener);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(Validation.invalidEnvironmentTypeError));
+    }
+
+    @Test
     public void testBuildParameters() throws Exception {
         setUpBuildEnvironment();
 
@@ -291,7 +381,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", "s", "",
                 "us-east-1", "$foo", "$foo2-$foo3", "", SourceControlType.ProjectSource.toString(), "1",
                 ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
-                "","[{k, v}]", "", "buildspec.yml", "5");
+                "","[{k, v}]", "", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
+                EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
+                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
 
         cb.perform(build, ws, launcher, listener);
 

@@ -44,6 +44,10 @@ public class Validation {
     public static final String basicAWSCredentials = "Using given AWS access and secret key for authorization";
     public static final String defaultChainCredentials = "Using credentials provided by the DefaultAWSCredentialsProviderChain for authorization";
     public static final String IAMRoleCredentials = "Authorizing with the IAM role defined in credentials ";
+    public static final String invalidSourceTypeError = "Source type override must be one of 'CODECOMMIT', 'S3', 'GITHUB', 'GITHUB_ENTERPRISE', 'BITBUCKET'";
+    public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";
+    public static final String invalidEnvironmentTypeError = "Environment type override must be one of 'LINUX_CONTAINER', 'WINDOWS_CONTAINER'";
+    public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE'";
 
     //CodeBuilder
     public static final String projectRequiredError = "CodeBuild project name is required";
@@ -64,7 +68,6 @@ public class Validation {
             return Integer.parseInt(s);
         }
     }
-
 
     public static String sanitizeYAML(final String s) {
         if(s == null) {
@@ -116,6 +119,42 @@ public class Validation {
                 ArtifactNamespace.fromValue(artifactNamespaceOverride);
             } catch(IllegalArgumentException e) {
                 return invalidArtifactNamespaceTypeError;
+            }
+        }
+
+        String sourceTypeOverride = cb.getParameterized(cb.getSourceTypeOverride());
+        if(!sourceTypeOverride.isEmpty()) {
+            try {
+                SourceType.fromValue(sourceTypeOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidSourceTypeError;
+            }
+        }
+
+        String computeTypeOverride = cb.getParameterized(cb.getComputeTypeOverride());
+        if(!computeTypeOverride.isEmpty()) {
+            try {
+                ComputeType.fromValue(computeTypeOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidComputeTypeError;
+            }
+        }
+
+        String environmentTypeOverride = cb.getParameterized(cb.getEnvironmentTypeOverride());
+        if(!environmentTypeOverride.isEmpty()) {
+            try {
+                EnvironmentType.fromValue(environmentTypeOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidEnvironmentTypeError;
+            }
+        }
+
+        String cacheTypeOverride = cb.getParameterized(cb.getCacheTypeOverride());
+        if(!cacheTypeOverride.isEmpty()) {
+            try {
+                CacheType.fromValue(cacheTypeOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidCacheTypeError;
             }
         }
 

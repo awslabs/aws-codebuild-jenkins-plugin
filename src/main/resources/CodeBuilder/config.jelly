@@ -60,12 +60,22 @@
 
     <f:radioBlock title="Use Project source" name="sourceControlType" help="/plugin/aws-codebuild/help-projectSourceHelp.html"
                   value="project" checked="${instance.sourceControlTypeEquals('project')}" inline="true">
+        <f:entry title="Source Type Override (optional)" field="sourceTypeOverride" help="/plugin/aws-codebuild/help-sourceTypeOverride.html">
+          <f:select />
+        </f:entry>
+
+        <f:entry title="Source Location Override (optional)" field="sourceLocationOverride" help="/plugin/aws-codebuild/help-sourceLocationOverride.html">
+          <f:textbox />
+        </f:entry>
+
         <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/help-sourceVersionHelp.html">
           <f:textbox />
         </f:entry>
+
         <f:entry title="Git Clone Depth Override (optional)" field="gitCloneDepthOverride" help="/plugin/aws-codebuild/help-gitCloneDepthHelp.html">
           <f:select />
         </f:entry>
+
     </f:radioBlock>
 
     <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
@@ -108,6 +118,42 @@
 
     <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
       <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
+    </f:entry>
+
+    <f:entry title="Environment Type Override" field="environmentTypeOverride" help="/plugin/aws-codebuild/help-environmentTypeOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Image Override" field="imageOverride" help="/plugin/aws-codebuild/help-imageOverride.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Privileged Mode Override" field="privilegedModeOverride" help="/plugin/aws-codebuild/help-privilegedModeOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Insecure SSL Override" field="insecureSslOverride" help="/plugin/aws-codebuild/help-insecureSslOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Compute Type Override" field="computeTypeOverride" help="/plugin/aws-codebuild/help-computeTypeOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Cache Type Override" field="cacheTypeOverride" help="/plugin/aws-codebuild/help-cacheTypeOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Cache Location Override" field="cacheLocationOverride" help="/plugin/aws-codebuild/help-cacheLocationOverride.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Certificate Override" field="certificateOverride" help="/plugin/aws-codebuild/help-certificateOverride.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="Service Role Override" field="serviceRoleOverride" help="/plugin/aws-codebuild/help-serviceRoleOverride.html">
+      <f:textbox />
     </f:entry>
 
     <f:entry title="Environment Variables Override" field="envVariables" help="/plugin/aws-codebuild/help-envVariablesHelp.html">

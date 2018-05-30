@@ -14,9 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.ArtifactNamespace;
-import com.amazonaws.services.codebuild.model.ArtifactPackaging;
-import com.amazonaws.services.codebuild.model.ArtifactsType;
+import com.amazonaws.services.codebuild.model.*;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -66,6 +64,17 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String artifactNamespaceOverride;
     @Getter private String artifactPackagingOverride;
     @Getter private String artifactPathOverride;
+    @Getter private String environmentTypeOverride;
+    @Getter private String imageOverride;
+    @Getter private String computeTypeOverride;
+    @Getter private String certificateOverride;
+    @Getter private String cacheTypeOverride;
+    @Getter private String cacheLocationOverride;
+    @Getter private String serviceRoleOverride;
+    @Getter private String privilegedModeOverride;
+    @Getter private String sourceTypeOverride;
+    @Getter private String sourceLocationOverride;
+    @Getter private String insecureSslOverride;
     @Getter private String envVariables;
     @Getter private String envParameters;
     @Getter private String buildSpecFile;
@@ -165,6 +174,61 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
+    public void setEnvironmentTypeOverride(String environmentTypeOverride) {
+        this.environmentTypeOverride = environmentTypeOverride;
+    }
+
+    @DataBoundSetter
+    public void setImageOverride(String imageOverride) {
+        this.imageOverride = imageOverride;
+    }
+
+    @DataBoundSetter
+    public void setComputeTypeOverride(String computeTypeOverride) {
+        this.computeTypeOverride = computeTypeOverride;
+    }
+
+    @DataBoundSetter
+    public void setCertificateOverride(String certificateOverride) {
+        this.certificateOverride = certificateOverride;
+    }
+
+    @DataBoundSetter
+    public void setCacheTypeOverride(String cacheTypeOverride) {
+        this.cacheTypeOverride = cacheTypeOverride;
+    }
+
+    @DataBoundSetter
+    public void setCacheLocationOverride(String cacheLocationOverride) {
+        this.cacheLocationOverride = cacheLocationOverride;
+    }
+
+    @DataBoundSetter
+    public void setServiceRoleOverride(String serviceRoleOverride) {
+        this.serviceRoleOverride = serviceRoleOverride;
+    }
+
+    @DataBoundSetter
+    public void setPrivilegedModeOverride(String privilegedModeOverride) {
+        this.privilegedModeOverride = privilegedModeOverride;
+    }
+
+    @DataBoundSetter
+    public void setSourceTypeOverride(String sourceTypeOverride) {
+        this.sourceTypeOverride = sourceTypeOverride;
+    }
+
+    @DataBoundSetter
+    public void setSourceLocationOverride(String sourceLocationOverride) {
+        this.sourceLocationOverride = sourceLocationOverride;
+    }
+
+    @DataBoundSetter
+    public void setInsecureSslOverride(String insecureSslOverride) {
+        this.insecureSslOverride = insecureSslOverride;
+    }
+
+    @DataBoundSetter
     public void setEnvVariables(String envVariables) {
         this.envVariables = envVariables;
     }
@@ -213,6 +277,26 @@ public class CodeBuildStep extends AbstractStepImpl {
             return selections;
         }
 
+        public ListBoxModel doFillPrivilegedModeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("False");
+            selections.add("True");
+            selections.add("");
+
+            return selections;
+        }
+
+        public ListBoxModel doFillInsecureSslOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            selections.add("False");
+            selections.add("True");
+            selections.add("");
+
+            return selections;
+        }
+
         public ListBoxModel doFillArtifactTypeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
@@ -237,6 +321,48 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ArtifactPackaging t : ArtifactPackaging.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillSourceTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (SourceType t : SourceType.values()) {
+                if(!t.equals(SourceType.CODEPIPELINE)) {
+                    selections.add(t.toString());
+                }
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillComputeTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (ComputeType t : ComputeType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillCacheTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (CacheType t : CacheType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillEnvironmentTypeOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for (EnvironmentType t : EnvironmentType.values()) {
                 selections.add(t.toString());
             }
             selections.add("");
@@ -325,7 +451,10 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.sourceVersion, step.sseAlgorithm, step.sourceControlType, step.gitCloneDepthOverride,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
                     step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
-                    step.envVariables, step.envParameters, step.buildSpecFile, step.buildTimeoutOverride
+                    step.envVariables, step.envParameters, step.buildSpecFile, step.buildTimeoutOverride,
+                    step.sourceTypeOverride, step.sourceLocationOverride, step.environmentTypeOverride,
+                    step.imageOverride, step.computeTypeOverride, step.cacheTypeOverride, step.cacheLocationOverride,
+                    step.certificateOverride, step.serviceRoleOverride, step.insecureSslOverride, step.privilegedModeOverride
             );
             builder.setIsPipelineBuild(true);
             builder.perform(run, ws, launcher, listener);
