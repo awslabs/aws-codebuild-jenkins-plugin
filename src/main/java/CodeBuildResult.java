@@ -55,6 +55,7 @@ public class CodeBuildResult implements Serializable {
 
     public void setStopped() {
         this.status = STOPPED;
+        this.errorMessage = "Build was stopped";
     }
 
     public void setBuildInformation(String buildId, String arn) {

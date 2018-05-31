@@ -92,8 +92,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter@Setter String projectSourceLocation;
     @Getter@Setter String projectSourceType;
 
-    @Getter@Setter Boolean isPipelineBuild;
-
     //These messages are used in the Jenkins console log.
     public static final String authorizationError = "Authorization error";
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings";
@@ -156,7 +154,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
         this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
         this.codeBuildResult = new CodeBuildResult();
-        this.isPipelineBuild = false;
         this.batchGetBuildsCalls = 0;
     }
 
@@ -430,11 +427,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
-            if(isPipelineBuild) {
-                this.codeBuildResult.setSuccess();
-            } else {
-                build.setResult(Result.SUCCESS);
-            }
+            this.codeBuildResult.setSuccess();
+            build.setResult(Result.SUCCESS);
         } else {
             action.setJenkinsBuildSucceeds(false);
             String errorMessage = "Build " + currentBuild.getId() + " failed" + "\n\t> " + action.getPhaseErrorMessage();
@@ -706,11 +700,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
-        if(isPipelineBuild) {
-            this.codeBuildResult.setFailure(errorMessage, secondaryError);
-        } else {
-            build.setResult(Result.FAILURE);
-        }
+        this.codeBuildResult.setFailure(errorMessage, secondaryError);
+        build.setResult(Result.FAILURE);
         LoggingHelper.log(listener, errorMessage, secondaryError);
     }
 

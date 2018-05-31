@@ -65,23 +65,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-    }
-
-    @Test
-    public void testConfigAllNullPipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder(null, null, null, null, null,
-                null, null,null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null,
-                null, null, null, null, null,
-                null, null, null, null);
-
-        test.setIsPipelineBuild(true);
-        test.perform(build, ws, launcher, listener);
-
-        assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
@@ -102,21 +85,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-    }
-
-    @Test
-    public void testConfigAllBlankPipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                "", "", "","", "", "", "", "", "",
-                "","","","",    "", "", "", "", "",
-                "","","","", "","","",
-                "","","","");
-
-        test.setIsPipelineBuild(true);
-        test.perform(build, ws, launcher, listener);
-
-        assert(log.toString().contains(CodeBuilder.configuredImproperlyError));
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
@@ -138,25 +106,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
         verify(listener, times(1)).getLogger();
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.projectRequiredError), true);
-    }
-
-    @Test
-    public void testNoProjectNamePipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
-                "us-east-1", "", "", "", SourceControlType.ProjectSource.toString(),
-                "", "", "", "", "", "",
-                "","", "", "", "",
-                "","",
-                "","", "","","",
-                "","","","");
-
-        test.setIsPipelineBuild(true);
-        test.perform(build, ws, launcher, listener);
-
-
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.projectRequiredError), true);
         CodeBuildResult result = test.getCodeBuildResult();
@@ -184,23 +133,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.sourceControlTypeRequiredError), true);
-    }
-
-    @Test
-    public void testNoSourceTypePipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = new CodeBuilder("keys", "","", "", "", "","",
-                "us-east-1", "project", "", "", "",
-                "", "", "", "", "", "",
-                "","", "", "", "", "","",
-                "","", "","","",
-                "","","","");
-
-        test.setIsPipelineBuild(true);
-        test.perform(build, ws, launcher, listener);
-
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.sourceControlTypeRequiredError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
@@ -220,24 +152,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
-    }
-
-    @Test
-    public void testStartBuildExceptsPipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = createDefaultCodeBuilder();
-        test.setIsPipelineBuild(true);
-        String error = "submit build exception.";
-        doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
-
-        test.perform(build, ws, launcher, listener);
-
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(error));
     }
-
 
     @Test
     public void testGetCBClientExcepts() throws Exception {
@@ -252,27 +170,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
-    }
-
-    @Test
-    public void testGetCBClientExceptsPipeline() throws Exception {
-        setUpBuildEnvironment();
-        CodeBuilder test = createDefaultCodeBuilder();
-        test.setIsPipelineBuild(true);
-        String error = "failed to instantiate cb client.";
-        doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
-
-        test.perform(build, ws, launcher, listener);
-
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(error));
     }
 
-
     @Test
-    public void testGetBuildExcepts() throws Exception {
+    public void testBatchGetBuildsExcepts() throws Exception {
         setUpBuildEnvironment();
         String error = "cannot get build";
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
@@ -283,19 +187,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
-    }
-
-    @Test
-    public void testGetBuildExceptsPipeline() throws Exception {
-        setUpBuildEnvironment();
-        String error = "cannot get build";
-        doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
-        CodeBuilder test = createDefaultCodeBuilder();
-        test.setIsPipelineBuild(true);
-
-        test.perform(build, ws, launcher, listener);
-
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(error), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
@@ -312,8 +203,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", "invalidComputeType",CacheType.NO_CACHE.toString(),"",
                 "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
-        test.setIsPipelineBuild(true);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidComputeTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(Validation.invalidComputeTypeError));
@@ -329,8 +224,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),"invalidtype","",
                 "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
-        test.setIsPipelineBuild(true);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidCacheTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(Validation.invalidCacheTypeError));
@@ -346,8 +245,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidsource","https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
                 "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
-        test.setIsPipelineBuild(true);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidSourceTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(Validation.invalidSourceTypeError));
@@ -363,8 +266,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
                 "invalidtype","aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
                 "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
-        test.setIsPipelineBuild(true);
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidEnvironmentTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(Validation.invalidEnvironmentTypeError));

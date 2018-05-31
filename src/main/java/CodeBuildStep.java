@@ -456,12 +456,11 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.imageOverride, step.computeTypeOverride, step.cacheTypeOverride, step.cacheLocationOverride,
                     step.certificateOverride, step.serviceRoleOverride, step.insecureSslOverride, step.privilegedModeOverride
             );
-            builder.setIsPipelineBuild(true);
             builder.perform(run, ws, launcher, listener);
 
             CodeBuildResult result = builder.getCodeBuildResult();
 
-            if(result.getStatus().equals(CodeBuildResult.FAILURE)) {
+            if(result.getStatus().equals(CodeBuildResult.FAILURE) || result.getStatus().equals(CodeBuildResult.STOPPED)) {
                 throw new CodeBuildException(result);
             }
 
