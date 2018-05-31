@@ -529,12 +529,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             message.append("\n\t> source version: " + sourceVersion);
         }
         if(!SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
-            if(gitCloneDepthOverride.isEmpty()) {
-                message.append("\n\t> git clone depth: " + "Full");
-            } else {
-                message.append("\n\t> git clone depth: " + getParameterized(gitCloneDepthOverride));
+            if(!gitCloneDepthOverride.isEmpty()) {
+                message.append("\n\t> git clone depth: " + getParameterized(gitCloneDepthOverride) + " (git clone depth is omitted when source provider is Amazon S3)");
             }
-            message.append(" (git clone depth is omitted when source provider is Amazon S3)");
         }
         if(!artifactTypeOverride.isEmpty()) {
             message.append("\n\t> artifact type: " + getParameterized(artifactTypeOverride));
@@ -555,7 +552,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             message.append("\n\t> artifact path: " + getParameterized(artifactPathOverride));
         }
         if(!buildSpecFile.isEmpty()) {
-            message.append("\n\t> build spec: " + getParameterized(buildSpecFile));
+            message.append("\n\t> build spec: \n" + getParameterized(buildSpecFile));
         }
         if(!envVariables.isEmpty()) {
             message.append("\n\t> environment variables: " + getParameterized(envVariables));
