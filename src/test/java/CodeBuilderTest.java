@@ -28,6 +28,8 @@ import hudson.Launcher;
 import hudson.model.*;
 import org.junit.Before;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 
 import java.io.ByteArrayOutputStream;
@@ -54,6 +56,11 @@ public class CodeBuilderTest {
     AWSLogsClient mockLogsClient = mock(AWSLogsClient.class);
     CloudWatchMonitor mockMonitor = mock(CloudWatchMonitor.class);
     CodeBuildAction mockAction = mock(CodeBuildAction.class);
+    Answer mockInterruptedException = new Answer() {
+        public Object answer(InvocationOnMock invocation) throws InterruptedException {
+            throw new InterruptedException();
+        }
+    };
 
     BatchGetProjectsResult mockBGPResult = mock(BatchGetProjectsResult.class);
     StartBuildResult mockStartBuildResult = mock(StartBuildResult.class);

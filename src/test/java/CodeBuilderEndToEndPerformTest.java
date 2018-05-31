@@ -19,6 +19,8 @@ import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
+import com.amazonaws.services.codebuild.model.BuildPhaseType;
+
 import hudson.model.Result;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -202,5 +204,42 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         test.perform(build, ws, launcher, listener);
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.SUCCESS);
+    }
+
+    @Test
+    public void testInterruptedBuild() throws Exception {
+        setUpBuildEnvironment();
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
+        Build stopped = new Build().withBuildStatus(StatusType.STOPPED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .then(mockInterruptedException)
+                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenReturn(new BatchGetBuildsResult().withBuilds(stopped));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.ABORTED);
+    }
+
+    @Test
+    public void testInterruptedCompletedBuild() throws Exception {
+        setUpBuildEnvironment();
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
+        Build completed = new Build().withBuildStatus(StatusType.SUCCEEDED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .then(mockInterruptedException)
+                .thenReturn(new BatchGetBuildsResult().withBuilds(completed));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.ABORTED);
     }
 }

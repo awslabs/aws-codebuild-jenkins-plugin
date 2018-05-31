@@ -398,7 +398,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     //Request to stop Jenkins build has been made. First make sure the build is stoppable
                     List<Build> buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
                     currentBuild = buildsForId.get(0);
-                    if(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString())) {
+                    if(!currentBuild.getCurrentPhase().equals(BuildPhaseType.COMPLETED.toString())) {
                         cbClient.stopBuild(new StopBuildRequest().withId(buildId));
                         //Wait for the build to actually stop
                         do {
@@ -407,17 +407,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                             Thread.sleep(5000L);
                             logMonitor.pollForLogs(listener);
                             updateDashboard(currentBuild, action, logMonitor, listener);
-                        } while(!currentBuild.getBuildStatus().equals(StatusType.STOPPED.toString()));
-                        if(action != null) {
-                            action.setJenkinsBuildSucceeds(false);
-                        }
-                        if(isPipelineBuild) {
-                            this.codeBuildResult.setStopped();
-                        } else {
-                            build.setResult(Result.FAILURE);
-                        }
-                        return;
+                        } while (!currentBuild.getCurrentPhase().equals(BuildPhaseType.COMPLETED.toString()));
                     }
+                    if (action != null) {
+                        action.setJenkinsBuildSucceeds(false);
+                    }
+                    this.codeBuildResult.setStopped();
+                    build.setResult(Result.ABORTED);
+                    return;
                 } else if(e.getMessage().contains(httpTimeoutMessage)) {
                     Thread.sleep(getSleepTime());
                     continue;
