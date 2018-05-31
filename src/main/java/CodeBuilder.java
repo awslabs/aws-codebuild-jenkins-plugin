@@ -718,7 +718,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     //Given a CodeBuild build parameter, checks if it contains any Jenkins parameters and if so, evaluates and returns the
     //value.
     public String getParameterized(String codeBuildParam) {
-        return envVars.expand(codeBuildParam);
+        String result = envVars.expand(codeBuildParam);
+        if(result == null) {
+          return "";
+        }
+        return result;
     }
 
     //// Jenkins-specific functions ////
