@@ -103,6 +103,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
 
+    public static final String httpTimeoutMessage = "Unable to execute HTTP request";
+
     private static final int MIN_SLEEP_TIME = 2500;
     private static final int MAX_SLEEP_TIME = 60000;
     private static final int SLEEP_JITTER = 5000;
@@ -327,7 +329,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        Build currentBuild;
+        Build currentBuild = new Build().withBuildStatus(StatusType.IN_PROGRESS);
         String buildId = sbResult.getBuild().getId();
         LoggingHelper.log(listener, "Build id: " + buildId);
         LoggingHelper.log(listener, "CodeBuild dashboard: " + generateDashboardURL(buildId));
@@ -416,8 +418,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                         }
                         return;
                     }
+                } else if(e.getMessage().contains(httpTimeoutMessage)) {
+                    Thread.sleep(getSleepTime());
+                    continue;
                 } else {
-                    if(action != null) {
+                    if (action != null) {
                         action.setJenkinsBuildSucceeds(false);
                     }
                     failBuild(build, listener, e.getMessage(), "");

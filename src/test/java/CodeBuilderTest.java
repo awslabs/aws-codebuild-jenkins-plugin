@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -114,6 +115,9 @@ public class CodeBuilderTest {
         when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
         when(build.getEnvironment(any(TaskListener.class))).thenReturn(envVars);
+
+        PowerMockito.mockStatic(Thread.class);
+        Thread.sleep(anyLong());
     }
 
     @Before

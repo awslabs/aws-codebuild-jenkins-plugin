@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
 import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
 import com.amazonaws.services.codebuild.model.Build;
@@ -160,5 +161,46 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+    }
+
+    @Test
+    public void testBatchGetBuildsHttpTimeout() throws Exception {
+        setUpBuildEnvironment();
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+
+        AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenThrow(ex)
+                .thenReturn(new BatchGetBuildsResult().withBuilds(succeeded));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
+    }
+
+    @Test
+    public void testBatchGetBuildsMultipleHttpTimeout() throws Exception {
+        setUpBuildEnvironment();
+        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+
+        AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .thenThrow(ex)
+                .thenThrow(ex)
+                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenReturn(new BatchGetBuildsResult().withBuilds(succeeded));
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener);
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.SUCCESS);
     }
 }
