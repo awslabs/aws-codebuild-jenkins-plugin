@@ -57,6 +57,10 @@ import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 public class AWSClientFactory {
 
 
@@ -69,6 +73,8 @@ public class AWSClientFactory {
 
     private String credentialsDescriptor;
     private AWSCredentialsProvider awsCredentialsProvider;
+    private final Properties properties;
+    private static final String POM_PROPERTIES = "/META-INF/maven/com.amazonaws/aws-codebuild/pom.properties";
 
     public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String awsSessionToken,
                        String region, Run<?, ?> build) {
@@ -77,6 +83,7 @@ public class AWSClientFactory {
         this.awsSecretKey = Validation.sanitize(awsSecretKey);
         this.awsSessionToken = Validation.sanitize(awsSessionToken);
         this.region = Validation.sanitize(region);
+        this.properties = new Properties();
 
         Validation.checkAWSClientFactoryRegionConfig(this.region);
         this.credentialsDescriptor = "";
@@ -155,8 +162,14 @@ public class AWSClientFactory {
     }
 
     private ClientConfiguration getClientConfiguration() {
+        String projectVersion = "";
+        try(InputStream stream = this.getClass().getResourceAsStream(POM_PROPERTIES)) {
+            properties.load(stream);
+            projectVersion =  "/" + properties.getProperty("version");
+        } catch (IOException e) {}
+
         ClientConfiguration clientConfig = new ClientConfiguration()
-                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin") //tags all calls made from Jenkins plugin.
+                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin" + projectVersion)
                 .withProxyHost(proxyHost)
                 .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
                         new PredefinedBackoffStrategies.ExponentialBackoffStrategy(10000, 30000),
