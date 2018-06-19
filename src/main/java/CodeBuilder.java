@@ -119,42 +119,80 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String cacheTypeOverride, String cacheLocationOverride, String certificateOverride, String serviceRoleOverride,
                        String insecureSslOverride, String privilegedModeOverride) {
 
-        this.credentialsType = Validation.sanitize(credentialsType);
-        this.credentialsId = Validation.sanitize(credentialsId);
-        this.proxyHost = Validation.sanitize(proxyHost);
-        this.proxyPort = Validation.sanitize(proxyPort);
-        this.awsAccessKey = Validation.sanitize(awsAccessKey);
-        this.awsSecretKey = Validation.sanitize(awsSecretKey);
-        this.awsSessionToken = Validation.sanitize(awsSessionToken);
-        this.region = Validation.sanitize(region);
-        this.projectName = Validation.sanitize(projectName);
-        this.sourceControlType = Validation.sanitize(sourceControlType);
-        this.sourceVersion = Validation.sanitize(sourceVersion);
-        this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
-        this.gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
-        this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
-        this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
-        this.artifactNameOverride = Validation.sanitize(artifactNameOverride);
-        this.artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
-        this.artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
-        this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
-        this.sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
-        this.sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
-        this.environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
-        this.imageOverride = Validation.sanitize(imageOverride);
-        this.computeTypeOverride = Validation.sanitize(computeTypeOverride);
-        this.cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
-        this.cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
-        this.certificateOverride = Validation.sanitize(certificateOverride);
-        this.serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
-        this.envVariables = Validation.sanitize(envVariables);
-        this.envParameters = Validation.sanitize(envParameters);
-        this.buildSpecFile = Validation.sanitizeYAML(buildSpecFile);
-        this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
-        this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
-        this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
+        this.credentialsType = credentialsType;
+        this.credentialsId = credentialsId;
+        this.proxyHost = proxyHost;
+        this.proxyPort = proxyPort;
+        this.awsAccessKey = awsAccessKey;
+        this.awsSecretKey = awsSecretKey;
+        this.awsSessionToken = awsSessionToken;
+        this.region = region;
+        this.projectName = projectName;
+        this.sourceControlType = sourceControlType;
+        this.sourceVersion = sourceVersion;
+        this.sseAlgorithm = sseAlgorithm;
+        this.gitCloneDepthOverride = gitCloneDepthOverride;
+        this.artifactTypeOverride = artifactTypeOverride;
+        this.artifactLocationOverride = artifactLocationOverride;
+        this.artifactNameOverride = artifactNameOverride;
+        this.artifactNamespaceOverride = artifactNamespaceOverride;
+        this.artifactPackagingOverride = artifactPackagingOverride;
+        this.artifactPathOverride = artifactPathOverride;
+        this.sourceTypeOverride = sourceTypeOverride;
+        this.sourceLocationOverride = sourceLocationOverride;
+        this.environmentTypeOverride = environmentTypeOverride;
+        this.imageOverride = imageOverride;
+        this.computeTypeOverride = computeTypeOverride;
+        this.cacheTypeOverride = cacheTypeOverride;
+        this.cacheLocationOverride = cacheLocationOverride;
+        this.certificateOverride = certificateOverride;
+        this.serviceRoleOverride = serviceRoleOverride;
+        this.envVariables = envVariables;
+        this.envParameters = envParameters;
+        this.buildSpecFile = buildSpecFile;
+        this.buildTimeoutOverride = buildTimeoutOverride;
+        this.insecureSslOverride = insecureSslOverride;
+        this.privilegedModeOverride = privilegedModeOverride;
         this.codeBuildResult = new CodeBuildResult();
         this.batchGetBuildsCalls = 0;
+    }
+
+    protected Object readResolve() {
+        credentialsType = Validation.sanitize(credentialsType);
+        credentialsId = Validation.sanitize(credentialsId);
+        proxyHost = Validation.sanitize(proxyHost);
+        proxyPort = Validation.sanitize(proxyPort);
+        awsAccessKey = Validation.sanitize(awsAccessKey);
+        awsSecretKey = Validation.sanitize(awsSecretKey);
+        awsSessionToken = Validation.sanitize(awsSessionToken);
+        region = Validation.sanitize(region);
+        projectName = Validation.sanitize(projectName);
+        sourceControlType = Validation.sanitize(sourceControlType);
+        sourceVersion = Validation.sanitize(sourceVersion);
+        sseAlgorithm = Validation.sanitize(sseAlgorithm);
+        gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
+        artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
+        artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
+        artifactNameOverride = Validation.sanitize(artifactNameOverride);
+        artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
+        artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
+        artifactPathOverride = Validation.sanitize(artifactPathOverride);
+        sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
+        sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
+        environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
+        imageOverride = Validation.sanitize(imageOverride);
+        computeTypeOverride = Validation.sanitize(computeTypeOverride);
+        cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
+        cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
+        certificateOverride = Validation.sanitize(certificateOverride);
+        serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
+        envVariables = Validation.sanitize(envVariables);
+        envParameters = Validation.sanitize(envParameters);
+        buildSpecFile = Validation.sanitizeYAML(buildSpecFile);
+        buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
+        insecureSslOverride = Validation.sanitize(insecureSslOverride);
+        privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
+        return this;
     }
 
     /*
@@ -509,11 +547,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
         StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name: " + getParameterized(projectName));
-        if(!getParameterized(sourceTypeOverride).isEmpty()) {
+        if(!sourceTypeOverride.isEmpty()) {
             message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
         }
 
-        if(!getParameterized(sourceLocationOverride).isEmpty()) {
+        if(!sourceLocationOverride.isEmpty()) {
             message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
         }
         if(!sourceVersion.isEmpty()) {
@@ -552,38 +590,38 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             message.append("\n\t> build timeout: " + getParameterized(buildTimeoutOverride));
         }
 
-        if(!getParameterized(cacheTypeOverride).isEmpty()) {
+        if(!cacheTypeOverride.isEmpty()) {
             message.append("\n\t> cache type: " + getParameterized(cacheTypeOverride));
         }
 
-        if(!getParameterized(cacheLocationOverride).isEmpty()) {
+        if(!cacheLocationOverride.isEmpty()) {
             message.append("\n\t> cache location: " + getParameterized(cacheLocationOverride));
         }
 
-        if(!getParameterized(environmentTypeOverride).isEmpty()) {
+        if(!environmentTypeOverride.isEmpty()) {
             message.append("\n\t> environment type: " + getParameterized(environmentTypeOverride));
         }
 
-        if(!getParameterized(imageOverride).isEmpty()) {
+        if(!imageOverride.isEmpty()) {
             message.append("\n\t> image: " + getParameterized(imageOverride));
         }
 
-        if(!getParameterized(privilegedModeOverride).isEmpty()) {
+        if(!privilegedModeOverride.isEmpty()) {
             message.append("\n\t> privileged mode override: " + getParameterized(privilegedModeOverride));
         }
 
-        if(!getParameterized(computeTypeOverride).isEmpty()) {
+        if(!computeTypeOverride.isEmpty()) {
             message.append("\n\t> compute type: " + getParameterized(computeTypeOverride));
         }
 
-        if(!getParameterized(insecureSslOverride).isEmpty()) {
+        if(!insecureSslOverride.isEmpty()) {
             message.append("\n\t> insecure ssl override: " + getParameterized(insecureSslOverride));
         }
 
-        if(!getParameterized(certificateOverride).isEmpty()) {
+        if(!certificateOverride.isEmpty()) {
             message.append("\n\t> certificate: " + getParameterized(certificateOverride));
         }
-        if(!getParameterized(serviceRoleOverride).isEmpty()) {
+        if(!serviceRoleOverride.isEmpty()) {
             message.append("\n\t> service role: " + getParameterized(serviceRoleOverride));
         }
 

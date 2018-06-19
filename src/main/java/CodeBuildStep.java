@@ -443,7 +443,7 @@ public class CodeBuildStep extends AbstractStepImpl {
 
         @Override
         protected CodeBuildResult run() throws Exception {
-            CodeBuilder builder = new CodeBuilder(
+            CodeBuilder builder = (CodeBuilder) new CodeBuilder(
                     step.getCredentialsType(), step.getCredentialsId(),
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), step.getAwsSecretKey(), step.getAwsSessionToken(),
@@ -455,7 +455,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.sourceTypeOverride, step.sourceLocationOverride, step.environmentTypeOverride,
                     step.imageOverride, step.computeTypeOverride, step.cacheTypeOverride, step.cacheLocationOverride,
                     step.certificateOverride, step.serviceRoleOverride, step.insecureSslOverride, step.privilegedModeOverride
-            );
+            ).readResolve();
             builder.perform(run, ws, launcher, listener);
 
             CodeBuildResult result = builder.getCodeBuildResult();
