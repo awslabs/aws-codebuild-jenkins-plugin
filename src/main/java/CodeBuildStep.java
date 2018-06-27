@@ -30,6 +30,7 @@ import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
@@ -446,7 +447,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             CodeBuilder builder = (CodeBuilder) new CodeBuilder(
                     step.getCredentialsType(), step.getCredentialsId(),
                     step.getProxyHost(), step.getProxyPort(),
-                    step.getAwsAccessKey(), step.getAwsSecretKey(), step.getAwsSessionToken(),
+                    step.getAwsAccessKey(), Secret.fromString(step.getAwsSecretKey()), step.getAwsSessionToken(),
                     step.getRegion(), step.getProjectName(),
                     step.sourceVersion, step.sseAlgorithm, step.sourceControlType, step.gitCloneDepthOverride,
                     step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,

@@ -53,6 +53,7 @@ import com.cloudbees.hudson.plugins.folder.*;
 
 import enums.CredentialsType;
 import hudson.model.*;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
@@ -67,7 +68,7 @@ public class AWSClientFactory {
     @Getter private final String proxyHost;
     @Getter private final Integer proxyPort;
     @Getter private final String awsAccessKey;
-    @Getter private final String awsSecretKey;
+    @Getter private final Secret awsSecretKey;
     @Getter private final String awsSessionToken;
     @Getter private final String region;
 
@@ -76,11 +77,11 @@ public class AWSClientFactory {
     private final Properties properties;
     private static final String POM_PROPERTIES = "/META-INF/maven/com.amazonaws/aws-codebuild/pom.properties";
 
-    public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String awsSessionToken,
+    public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
                        String region, Run<?, ?> build) {
 
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
-        this.awsSecretKey = Validation.sanitize(awsSecretKey);
+        this.awsSecretKey = awsSecretKey;
         this.awsSessionToken = Validation.sanitize(awsSessionToken);
         this.region = Validation.sanitize(region);
         this.properties = new Properties();
@@ -115,7 +116,10 @@ public class AWSClientFactory {
                 throw new InvalidInputException(Validation.invalidCredentialsIdError);
             }
         } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
-            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), Validation.sanitize(awsSecretKey), Validation.sanitize(awsSessionToken));
+            if(this.awsSecretKey == null) {
+                throw new InvalidInputException(Validation.invalidSecretKeyError);
+            }
+            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), awsSecretKey.getPlainText(), Validation.sanitize(awsSessionToken));
             this.proxyHost = Validation.sanitize(proxyHost);
             this.proxyPort = Validation.parseInt(proxyPort);
         } else {
@@ -183,7 +187,7 @@ public class AWSClientFactory {
 
     public String getCredentialsDescriptor() {
         if(this.credentialsDescriptor.isEmpty()) {
-            if(awsAccessKey.isEmpty() || awsSecretKey.isEmpty()) {
+            if(awsAccessKey.isEmpty()) {
                 return Validation.defaultChainCredentials;
             } else {
                 return Validation.basicAWSCredentials;

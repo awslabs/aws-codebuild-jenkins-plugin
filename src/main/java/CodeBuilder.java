@@ -18,11 +18,9 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
 import com.cloudbees.hudson.plugins.folder.Folder;
-import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import com.cloudbees.plugins.credentials.domains.Domain;
 import enums.CodeBuildRegions;
 import enums.EncryptionAlgorithm;
 import enums.SourceControlType;
@@ -31,6 +29,7 @@ import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import lombok.Getter;
@@ -53,7 +52,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String proxyHost;
     @Getter private String proxyPort;
     @Getter private String awsAccessKey;
-    @Getter private String awsSecretKey;
+    @Getter private Secret awsSecretKey;
     @Getter private String awsSessionToken;
     @Getter private String region;
     @Getter private String projectName;
@@ -110,7 +109,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
 
     @DataBoundConstructor
-    public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, String awsSecretKey, String awsSessionToken,
+    public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String gitCloneDepthOverride,
                        String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
                        String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
@@ -163,7 +162,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         proxyHost = Validation.sanitize(proxyHost);
         proxyPort = Validation.sanitize(proxyPort);
         awsAccessKey = Validation.sanitize(awsAccessKey);
-        awsSecretKey = Validation.sanitize(awsSecretKey);
         awsSessionToken = Validation.sanitize(awsSessionToken);
         region = Validation.sanitize(region);
         projectName = Validation.sanitize(projectName);
@@ -211,7 +209,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     getParameterized(this.proxyHost),
                     getParameterized(this.proxyPort),
                     getParameterized(this.awsAccessKey),
-                    getParameterized(this.awsSecretKey),
+                    this.awsSecretKey,
                     getParameterized(this.awsSessionToken),
                     getParameterized(this.region),
                     build);
