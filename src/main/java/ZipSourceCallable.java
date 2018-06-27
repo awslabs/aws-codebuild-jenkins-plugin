@@ -61,9 +61,16 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
             throw new IOException(e);
         }
 
-        // Move zip to the location we expect it to be in
+        // Copy zip to the location we expect it to be in
         FileUtils.copyFile(tempFile, f);
-        tempFile.delete();
+
+        try {
+            tempFile.delete();
+        } catch (Exception e) {
+            // If this fails, the file will just be cleaned up
+            // by the system later.  We are just trying to be
+            // good citizens here.
+        }
 
         String zipFileMD5;
 
