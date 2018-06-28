@@ -142,7 +142,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -164,7 +164,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -192,7 +192,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -224,7 +224,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -278,7 +278,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -343,7 +343,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -405,7 +405,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -452,7 +452,7 @@ public class S3DataManagerTest {
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
         S3DataManager dataManager = createDefaultSource();
-        dataManager.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -474,7 +474,7 @@ public class S3DataManagerTest {
         String prefixWithSlash = FilenameUtils.separatorsToSystem("/tmp/dir/");  // "/tmp/dir/" in Linux, "\tmp\dir\" in Windows.
         String path = FilenameUtils.separatorsToSystem("/tmp/dir/folder/file.txt");
 
-        assertEquals(FilenameUtils.separatorsToSystem("folder/file.txt"), S3DataManager.trimPrefix(path, prefixWithSlash));
+        assertEquals(FilenameUtils.separatorsToSystem("folder/file.txt"), ZipSourceCallable.trimPrefix(path, prefixWithSlash));
     }
 
     @Test
@@ -482,6 +482,6 @@ public class S3DataManagerTest {
         String prefixNoSlash = FilenameUtils.separatorsToSystem("/tmp/dir"); // "/tmp/dir" in Linux, "\tmp\dir" in Windows.
         String path = FilenameUtils.separatorsToSystem("/tmp/dir/folder/file.txt");
 
-        assertEquals(FilenameUtils.separatorsToSystem("folder/file.txt"), S3DataManager.trimPrefix(path, prefixNoSlash));
+        assertEquals(FilenameUtils.separatorsToSystem("folder/file.txt"), ZipSourceCallable.trimPrefix(path, prefixNoSlash));
     }
 }
