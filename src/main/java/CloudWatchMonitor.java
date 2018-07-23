@@ -35,7 +35,7 @@ public class CloudWatchMonitor {
     @Getter private List<String> latestLogs;
     @Getter private Long lastPollTime;
 
-    private static final int htmlMaxLineLength = 197;
+    private static final int htmlMaxLineLength = 2000;
     public static final String noLogsMessage = "No CloudWatch logs found for this build.";
     public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
