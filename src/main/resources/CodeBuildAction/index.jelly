@@ -85,6 +85,9 @@
                         if("${it.sourceType}" != "S3") {
                             document.write('<tr><td>Git Clone Depth</td><td> ${it.gitCloneDepth} </td></tr>');
                         }
+                        if("${it.sourceType}" == "GITHUB") {
+                            document.write('<tr><td>Report Build Status</td><td> ${it.reportBuildStatus} </td></tr>');
+                        }
                     </script>
                 </tbody>
             </table>

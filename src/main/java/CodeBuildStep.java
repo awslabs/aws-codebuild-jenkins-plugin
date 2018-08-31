@@ -20,8 +20,7 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.google.inject.Inject;
-import enums.CodeBuildRegions;
-import enums.EncryptionAlgorithm;
+import enums.*;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
@@ -59,12 +58,15 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
+    @Getter private String reportBuildStatusOverride;
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
     @Getter private String artifactNameOverride;
     @Getter private String artifactNamespaceOverride;
     @Getter private String artifactPackagingOverride;
     @Getter private String artifactPathOverride;
+    @Getter private String artifactEncryptionDisabledOverride;
+    @Getter private String overrideArtifactName;
     @Getter private String environmentTypeOverride;
     @Getter private String imageOverride;
     @Getter private String computeTypeOverride;
@@ -142,7 +144,14 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
-    public void setGitCloneDepthOverride(String gitCloneDepthOverride) { this.gitCloneDepthOverride = gitCloneDepthOverride; }
+    public void setGitCloneDepthOverride(String gitCloneDepthOverride) {
+        this.gitCloneDepthOverride = gitCloneDepthOverride;
+    }
+
+    @DataBoundSetter
+    public void setReportBuildStatusOverride(String reportBuildStatusOverride) {
+        this.reportBuildStatusOverride = reportBuildStatusOverride;
+    }
 
     @DataBoundSetter
     public void setArtifactTypeOverride(String artifactTypeOverride) {
@@ -172,6 +181,16 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setArtifactPathOverride(String artifactPathOverride) {
         this.artifactPathOverride = artifactPathOverride;
+    }
+
+    @DataBoundSetter
+    public void setArtifactEncryptionDisabledOverride(String artifactEncryptionDisabledOverride) {
+        this.artifactEncryptionDisabledOverride = artifactEncryptionDisabledOverride;
+    }
+
+    @DataBoundSetter
+    public void setOverrideArtifactName(String overrideArtifactName) {
+        this.overrideArtifactName = overrideArtifactName;
     }
 
     @DataBoundSetter
@@ -269,11 +288,19 @@ public class CodeBuildStep extends AbstractStepImpl {
         public ListBoxModel doFillGitCloneDepthOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("1");
-            selections.add("5");
-            selections.add("25");
-            selections.add("Full");
-            selections.add("");
+            for(GitCloneDepth t: GitCloneDepth.values()) {
+                selections.add(t.toString());
+            }
+
+            return selections;
+        }
+
+        public ListBoxModel doFillReportBuildStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -281,9 +308,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         public ListBoxModel doFillPrivilegedModeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("False");
-            selections.add("True");
-            selections.add("");
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -291,9 +318,9 @@ public class CodeBuildStep extends AbstractStepImpl {
         public ListBoxModel doFillInsecureSslOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("False");
-            selections.add("True");
-            selections.add("");
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -325,6 +352,26 @@ public class CodeBuildStep extends AbstractStepImpl {
                 selections.add(t.toString());
             }
             selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillArtifactEncryptionDisabledOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+
+            return selections;
+        }
+
+        public ListBoxModel doFillOverrideArtifactNameItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+
             return selections;
         }
 
@@ -394,15 +441,16 @@ public class CodeBuildStep extends AbstractStepImpl {
             Jenkins instance = Jenkins.getInstance();
             if(instance != null) {
                 List<Folder> folders = instance.getAllItems(Folder.class);
-                for (Folder folder : folders) {
+                for(Folder folder: folders) {
                     List<Credentials> creds = CredentialsProvider.lookupCredentials(Credentials.class, (Item) folder);
-                    for (Credentials cred : creds) {
+                    for(Credentials cred: creds) {
                         if (cred instanceof CodeBuildCredentials) {
                             displayCredentials.add(((CodeBuildCredentials) cred).getId());
                         }
                     }
                 }
             }
+
 
             for(String credString: displayCredentials) {
                 selections.add(credString);
@@ -449,13 +497,14 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), Secret.fromString(step.getAwsSecretKey()), step.getAwsSessionToken(),
                     step.getRegion(), step.getProjectName(),
-                    step.sourceVersion, step.sseAlgorithm, step.sourceControlType, step.gitCloneDepthOverride,
-                    step.artifactTypeOverride, step.artifactLocationOverride, step.artifactNameOverride,
-                    step.artifactNamespaceOverride, step.artifactPackagingOverride, step.artifactPathOverride,
-                    step.envVariables, step.envParameters, step.buildSpecFile, step.buildTimeoutOverride,
-                    step.sourceTypeOverride, step.sourceLocationOverride, step.environmentTypeOverride,
-                    step.imageOverride, step.computeTypeOverride, step.cacheTypeOverride, step.cacheLocationOverride,
-                    step.certificateOverride, step.serviceRoleOverride, step.insecureSslOverride, step.privilegedModeOverride
+                    step.getSourceVersion(), step.getSseAlgorithm(), step.getSourceControlType(), step.getGitCloneDepthOverride(),
+                    step.getReportBuildStatusOverride(), step.getArtifactTypeOverride(), step.getArtifactLocationOverride(),
+                    step.getArtifactNameOverride(), step.getArtifactNamespaceOverride(), step.getArtifactPackagingOverride(),
+                    step.getArtifactPathOverride(), step.getArtifactEncryptionDisabledOverride(), step.getOverrideArtifactName(),
+                    step.getEnvVariables(), step.getEnvParameters(), step.getBuildSpecFile(), step.getBuildTimeoutOverride(),
+                    step.getSourceTypeOverride(), step.getSourceLocationOverride(), step.getEnvironmentTypeOverride(),
+                    step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
+                    step.getCertificateOverride(), step.getServiceRoleOverride(), step.getInsecureSslOverride(), step.getPrivilegedModeOverride()
             ).readResolve();
             builder.perform(run, ws, launcher, listener);
 

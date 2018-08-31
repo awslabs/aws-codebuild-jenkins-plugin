@@ -21,9 +21,7 @@ import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import enums.CodeBuildRegions;
-import enums.EncryptionAlgorithm;
-import enums.SourceControlType;
+import enums.*;
 import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
@@ -60,6 +58,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
+    @Getter private String reportBuildStatusOverride;
 
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
@@ -67,6 +66,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String artifactNamespaceOverride;
     @Getter private String artifactPackagingOverride;
     @Getter private String artifactPathOverride;
+    @Getter private String artifactEncryptionDisabledOverride;
+    @Getter private String overrideArtifactName;
+
     @Getter private String environmentTypeOverride;
     @Getter private String imageOverride;
     @Getter private String computeTypeOverride;
@@ -111,8 +113,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String gitCloneDepthOverride,
-                       String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride,
-                       String artifactNamespaceOverride, String artifactPackagingOverride, String artifactPathOverride,
+                       String reportBuildStatusOverride, String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride, String artifactNamespaceOverride,
+                       String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String certificateOverride, String serviceRoleOverride,
@@ -131,12 +133,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.sourceVersion = sourceVersion;
         this.sseAlgorithm = sseAlgorithm;
         this.gitCloneDepthOverride = gitCloneDepthOverride;
+        this.reportBuildStatusOverride = reportBuildStatusOverride;
         this.artifactTypeOverride = artifactTypeOverride;
         this.artifactLocationOverride = artifactLocationOverride;
         this.artifactNameOverride = artifactNameOverride;
         this.artifactNamespaceOverride = artifactNamespaceOverride;
         this.artifactPackagingOverride = artifactPackagingOverride;
         this.artifactPathOverride = artifactPathOverride;
+        this.artifactEncryptionDisabledOverride = artifactEncryptionDisabledOverride;
+        this.overrideArtifactName = overrideArtifactName;
         this.sourceTypeOverride = sourceTypeOverride;
         this.sourceLocationOverride = sourceLocationOverride;
         this.environmentTypeOverride = environmentTypeOverride;
@@ -169,12 +174,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         sourceVersion = Validation.sanitize(sourceVersion);
         sseAlgorithm = Validation.sanitize(sseAlgorithm);
         gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
+        reportBuildStatusOverride = Validation.sanitize(reportBuildStatusOverride);
         artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
         artifactNameOverride = Validation.sanitize(artifactNameOverride);
         artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
         artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
         artifactPathOverride = Validation.sanitize(artifactPathOverride);
+        artifactEncryptionDisabledOverride = Validation.sanitize(artifactEncryptionDisabledOverride);
+        overrideArtifactName = Validation.sanitize(overrideArtifactName);
         sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
         sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
         environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
@@ -261,7 +269,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
-                withGitCloneDepthOverride(generateStartBuildGitCloneDepthOverride()).
                 withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
                 withTimeoutInMinutesOverride(Validation.parseInt(getParameterized(buildTimeoutOverride)));
 
@@ -295,18 +302,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             startBuildRequest.setServiceRoleOverride(getParameterized(serviceRoleOverride));
         }
 
-        if(!getParameterized(sourceTypeOverride).isEmpty()) {
-            startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
-            SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
-            if(auth != null) {
-                startBuildRequest.setSourceAuthOverride(auth);
-            }
-        }
-
-        if(!getParameterized(sourceLocationOverride).isEmpty()) {
-            startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
-        }
-
         if(!getParameterized(insecureSslOverride).isEmpty()) {
             startBuildRequest.setInsecureSslOverride(Boolean.parseBoolean(getParameterized(insecureSslOverride)));
         }
@@ -316,14 +311,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
-            if(! Validation.checkSourceTypeS3(this.projectSourceType)) {
+            if(!Validation.checkSourceTypeS3(this.projectSourceType)) {
                 failBuild(build, listener, invalidProjectError, "");
                 return;
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
-            if(! Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
+            if(!Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 failBuild(build, listener, notVersionsedS3BucketError, "");
                 return;
             }
@@ -350,7 +345,22 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             logStartBuildMessage(listener, uploadedSourceVersion);
 
         } else {
+            if(!getParameterized(sourceTypeOverride).isEmpty()) {
+                startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
+                SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
+                if(auth != null) {
+                    startBuildRequest.setSourceAuthOverride(auth);
+                }
+            }
+            if(!getParameterized(sourceLocationOverride).isEmpty()) {
+                startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
+            }
             startBuildRequest.setSourceVersion(getParameterized(sourceVersion));
+            startBuildRequest.setGitCloneDepthOverride(generateStartBuildGitCloneDepthOverride());
+            if(!getParameterized(reportBuildStatusOverride).isEmpty()) {
+                startBuildRequest.setReportBuildStatusOverride(Boolean.parseBoolean(getParameterized(reportBuildStatusOverride)));
+            }
+
             logStartBuildMessage(listener, getParameterized(sourceVersion));
         }
 
@@ -410,6 +420,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                             action.setGitCloneDepth("Full");
                         } else {
                             action.setGitCloneDepth(String.valueOf(depth));
+                        }
+
+                        Boolean status = source.getReportBuildStatus();
+                        if(status != null) {
+                            action.setReportBuildStatus(String.valueOf(status));
                         }
                     }
 
@@ -545,20 +560,22 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
         StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name: " + getParameterized(projectName));
-        if(!sourceTypeOverride.isEmpty()) {
-            message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
-        }
-
-        if(!sourceLocationOverride.isEmpty()) {
-            message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
-        }
-        if(!sourceVersion.isEmpty()) {
-            message.append("\n\t> source version: " + sourceVersion);
-        }
         if(!SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
+            if(!sourceTypeOverride.isEmpty()) {
+                message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
+            }
+            if(!sourceLocationOverride.isEmpty()) {
+                message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
+            }
             if(!gitCloneDepthOverride.isEmpty()) {
                 message.append("\n\t> git clone depth: " + getParameterized(gitCloneDepthOverride) + " (git clone depth is omitted when source provider is Amazon S3)");
             }
+            if(!reportBuildStatusOverride.isEmpty()) {
+                message.append("\n\t> report build status: " + getParameterized(reportBuildStatusOverride) + " (report build status is valid when source provider is GitHub)");
+            }
+        }
+        if(!sourceVersion.isEmpty()) {
+            message.append("\n\t> source version: " + sourceVersion);
         }
         if(!artifactTypeOverride.isEmpty()) {
             message.append("\n\t> artifact type: " + getParameterized(artifactTypeOverride));
@@ -569,6 +586,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!artifactNameOverride.isEmpty()) {
             message.append("\n\t> artifact name: " + getParameterized(artifactNameOverride));
         }
+        if(!overrideArtifactName.isEmpty()) {
+            message.append("\n\t> overrideArtifactName: " + getParameterized(overrideArtifactName));
+        }
         if(!artifactNamespaceOverride.isEmpty()) {
             message.append("\n\t> artifact namespace: " + getParameterized(artifactNamespaceOverride));
         }
@@ -577,6 +597,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
         if(!artifactPathOverride.isEmpty()) {
             message.append("\n\t> artifact path: " + getParameterized(artifactPathOverride));
+        }
+        if(!artifactEncryptionDisabledOverride.isEmpty()) {
+            message.append("\n\t> artifact encryption disabled: " + getParameterized(artifactEncryptionDisabledOverride));
         }
         if(!buildSpecFile.isEmpty()) {
             message.append("\n\t> build spec: \n" + getParameterized(buildSpecFile));
@@ -662,6 +685,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             artifacts.setPath(getParameterized(artifactPathOverride));
             overridesSpecified = true;
         }
+        if(!getParameterized(artifactEncryptionDisabledOverride).isEmpty()) {
+            artifacts.setEncryptionDisabled(Boolean.parseBoolean(artifactEncryptionDisabledOverride));
+            overridesSpecified = true;
+        }
+        if(!getParameterized(overrideArtifactName).isEmpty()) {
+            artifacts.setOverrideArtifactName(Boolean.parseBoolean(overrideArtifactName));
+            overridesSpecified = true;
+        }
+
         return overridesSpecified ? artifacts : null;
     }
 
@@ -789,11 +821,19 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         public ListBoxModel doFillGitCloneDepthOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("1");
-            selections.add("5");
-            selections.add("25");
-            selections.add("Full");
-            selections.add("");
+            for(GitCloneDepth t: GitCloneDepth.values()) {
+                selections.add(t.toString());
+            }
+
+            return selections;
+        }
+
+        public ListBoxModel doFillReportBuildStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -801,9 +841,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         public ListBoxModel doFillPrivilegedModeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("False");
-            selections.add("True");
-            selections.add("");
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -811,9 +851,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         public ListBoxModel doFillInsecureSslOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
-            selections.add("False");
-            selections.add("True");
-            selections.add("");
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
 
             return selections;
         }
@@ -845,6 +885,26 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 selections.add(t.toString());
             }
             selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillArtifactEncryptionDisabledOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+
+            return selections;
+        }
+
+        public ListBoxModel doFillOverrideArtifactNameItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+
             return selections;
         }
 

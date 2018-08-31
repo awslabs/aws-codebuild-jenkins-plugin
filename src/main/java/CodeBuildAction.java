@@ -44,6 +44,7 @@ public class CodeBuildAction implements Action {
     private String sourceLocation;
     private String sourceVersion;
     private String gitCloneDepth;
+    private String reportBuildStatus;
     private String s3BucketName;
     private String s3ArtifactURL;
     private String artifactTypeOverride;

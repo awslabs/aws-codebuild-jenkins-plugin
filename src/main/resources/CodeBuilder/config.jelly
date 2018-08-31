@@ -76,6 +76,9 @@
           <f:select />
         </f:entry>
 
+        <f:entry title="Report Build Status Override (optional)" field="reportBuildStatusOverride" help="/plugin/aws-codebuild/help-reportBuildStatusHelp.html">
+           <f:select />
+        </f:entry>
     </f:radioBlock>
 
     <f:radioBlock title="Use Jenkins source" name="sourceControlType" help="/plugin/aws-codebuild/help-jenkinsSourceHelp.html"
@@ -104,6 +107,10 @@
       <f:textbox />
     </f:entry>
 
+    <f:entry title="Override Artifact Name" field="overrideArtifactName" help="/plugin/aws-codebuild/help-overrideArtifactName.html">
+      <f:select />
+    </f:entry>
+
     <f:entry title="Artifact Namespace Override" field="artifactNamespaceOverride" help="/plugin/aws-codebuild/help-artifactNamespaceOverride.html">
       <f:select />
     </f:entry>
@@ -114,6 +121,10 @@
 
     <f:entry title="Artifact Path Override" field="artifactPathOverride" help="/plugin/aws-codebuild/help-artifactPathOverride.html">
       <f:textbox />
+    </f:entry>
+
+    <f:entry title="Artifact Encryption Disabled Override" field="artifactEncryptionDisabledOverride" help="/plugin/aws-codebuild/help-artifactEncryptionDisabledOverride.html">
+      <f:select />
     </f:entry>
 
     <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">

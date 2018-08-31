@@ -18,7 +18,7 @@ import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
-import enums.SourceControlType;
+import enums.*;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -78,12 +78,13 @@ public class CodeBuilderTest {
 
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
-        CodeBuilder cb = new CodeBuilder("keys", "id123","host", "60", "a", awsSecretKey, "",
-                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
-                "1", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
-                "","[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(),"https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(),"aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(),CacheType.NO_CACHE.toString(),"",
-                "arn:aws:s3:::my_bucket/certificate.pem","my_service_role","false","false");
+        CodeBuilder cb = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey, "",
+                CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(),
+                GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "", BooleanValue.False.toString(), BooleanValue.False.toString(), "[{k, v}]", "[{k, p}]",
+                "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
+                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
 
             // It will be a mock factory during testing.
         return cb;
@@ -97,10 +98,10 @@ public class CodeBuilderTest {
 
         ProjectArtifacts artifacts = new ProjectArtifacts();
         artifacts.setLocation("artifactBucket");
-        artifacts.setType("S3");
+        artifacts.setType(ArtifactsType.S3.toString());
         ProjectSource source = new ProjectSource();
         source.setLocation("arn:aws:s3:::my_corporate_bucket/exampleobject.png");
-        source.setType("S3");
+        source.setType(SourceType.S3.toString());
         Project project = new Project();
         project.setArtifacts(artifacts);
         project.setSource(source);
