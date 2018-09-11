@@ -36,6 +36,7 @@
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.*;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.retry.PredefinedBackoffStrategies;
 import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
@@ -129,17 +130,19 @@ public class AWSClientFactory {
 
     public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException, IllegalArgumentException {
         AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, getClientConfiguration());
-        client.setEndpoint("https://codebuild." + region + ".amazonaws.com");
+        client.setEndpoint("https://codebuild." + region + getAwsClientSuffix(region));
         return client;
     }
 
     public AmazonS3Client getS3Client() throws InvalidInputException {
-        return new AmazonS3Client(awsCredentialsProvider, getClientConfiguration());
+        AmazonS3Client client = new AmazonS3Client(awsCredentialsProvider, getClientConfiguration());
+        client.setEndpoint("https://s3." + region + getAwsClientSuffix(region));
+        return client;
     }
 
     public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
         AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, getClientConfiguration());
-        client.setEndpoint("https://logs." + region + ".amazonaws.com");
+        client.setEndpoint("https://logs." + region + getAwsClientSuffix(region));
         return client;
     }
 
@@ -194,6 +197,14 @@ public class AWSClientFactory {
             }
         } else {
             return credentialsDescriptor;
+        }
+    }
+
+    private String getAwsClientSuffix(String region) {
+        if(region.equals(Regions.CN_NORTH_1.getName().toString()) || region.equals(Regions.CN_NORTHWEST_1.getName().toString())) {
+            return ".amazonaws.com.cn";
+        } else {
+            return ".amazonaws.com";
         }
     }
 

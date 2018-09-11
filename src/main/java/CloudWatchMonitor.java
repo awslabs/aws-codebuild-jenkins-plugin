@@ -51,7 +51,7 @@ public class CloudWatchMonitor {
     // Checks if the CloudWatch logs exist. If they do, retrieves/stores them in this.latestLogs.
     // If the logs don't exist yet, sets this.latestLogs to an error message.
     public void pollForLogs(TaskListener listener) {
-        if(this.logsLocation != null) {
+        if(this.logsLocation != null && this.logsLocation.getGroupName() != null && this.logsLocation.getStreamName() != null) {
             this.latestLogs = new ArrayList();
             GetLogEventsRequest logRequest = new GetLogEventsRequest()
                 .withStartTime(lastPollTime)

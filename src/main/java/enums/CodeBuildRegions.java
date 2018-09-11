@@ -29,7 +29,9 @@ public enum CodeBuildRegions {
     LHR("eu-west-2"),
     CDG("eu-west-3"),
     FRA("eu-central-1"),
-    GRU("sa-east-1");
+    GRU("sa-east-1"),
+    BJS("cn-north-1"),
+    ZHY("cn-northwest-1");
 
     private String value;
 

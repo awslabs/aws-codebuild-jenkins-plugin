@@ -24,9 +24,9 @@ public class Utils {
         The given string can be in ARN format or <bucket>/<key> format, so handle both.
      */
     public static String getS3BucketFromObjectArn(String s3ObjectString) {
-        Matcher stringRegex = Pattern.compile("(arn:aws:s3:::)?([^/]+)/.*").matcher(s3ObjectString);
+        Matcher stringRegex = Pattern.compile("(arn:(aws|aws-cn):s3:::)?([^/]+)/.*").matcher(s3ObjectString);
         stringRegex.find();
-        return stringRegex.group(2);
+        return stringRegex.group(3);
     }
 
     public static String getS3KeyFromObjectArn(String s3ObjectArn) {
