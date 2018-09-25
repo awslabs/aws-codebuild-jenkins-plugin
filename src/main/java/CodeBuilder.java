@@ -75,6 +75,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String certificateOverride;
     @Getter private String cacheTypeOverride;
     @Getter private String cacheLocationOverride;
+    @Getter private String cloudWatchLogsStatusOverride;
+    @Getter private String cloudWatchLogsGroupNameOverride;
+    @Getter private String cloudWatchLogsStreamNameOverride;
+    @Getter private String s3LogsStatusOverride;
+    @Getter private String s3LogsLocationOverride;
     @Getter private String serviceRoleOverride;
     @Getter private String privilegedModeOverride;
     @Getter private String sourceTypeOverride;
@@ -117,7 +122,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
-                       String cacheTypeOverride, String cacheLocationOverride, String certificateOverride, String serviceRoleOverride,
+                       String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
+                       String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
                        String insecureSslOverride, String privilegedModeOverride) {
 
         this.credentialsType = credentialsType;
@@ -149,6 +155,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.computeTypeOverride = computeTypeOverride;
         this.cacheTypeOverride = cacheTypeOverride;
         this.cacheLocationOverride = cacheLocationOverride;
+        this.cloudWatchLogsStatusOverride = cloudWatchLogsStatusOverride;
+        this.cloudWatchLogsGroupNameOverride = cloudWatchLogsGroupNameOverride;
+        this.cloudWatchLogsStreamNameOverride = cloudWatchLogsStreamNameOverride;
+        this.s3LogsStatusOverride = s3LogsStatusOverride;
+        this.s3LogsLocationOverride = s3LogsLocationOverride;
         this.certificateOverride = certificateOverride;
         this.serviceRoleOverride = serviceRoleOverride;
         this.envVariables = envVariables;
@@ -190,6 +201,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         computeTypeOverride = Validation.sanitize(computeTypeOverride);
         cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
         cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
+        cloudWatchLogsStatusOverride = Validation.sanitize(cloudWatchLogsStatusOverride);
+        cloudWatchLogsGroupNameOverride = Validation.sanitize(cloudWatchLogsGroupNameOverride);
+        cloudWatchLogsStreamNameOverride = Validation.sanitize(cloudWatchLogsStreamNameOverride);
+        s3LogsStatusOverride = Validation.sanitize(s3LogsStatusOverride);
+        s3LogsLocationOverride = Validation.sanitize(s3LogsLocationOverride);
         certificateOverride = Validation.sanitize(certificateOverride);
         serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
         envVariables = Validation.sanitize(envVariables);
@@ -280,6 +296,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         ProjectCache cacheOverride = generateStartBuildCacheOverride();
         if(cacheOverride != null) {
             startBuildRequest.setCacheOverride(cacheOverride);
+        }
+
+        LogsConfig logsConfigOverride = generateStartBuildLogsConfigOverride();
+        if(logsConfigOverride != null) {
+            startBuildRequest.setLogsConfigOverride(logsConfigOverride);
         }
 
         if(!getParameterized(environmentTypeOverride).isEmpty()) {
@@ -433,6 +454,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
                     action.setS3BucketName(artifactLocation);
                     action.setLogs(new ArrayList());
+                    action.setCloudWatchLogsURL("");
+                    action.setS3LogsURL("");
 
                     build.addAction(action);
                     haveInitializedAction = true;
@@ -523,11 +546,28 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             action.updateLogs(logMonitor.getLatestLogs());
 
             action.setPhases(b.getPhases());
-            if (logMonitor.getLogsLocation() != null) {
-                if(action.getLogURL() == null){
-                    String logUrl = logMonitor.getLogsLocation().getDeepLink();
-                    action.setLogURL(logUrl);
-                    LoggingHelper.log(listener, "CloudWatch dashboard: " + logUrl);
+            if(logMonitor.getLogsLocation() != null) {
+                LogsLocation logsLocation = logMonitor.getLogsLocation();
+
+                if(logsLocation.getGroupName() != null && logsLocation.getStreamName() != null && logsLocation.getDeepLink() != null
+                    && action.getCloudWatchLogsURL().equals("")) {
+                    String cloudWatchLogsURL = logsLocation.getDeepLink();
+                    action.setCloudWatchLogsURL(cloudWatchLogsURL);
+                    LoggingHelper.log(listener, "CloudWatch dashboard: " + cloudWatchLogsURL);
+                }
+
+                if(logsLocation.getS3DeepLink() != null && b.getPhases() != null && action.getS3LogsURL().equals("")) {
+                    List<BuildPhase> phases = b.getPhases();
+                    for(BuildPhase phase : phases) {
+                        if(phase.getPhaseType() != null && phase.getPhaseType().equals(BuildPhaseType.UPLOAD_ARTIFACTS.toString())) {
+                            if(phase.getContexts() != null && phase.getContexts().get(0) != null && phase.getContexts().get(0).getMessage() != null
+                                && !phase.getContexts().get(0).getMessage().contains("Error uploading logs:")) {
+                                String s3LogsURL = logsLocation.getS3DeepLink();
+                                action.setS3LogsURL(s3LogsURL);
+                                LoggingHelper.log(listener, "S3 logs location: " + s3LogsURL);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -617,6 +657,26 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(!cacheLocationOverride.isEmpty()) {
             message.append("\n\t> cache location: " + getParameterized(cacheLocationOverride));
+        }
+
+        if(!cloudWatchLogsStatusOverride.isEmpty()) {
+            message.append("\n\t> cloudwatch logs status: " + getParameterized(cloudWatchLogsStatusOverride));
+        }
+
+        if(!cloudWatchLogsGroupNameOverride.isEmpty()) {
+            message.append("\n\t> cloudwatch logs group name: " + getParameterized(cloudWatchLogsGroupNameOverride));
+        }
+
+        if(!cloudWatchLogsStreamNameOverride.isEmpty()) {
+            message.append("\n\t> cloudwatch logs stream name: " + getParameterized(cloudWatchLogsStreamNameOverride));
+        }
+
+        if(!s3LogsStatusOverride.isEmpty()) {
+            message.append("\n\t> s3 logs status: " + getParameterized(s3LogsStatusOverride));
+        }
+
+        if(!s3LogsLocationOverride.isEmpty()) {
+            message.append("\n\t> s3 logs location: " + getParameterized(s3LogsLocationOverride));
         }
 
         if(!environmentTypeOverride.isEmpty()) {
@@ -709,6 +769,46 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             overridesSpecified = true;
         }
         return overridesSpecified ? cache : null;
+    }
+
+    private LogsConfig generateStartBuildLogsConfigOverride() {
+        LogsConfig logsConfig = new LogsConfig();
+        CloudWatchLogsConfig cloudWatchLogsConfig = new CloudWatchLogsConfig();
+        S3LogsConfig s3LogsConfig = new S3LogsConfig();
+
+        boolean overridesCloudWatchLogsSpecified = false;
+        boolean overridesS3LogsSpecified = false;
+
+        if(!getParameterized(cloudWatchLogsStatusOverride).isEmpty()) {
+            cloudWatchLogsConfig.setStatus(getParameterized(cloudWatchLogsStatusOverride));
+            overridesCloudWatchLogsSpecified = true;
+        }
+        if(!getParameterized(cloudWatchLogsGroupNameOverride).isEmpty()) {
+            cloudWatchLogsConfig.setGroupName(getParameterized(cloudWatchLogsGroupNameOverride));
+            overridesCloudWatchLogsSpecified = true;
+        }
+        if(!getParameterized(cloudWatchLogsStreamNameOverride).isEmpty()) {
+            cloudWatchLogsConfig.setStreamName(getParameterized(cloudWatchLogsStreamNameOverride));
+            overridesCloudWatchLogsSpecified = true;
+        }
+
+        if(!getParameterized(s3LogsStatusOverride).isEmpty()) {
+            s3LogsConfig.setStatus(getParameterized(s3LogsStatusOverride));
+            overridesS3LogsSpecified = true;
+        }
+        if(!getParameterized(s3LogsLocationOverride).isEmpty()) {
+            s3LogsConfig.setLocation(getParameterized(s3LogsLocationOverride));
+            overridesS3LogsSpecified = true;
+        }
+
+        if(overridesCloudWatchLogsSpecified) {
+            logsConfig.setCloudWatchLogs(cloudWatchLogsConfig);
+        }
+        if(overridesS3LogsSpecified) {
+            logsConfig.setS3Logs(s3LogsConfig);
+        }
+
+        return overridesCloudWatchLogsSpecified || overridesS3LogsSpecified ? logsConfig : null;
     }
 
     private SourceAuth generateStartBuildSourceAuthOverride(String sourceType) {
@@ -934,6 +1034,26 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (CacheType t : CacheType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillCloudWatchLogsStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillS3LogsStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
                 selections.add(t.toString());
             }
             selections.add("");

@@ -31,7 +31,8 @@ public class CodeBuildAction implements Action {
 
     private String buildId;
     private List<String> logs;
-    private String logURL;
+    private String cloudWatchLogsURL;
+    private String s3LogsURL;
     private List<BuildPhase> phases;
     private String phaseErrorMessage;
     private String startTime;

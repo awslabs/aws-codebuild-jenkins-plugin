@@ -159,6 +159,26 @@
       <f:textbox />
     </f:entry>
 
+    <f:entry title="CloudWatch Logs Status Override" field="cloudWatchLogsStatusOverride" help="/plugin/aws-codebuild/help-cloudWatchLogsStatusOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="CloudWatch Logs Group Name Override" field="cloudWatchLogsGroupNameOverride" help="/plugin/aws-codebuild/help-cloudWatchLogsGroupNameOverride.html">
+      <f:textbox />
+    </f:entry>
+
+    <f:entry title="CloudWatch Logs Stream Name Override" field="cloudWatchLogsStreamNameOverride" help="/plugin/aws-codebuild/help-cloudWatchLogsStreamNameOverride.html">
+      <f:textbox />
+     </f:entry>
+
+    <f:entry title="S3 Logs Status Override" field="s3LogsStatusOverride" help="/plugin/aws-codebuild/help-s3LogsStatusOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="S3 Logs Location Override" field="s3LogsLocationOverride" help="/plugin/aws-codebuild/help-s3LogsLocationOverride.html">
+      <f:textbox />
+    </f:entry>
+
     <f:entry title="Certificate Override" field="certificateOverride" help="/plugin/aws-codebuild/help-certificateOverride.html">
       <f:textbox />
     </f:entry>

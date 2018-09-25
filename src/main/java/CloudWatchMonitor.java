@@ -31,7 +31,7 @@ import java.util.List;
 public class CloudWatchMonitor {
 
     @Setter private AWSLogsClient logsClient;
-    @Setter @Getter  private LogsLocation logsLocation;
+    @Setter @Getter private LogsLocation logsLocation;
     @Getter private List<String> latestLogs;
     @Getter private Long lastPollTime;
 

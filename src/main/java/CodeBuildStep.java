@@ -73,6 +73,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String certificateOverride;
     @Getter private String cacheTypeOverride;
     @Getter private String cacheLocationOverride;
+    @Getter private String cloudWatchLogsStatusOverride;
+    @Getter private String cloudWatchLogsGroupNameOverride;
+    @Getter private String cloudWatchLogsStreamNameOverride;
+    @Getter private String s3LogsStatusOverride;
+    @Getter private String s3LogsLocationOverride;
     @Getter private String serviceRoleOverride;
     @Getter private String privilegedModeOverride;
     @Getter private String sourceTypeOverride;
@@ -221,6 +226,31 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setCacheLocationOverride(String cacheLocationOverride) {
         this.cacheLocationOverride = cacheLocationOverride;
+    }
+
+    @DataBoundSetter
+    public void setCloudWatchLogsStatusOverride(String cloudWatchLogsStatusOverride) {
+        this.cloudWatchLogsStatusOverride = cloudWatchLogsStatusOverride;
+    }
+
+    @DataBoundSetter
+    public void setCloudWatchLogsGroupNameOverride(String cloudWatchLogsGroupNameOverride) {
+        this.cloudWatchLogsGroupNameOverride = cloudWatchLogsGroupNameOverride;
+    }
+
+    @DataBoundSetter
+    public void setCloudWatchLogsStreamNameOverride(String cloudWatchLogsStreamNameOverride) {
+        this.cloudWatchLogsStreamNameOverride = cloudWatchLogsStreamNameOverride;
+    }
+
+    @DataBoundSetter
+    public void setS3LogsStatusOverride(String s3LogsStatusOverride) {
+        this.s3LogsStatusOverride = s3LogsStatusOverride;
+    }
+
+    @DataBoundSetter
+    public void setS3LogsLocationOverride(String s3LogsLocationOverride) {
+        this.s3LogsLocationOverride = s3LogsLocationOverride;
     }
 
     @DataBoundSetter
@@ -407,6 +437,26 @@ public class CodeBuildStep extends AbstractStepImpl {
             return selections;
         }
 
+        public ListBoxModel doFillCloudWatchLogsStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
+        public ListBoxModel doFillS3LogsStatusOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
         public ListBoxModel doFillEnvironmentTypeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
@@ -504,7 +554,9 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getEnvVariables(), step.getEnvParameters(), step.getBuildSpecFile(), step.getBuildTimeoutOverride(),
                     step.getSourceTypeOverride(), step.getSourceLocationOverride(), step.getEnvironmentTypeOverride(),
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
-                    step.getCertificateOverride(), step.getServiceRoleOverride(), step.getInsecureSslOverride(), step.getPrivilegedModeOverride()
+                    step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
+                    step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
+                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride()
             ).readResolve();
             builder.perform(run, ws, launcher, listener);
 

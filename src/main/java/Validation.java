@@ -49,6 +49,8 @@ public class Validation {
     public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";
     public static final String invalidEnvironmentTypeError = "Environment type override must be one of 'LINUX_CONTAINER', 'WINDOWS_CONTAINER'";
     public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE'";
+    public static final String invalidCloudWatchLogsStatusError = "CloudWatch Logs status override must be one of 'ENABLED', 'DISABLED'";
+    public static final String invalidS3LogsStatusError = "S3 logs status override must be one of 'ENABLED', 'DISABLED'";
 
     //CodeBuilder
     public static final String projectRequiredError = "CodeBuild project name is required";
@@ -156,6 +158,24 @@ public class Validation {
                 CacheType.fromValue(cacheTypeOverride);
             } catch(IllegalArgumentException e) {
                 return invalidCacheTypeError;
+            }
+        }
+
+        String cloudWatchLogsStatusOverride = cb.getParameterized(cb.getCloudWatchLogsStatusOverride());
+        if(!cloudWatchLogsStatusOverride.isEmpty()) {
+            try {
+                LogsConfigStatusType.fromValue(cloudWatchLogsStatusOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidCloudWatchLogsStatusError;
+            }
+        }
+
+        String s3LogsStatusOverride = cb.getParameterized(cb.getS3LogsStatusOverride());
+        if(!s3LogsStatusOverride.isEmpty()) {
+            try {
+                LogsConfigStatusType.fromValue(s3LogsStatusOverride);
+            } catch(IllegalArgumentException e) {
+                return invalidS3LogsStatusError;
             }
         }
 
