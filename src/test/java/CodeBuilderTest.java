@@ -25,6 +25,7 @@ import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
@@ -60,6 +61,8 @@ public class CodeBuilderTest {
             throw new InterruptedException();
         }
     };
+    StepContext mockStepContext = mock(StepContext.class);
+    EnvVars mockEnvVars = mock(EnvVars.class);
 
     BatchGetProjectsResult mockBGPResult = mock(BatchGetProjectsResult.class);
     StartBuildResult mockStartBuildResult = mock(StartBuildResult.class);
@@ -126,6 +129,7 @@ public class CodeBuilderTest {
         PowerMockito.mockStatic(Thread.class);
         Thread.sleep(anyLong());
         when(awsSecretKey.getPlainText()).thenReturn("secretKey");
+        when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
     }
 
     @Before

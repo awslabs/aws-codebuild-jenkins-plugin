@@ -21,10 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.google.inject.Inject;
 import enums.*;
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
+import hudson.*;
 import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -558,7 +555,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
                     step.getInsecureSslOverride(), step.getPrivilegedModeOverride()
             ).readResolve();
-            builder.perform(run, ws, launcher, listener);
+            builder.perform(run, ws, launcher, listener, getContext());
 
             CodeBuildResult result = builder.getCodeBuildResult();
 

@@ -56,7 +56,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 null, null, null, null);
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -78,7 +78,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -90,7 +90,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testNoProjectName() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
                 null, "", CodeBuildRegions.IAD.toString(), "", "", "",
                 SourceControlType.ProjectSource.toString(), "", "", "", "", "",
@@ -101,7 +100,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -116,7 +115,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testNoSourceType() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
                 null, "", CodeBuildRegions.IAD.toString(), "project", "", "",
                 "", "", "", "", "", "",
@@ -127,7 +125,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -148,7 +146,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -160,13 +158,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testGetCBClientExcepts() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "failed to instantiate cb client.";
         doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -178,13 +175,12 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsExcepts() throws Exception {
-        setUpBuildEnvironment();
+        CodeBuilder test = createDefaultCodeBuilder();
         String error = "cannot get build";
         doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
-        CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -196,8 +192,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testComputeTypeOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -207,7 +201,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -219,8 +213,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testCacheTypeOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -230,7 +222,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -242,8 +234,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testCloudWatchLogsStatusOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -253,7 +243,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 "invalidCloudWatchLogsStatus", "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -265,8 +255,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testS3LogsStatusOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -276,7 +264,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", "invalidS3LogsStatus", "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -288,8 +276,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testSourceTypeOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -299,7 +285,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -311,8 +297,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testEnvironmentTypeOverrideException() throws Exception {
-        setUpBuildEnvironment();
-
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
@@ -322,7 +306,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -347,7 +331,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
                 "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString());
 
-        cb.perform(build, ws, launcher, listener);
+        cb.perform(build, ws, launcher, listener, mockStepContext);
 
         assertEquals(envVars.get("foo"), cb.getParameterized(cb.getProjectName()));
         assertEquals(envVars.get("foo2") + "-" + envVars.get("foo3"), cb.getParameterized(cb.getSourceVersion()));

@@ -14,18 +14,19 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.cloudbees.plugins.credentials.*;
+import hudson.EnvVars;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Run;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,8 +35,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.io.IOException;
 import java.util.List;
 
+import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -57,6 +60,7 @@ public class AWSClientFactoryTest {
     private final SystemCredentialsProvider mockSysCreds = mock(SystemCredentialsProvider.class);
     private final Secret awsSecretKey = PowerMockito.mock(Secret.class);
     private final Run<?, ?> build = mock(Run.class);
+    private final StepContext mockStepContext = mock(StepContext.class);
 
     @Before
     public void setUp() {
@@ -81,7 +85,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullInput() {
         try {
-            new AWSClientFactory(null, null, null, null, null, null, null, null, build);
+            new AWSClientFactory(null, null, null, null, null, null, null, null, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -90,7 +94,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testBlankInput() {
         try {
-            new AWSClientFactory("", "", "", "", "", null, "", "", build);
+            new AWSClientFactory("", "", "", "", "", null, "", "", build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidRegionError));
         }
@@ -98,13 +102,13 @@ public class AWSClientFactoryTest {
 
     @Test(expected=NumberFormatException.class)
     public void testInvalidProxyPort() {
-        new AWSClientFactory("keys", "", "", "port", "", awsSecretKey, "", REGION, build);
+        new AWSClientFactory("keys", "", "", "port", "", awsSecretKey, "", REGION, build, null);
     }
 
     @Test
     public void testInvalidCredsOption() {
         try {
-            new AWSClientFactory("bad", "", "", "", "", null, "", REGION, build);
+            new AWSClientFactory("bad", "", "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredTypeError));
         }
@@ -112,7 +116,7 @@ public class AWSClientFactoryTest {
 
     @Test
     public void testSpecifyCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", awsSecretKey, "t", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", awsSecretKey, "t", REGION, build, null);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
 
@@ -120,7 +124,7 @@ public class AWSClientFactoryTest {
 
     @Test
     public void testDefaultCreds() {
-        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", awsSecretKey, "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", awsSecretKey, "", REGION, build, null);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
     }
@@ -130,7 +134,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullCredsId() {
         try {
-            new AWSClientFactory("jenkins", null, "", "", "", null, "", REGION, build);
+            new AWSClientFactory("jenkins", null, "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
         }
@@ -139,7 +143,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testEmptyCredsId() {
         try {
-            new AWSClientFactory("jenkins", "", "", "", "", null, "", REGION, build);
+            new AWSClientFactory("jenkins", "", "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
         }
@@ -148,7 +152,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testJenkinsCreds() {
         String credentialsId = "id";
-        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
@@ -159,7 +163,7 @@ public class AWSClientFactoryTest {
     @Test
     public void testNullAwsSecretKey() {
         try {
-            new AWSClientFactory("keys", null, "", "", "a", null, "", REGION, build);
+            new AWSClientFactory("keys", null, "", "", "a", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidSecretKeyError));
         }
@@ -193,7 +197,7 @@ public class AWSClientFactoryTest {
         when(mockProject.getParent()).thenReturn(mockFolderItem);
         when(mockFolderItem.getFullName()).thenReturn(folder);
 
-        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build);
+        AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
         assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
@@ -224,11 +228,61 @@ public class AWSClientFactoryTest {
         when(mockFolder.getFullName()).thenReturn(folder);
 
         try {
-            new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build);
+            new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
             assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
             throw e;
         }
+    }
+
+    @Test
+    public void testStepContextBasicCreds() throws IOException, InterruptedException {
+        EnvVars mockEnvVars = mock(EnvVars.class);
+        when(mockEnvVars.get(AWS_ACCESS_KEY_ID)).thenReturn("access");
+        when(mockEnvVars.get(AWS_SECRET_ACCESS_KEY)).thenReturn("secret");
+        when(mockEnvVars.get(AWS_SESSION_TOKEN)).thenReturn(null);
+        when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
+        when(awsSecretKey.getPlainText()).thenReturn("");
+
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenThrow(new RuntimeException("Should not be accessing the default credentials provider chain."));
+
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "", awsSecretKey, "", REGION, build, mockStepContext);
+
+        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.stepCredentials));
+    }
+
+    @Test
+    public void testStepContextSessionCreds() throws IOException, InterruptedException {
+        EnvVars mockEnvVars = mock(EnvVars.class);
+        when(mockEnvVars.get(AWS_ACCESS_KEY_ID)).thenReturn("access");
+        when(mockEnvVars.get(AWS_SECRET_ACCESS_KEY)).thenReturn("secret");
+        when(mockEnvVars.get(AWS_SESSION_TOKEN)).thenReturn("token");
+        when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
+        when(awsSecretKey.getPlainText()).thenReturn("");
+
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenThrow(new RuntimeException("Should not be accessing the default credentials provider chain."));
+
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "", awsSecretKey, "", REGION, build, mockStepContext);
+
+        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.stepCredentials));
+    }
+
+    @Test
+    public void testStepContextWithKeysSpecified() throws IOException, InterruptedException {
+        EnvVars mockEnvVars = mock(EnvVars.class);
+        when(mockEnvVars.get(AWS_ACCESS_KEY_ID)).thenReturn("access");
+        when(mockEnvVars.get(AWS_SECRET_ACCESS_KEY)).thenReturn("secret");
+        when(mockEnvVars.get(AWS_SESSION_TOKEN)).thenReturn("token");
+        when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
+
+        PowerMockito.mockStatic(DefaultAWSCredentialsProviderChain.class);
+        when(DefaultAWSCredentialsProviderChain.getInstance()).thenThrow(new RuntimeException("Should not be accessing the default credentials provider chain."));
+
+        AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "accessKey", awsSecretKey, "", REGION, build, mockStepContext);
+
+        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.basicAWSCredentials));
     }
 
 }

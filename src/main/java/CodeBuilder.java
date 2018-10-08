@@ -33,6 +33,7 @@ import jenkins.tasks.SimpleBuildStep;
 import lombok.Getter;
 import lombok.Setter;
 import net.sf.json.JSONObject;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -97,6 +98,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter@Setter String artifactType;
     @Getter@Setter String projectSourceLocation;
     @Getter@Setter String projectSourceType;
+
+    private StepContext stepContext;
 
     //These messages are used in the Jenkins console log.
     public static final String authorizationError = "Authorization error";
@@ -217,6 +220,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return this;
     }
 
+    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener, StepContext stepContext) throws InterruptedException, IOException {
+        this.stepContext = stepContext;
+        perform(build, ws, launcher, listener);
+    }
+
     /*
      * This is the Jenkins method that executes the actual build.
      */
@@ -236,7 +244,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     this.awsSecretKey,
                     getParameterized(this.awsSessionToken),
                     getParameterized(this.region),
-                    build);
+                    build,
+                    this.stepContext);
         } catch (Exception e) {
             failBuild(build, listener, authorizationError, e.getMessage());
             return;

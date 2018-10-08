@@ -44,6 +44,7 @@ public class Validation {
     public static final String unableToGetJobFolder = "Unable to retrieve folder for this job.";
     public static final String basicAWSCredentials = "Using given AWS access and secret key for authorization";
     public static final String defaultChainCredentials = "Using credentials provided by the DefaultAWSCredentialsProviderChain for authorization";
+    public static final String stepCredentials = "Using credentials provided by the Jenkins step context for authorization";
     public static final String IAMRoleCredentials = "Authorizing with the IAM role defined in credentials ";
     public static final String invalidSourceTypeError = "Source type override must be one of 'CODECOMMIT', 'S3', 'GITHUB', 'GITHUB_ENTERPRISE', 'BITBUCKET'";
     public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";

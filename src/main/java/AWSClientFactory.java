@@ -33,6 +33,7 @@
  *     SOFTWARE.
  */
 
+import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.*;
@@ -53,18 +54,20 @@ import com.cloudbees.hudson.plugins.folder.*;
 
 
 import enums.CredentialsType;
+import hudson.EnvVars;
 import hudson.model.*;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-public class AWSClientFactory {
 
+public class AWSClientFactory {
 
     @Getter private final String proxyHost;
     @Getter private final Integer proxyPort;
@@ -79,7 +82,7 @@ public class AWSClientFactory {
     private static final String POM_PROPERTIES = "/META-INF/maven/com.amazonaws/aws-codebuild/pom.properties";
 
     public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
-                       String region, Run<?, ?> build) {
+                       String region, Run<?, ?> build, StepContext stepContext) {
 
         this.awsAccessKey = Validation.sanitize(awsAccessKey);
         this.awsSecretKey = awsSecretKey;
@@ -120,7 +123,17 @@ public class AWSClientFactory {
             if(this.awsSecretKey == null) {
                 throw new InvalidInputException(Validation.invalidSecretKeyError);
             }
-            awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), awsSecretKey.getPlainText(), Validation.sanitize(awsSessionToken));
+
+            if(stepContext != null && awsAccessKey.isEmpty() && awsSecretKey.getPlainText().isEmpty()) {
+                try {
+                    EnvVars stepEnvVars = stepContext.get(EnvVars.class);
+                    awsCredentialsProvider = getStepCreds(stepEnvVars);
+                } catch (IOException|InterruptedException e) {}
+            }
+
+            if(awsCredentialsProvider == null) {
+                awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), awsSecretKey.getPlainText(), Validation.sanitize(awsSessionToken));
+            }
             this.proxyHost = Validation.sanitize(proxyHost);
             this.proxyPort = Validation.parseInt(proxyPort);
         } else {
@@ -148,6 +161,23 @@ public class AWSClientFactory {
 
     public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
         return getBasicCredentialsOrDefaultChain(accessKey, secretKey, "");
+    }
+
+    private AWSCredentialsProvider getStepCreds(EnvVars stepEnvVars) {
+        String stepAccessKey = stepEnvVars.get(AWS_ACCESS_KEY_ID);
+        String stepSecretKey = stepEnvVars.get(AWS_SECRET_ACCESS_KEY);
+        String stepSessionToken = stepEnvVars.get(AWS_SESSION_TOKEN);
+
+        if(stepAccessKey != null && !stepAccessKey.isEmpty() && stepSecretKey != null && !stepSecretKey.isEmpty()) {
+            this.credentialsDescriptor = Validation.stepCredentials;
+            if(stepSessionToken != null && !stepSessionToken.isEmpty()) {
+                return new AWSStaticCredentialsProvider(new BasicSessionCredentials(stepAccessKey, stepSecretKey, stepSessionToken));
+            } else {
+                return new AWSStaticCredentialsProvider(new BasicAWSCredentials(stepAccessKey, stepSecretKey));
+            }
+        }
+
+        return null;
     }
 
     public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {

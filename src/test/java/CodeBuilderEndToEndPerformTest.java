@@ -53,7 +53,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         CodeBuilder test = createDefaultCodeBuilder();
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.SUCCESS);
         CodeBuildResult result = test.getCodeBuildResult();
@@ -71,7 +71,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.SUCCESS);
@@ -81,12 +81,11 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildFails() throws Exception {
-        setUpBuildEnvironment();
         CodeBuilder test = createDefaultCodeBuilder();
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -96,7 +95,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenFails() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
         Build failed = new Build().withBuildStatus(StatusType.FAILED).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
@@ -106,7 +104,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
@@ -116,7 +114,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsHttpTimeout() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
         Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
 
@@ -129,14 +126,13 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.SUCCESS);
     }
 
     @Test
     public void testBatchGetBuildsMultipleHttpTimeout() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
         Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
 
@@ -150,14 +146,13 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.SUCCESS);
     }
 
     @Test
     public void testInterruptedBuild() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
         Build stopped = new Build().withBuildStatus(StatusType.STOPPED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
@@ -168,7 +163,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.ABORTED);
@@ -176,7 +171,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptedCompletedBuild() throws Exception {
-        setUpBuildEnvironment();
         Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
         Build completed = new Build().withBuildStatus(StatusType.SUCCEEDED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
@@ -186,7 +180,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
-        test.perform(build, ws, launcher, listener);
+        test.perform(build, ws, launcher, listener, mockStepContext);
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.ABORTED);
