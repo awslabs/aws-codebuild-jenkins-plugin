@@ -605,11 +605,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return new StringBuilder()
             .append("https://")
             .append(getParameterized(region))
-            .append(".console.aws.amazon.com/codebuild/home?region=")
-            .append(getParameterized(region))
-            .append("#builds/")
-            .append(buildId)
-            .append("/view/new").toString();
+            .append(".console.aws.amazon.com/codesuite/codebuild/projects/")
+            .append(getParameterized(projectName))
+            .append("/build/")
+            .append(getParameterized(buildId))
+            .append("/log?region=")
+            .append(region)
+            .toString();
     }
 
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
