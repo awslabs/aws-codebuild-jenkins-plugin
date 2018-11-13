@@ -1,0 +1,21 @@
+<!--
+  ~     Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  ~
+  ~     Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
+  ~     A copy of the License is located at
+  ~
+  ~         http://aws.amazon.com/apache2.0/
+  ~
+  ~     or in the "license" file accompanying this file.
+  ~     This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~     See the License for the specific language governing permissions and limitations under the License.
+  -->
+
+<div>
+    The minimum time between calls to BatchGetBuilds to poll build status. <br>
+
+    The default value is 3 seconds. The maximum allowed value is 28800 (eight hours). <br>
+
+    The plugin increases the poll time by one second every cycle until the maximum poll
+    time is reached (default 60 seconds) and adds a jitter (default maximum 5 seconds).
+</div>

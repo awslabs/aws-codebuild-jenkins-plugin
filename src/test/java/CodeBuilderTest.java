@@ -27,6 +27,8 @@ import hudson.model.TaskListener;
 import hudson.util.Secret;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
+import org.junit.Rule;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -75,6 +77,9 @@ public class CodeBuilderTest {
     TaskListener listener = mock(TaskListener.class);
     Secret awsSecretKey = PowerMockito.mock(Secret.class);
     EnvVars envVars = new EnvVars();
+
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
     //mock console log
     protected ByteArrayOutputStream log;

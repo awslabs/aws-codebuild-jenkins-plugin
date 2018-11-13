@@ -26,6 +26,7 @@ import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
@@ -35,6 +36,7 @@ import lombok.Setter;
 import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.Nonnull;
@@ -43,6 +45,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
@@ -116,10 +119,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     public static final String httpTimeoutMessage = "Unable to execute HTTP request";
 
-    private static final int MIN_SLEEP_TIME = 2500;
-    private static final int MAX_SLEEP_TIME = 60000;
-    private static final int SLEEP_JITTER = 5000;
     private int batchGetBuildsCalls;
+    private DescriptorImpl descriptor;
 
 
     @DataBoundConstructor
@@ -242,7 +243,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-
+        descriptor = getDescriptor();
         envVars = build.getEnvironment(listener);
 
         AWSClientFactory awsClientFactory;
@@ -482,8 +483,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
 
                 updateDashboard(currentBuild, action, logMonitor, listener);
-                Thread.sleep(getSleepTime());
-
+                Thread.sleep(getSleepTime(descriptor));
             } catch(Exception e) {
                 if(e.getClass().equals(InterruptedException.class)) {
                     //Request to stop Jenkins build has been made. First make sure the build is stoppable
@@ -507,7 +507,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     build.setResult(Result.ABORTED);
                     return;
                 } else if(e.getMessage().contains(httpTimeoutMessage)) {
-                    Thread.sleep(getSleepTime());
+                    Thread.sleep(getSleepTime(descriptor));
                     continue;
                 } else {
                     if (action != null) {
@@ -533,10 +533,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return;
     }
 
-    private int getSleepTime() {
+    private int getSleepTime(DescriptorImpl desc) {
         // 5s + 1s per BatchGetBuilds call already made + jitter for concurrent builds
-        int sleepTime = MIN_SLEEP_TIME + batchGetBuildsCalls++*1000 + ThreadLocalRandom.current().nextInt(SLEEP_JITTER);
-        return Math.min(sleepTime, MAX_SLEEP_TIME);
+        int secondToMs = (int) TimeUnit.SECONDS.toMillis(1);
+        int sleepTimeInMs = secondToMs*desc.getMinSleepTime() + secondToMs*batchGetBuildsCalls++;
+        return Math.min(sleepTimeInMs, secondToMs*desc.getMaxSleepTime()) + ThreadLocalRandom.current().nextInt(secondToMs*desc.getSleepJitter());
     }
 
     // finds the name of the artifact S3 bucket associated with this project.
@@ -928,14 +929,50 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+        private static final int DEFAULT_MIN_SLEEP_TIME = 3;
+        private static final int DEFAULT_MAX_SLEEP_TIME = 60;
+        private static final int DEFAULT_SLEEP_JITTER = 5;
+        private static final int MAX_BUILD_DURATION = (int) TimeUnit.HOURS.toSeconds(8);
+
+
+        private int minSleepTime;
+        private int maxSleepTime;
+        private int sleepJitter;
 
         public DescriptorImpl() {
             load();
         }
 
+        public int getMinSleepTime() {
+            if (minSleepTime <= 0) {
+                return DEFAULT_MIN_SLEEP_TIME;
+            } else {
+                return minSleepTime;
+            }
+        }
+
+        public int getMaxSleepTime() {
+            if (minSleepTime <= 0 || maxSleepTime <= 0 || minSleepTime > maxSleepTime) {
+                return DEFAULT_MAX_SLEEP_TIME;
+            } else {
+                return maxSleepTime;
+            }
+        }
+
+        public int getSleepJitter() {
+            if (sleepJitter <= 0) {
+                return DEFAULT_SLEEP_JITTER;
+            } else {
+                return sleepJitter;
+            }
+        }
+
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindJSON(this, formData);
+            this.minSleepTime = formData.optInt("minSleepTime", 0);
+            this.maxSleepTime = formData.optInt("maxSleepTime", 0);
+            this.sleepJitter = formData.optInt("sleepJitter", 0);
             save();
             return super.configure(req, formData);
         }
@@ -1158,11 +1195,54 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             // ENABLED/DISABLED
-            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+            for (LogsConfigStatusType t : LogsConfigStatusType.values()) {
                 selections.add(t.toString());
             }
             selections.add("");
             return selections;
+        }
+
+        public FormValidation doCheckMaxSleepTime(@QueryParameter String minSleepTime, @QueryParameter String maxSleepTime, @QueryParameter String sleepJitter) {
+            Integer min = 0;
+            try {
+                min = Validation.parseInt(minSleepTime);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Not a positive integer");
+            }
+            if (min == null || min <= 0) {
+                return FormValidation.error("Not a positive integer");
+            } else if (min > MAX_BUILD_DURATION) {
+                return FormValidation.error("Cannot be greater than 28800 (eight hours)");
+            }
+
+            Integer max = 0;
+            try {
+                max = Validation.parseInt(maxSleepTime);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Not a positive integer");
+            }
+
+            if (max == null || max <= 0) {
+                return FormValidation.error("Not a positive integer");
+            } else if (max > MAX_BUILD_DURATION) {
+                return FormValidation.error("Cannot be greater than 28800 (eight hours)");
+            } else if (min > max) {
+                return FormValidation.error("Must be greater than minimum interval");
+            }
+
+            Integer jitter = 0;
+            try {
+                jitter = Validation.parseInt(sleepJitter);
+            } catch (NumberFormatException e) {
+                return FormValidation.error("Not a positive integer");
+            }
+            if (jitter == null || jitter <= 0) {
+                return FormValidation.error("Not a positive integer");
+            } else if (max > MAX_BUILD_DURATION) {
+                return FormValidation.error("Cannot be greater than 28800 (eight hours)");
+            }
+
+            return FormValidation.ok();
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
