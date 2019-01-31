@@ -72,13 +72,7 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
             // good citizens here.
         }
 
-        String zipFileMD5;
-
-        // Build MD5 checksum before returning
-        try(InputStream zipFileInputStream = new FileInputStream(f)) {
-            zipFileMD5 = new String(encodeBase64(DigestUtils.md5(zipFileInputStream)), Charsets.UTF_8);
-            return zipFileMD5;
-        }
+        return getZipMD5(f);
     }
 
     // Recursively zips everything in the given directory into a zip file using the given ZipOutputStream.
@@ -146,5 +140,9 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     //     Then the returned path string will be folder/file.txt.
     public static String trimPrefix(final String path, final String prefixToTrim) {
         return Paths.get(prefixToTrim).relativize(Paths.get(path)).toString();
+    }
+
+    public static String getZipMD5(File zipFile) throws IOException {
+        return new String(encodeBase64(DigestUtils.md5(new FileInputStream(zipFile))), Charsets.UTF_8);
     }
 }

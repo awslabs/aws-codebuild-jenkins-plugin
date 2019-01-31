@@ -88,6 +88,10 @@
           <f:select />
         </f:entry>
 
+        <f:entry title="Local Source Path (optional)" field="localSourcePath" help="/plugin/aws-codebuild/help-localSourcePathHelp.html">
+          <f:textbox />
+        </f:entry>
+
     </f:radioBlock>
 
 

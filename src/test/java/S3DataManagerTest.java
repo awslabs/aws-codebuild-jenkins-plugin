@@ -29,6 +29,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.*;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import java.util.zip.ZipOutputStream;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class S3DataManagerTest {
@@ -51,6 +53,7 @@ public class S3DataManagerTest {
     private String s3InputBucketName = "Inputbucket";
     private String s3InputKeyName = "InputKey";
     private String sseAlgorithm = EncryptionAlgorithm.AES256.toString();
+    private String localSourcePath = "";
 
     AbstractBuild build = mock(AbstractBuild.class);
     Launcher launcher = mock(Launcher.class);
@@ -69,22 +72,22 @@ public class S3DataManagerTest {
     }
 
     private S3DataManager createDefault() throws Exception {
-        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm, localSourcePath);
     }
 
     //creates S3DataManager with parameters that won't throw a FileNotFoundException for below tests.
-    private S3DataManager createDefaultSource() throws Exception {
+    private S3DataManager createDefaultSource(String localSourcePath) throws Exception {
         this.s3ARNs.put("main", "ARN1/bucket/thing.zip"); //put one item in s3ARNs so exception doesn't happen.
 
         PutObjectResult mockedResponse = new PutObjectResult();
         mockedResponse.setVersionId("some-version-id");
         when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
-        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm);
+        return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm, localSourcePath);
     }
 
     @Test(expected=Exception.class)
     public void testNullConfig() throws Exception {
-        S3DataManager d = new S3DataManager(null, null, null, null);
+        S3DataManager d = new S3DataManager(null, null, null, null, null);
         d.uploadSourceToS3(listener, testWorkSpace);
     }
 
@@ -105,11 +108,71 @@ public class S3DataManagerTest {
         AbstractProject p = mock(AbstractProject.class);
         when(p.getScm()).thenReturn(mockSCM);
         when(build.getProject()).thenReturn(p);
-        S3DataManager d = createDefaultSource();
+        S3DataManager d = createDefaultSource("");
         File sourceFolder = new File("/tmp/jenkins/workspace/proj");
         sourceFolder.mkdirs();
+
+        ArgumentCaptor<PutObjectRequest> savedPutObjectRequest = ArgumentCaptor.forClass(PutObjectRequest.class);
         UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
+
+        verify(s3Client).putObject(savedPutObjectRequest.capture());
+        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
+    }
+
+    @Test
+    public void testUploadLocalNonexistentSource() throws Exception {
+        S3DataManager d = createDefaultSource("non-existent-file");
+        try {
+            d.uploadSourceToS3(listener, testWorkSpace);
+        } catch(IOException e) {
+            assert(e.getMessage().contains("non-existent-file (No such file or directory)"));
+        }
+    }
+
+    @Test
+    public void testUploadLocalSource() throws Exception {
+        clearSourceDirectory();
+        File file = new File("/tmp/source/source-file");
+        FileUtils.write(file, "contents");
+
+        S3DataManager d = createDefaultSource(file.getPath());
+
+        ArgumentCaptor<PutObjectRequest> savedPutObjectRequest = ArgumentCaptor.forClass(PutObjectRequest.class);
+        UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
+        assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
+
+        verify(s3Client).putObject(savedPutObjectRequest.capture());
+        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), ZipSourceCallable.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
+    }
+
+    @Test
+    public void testUploadLocalSourceWithNoSSEAlgorithm() throws Exception {
+        clearSourceDirectory();
+        File file = new File("/tmp/source/source-file");
+        FileUtils.write(file, "contents");
+
+        PutObjectResult mockedResponse = new PutObjectResult();
+        mockedResponse.setVersionId("some-version-id");
+        when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
+        S3DataManager d = new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, "", file.getPath());
+
+        ArgumentCaptor<PutObjectRequest> savedPutObjectRequest = ArgumentCaptor.forClass(PutObjectRequest.class);
+        UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
+        assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
+
+        verify(s3Client).putObject(savedPutObjectRequest.capture());
+        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), ZipSourceCallable.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
+        assertNull(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm());
     }
 
     //helper method that erases the directories and files where test zip files
@@ -141,7 +204,7 @@ public class S3DataManagerTest {
         clearSourceDirectory();
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -163,7 +226,7 @@ public class S3DataManagerTest {
         FileUtils.write(buildSpec, buildSpecContents);
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -191,7 +254,7 @@ public class S3DataManagerTest {
         sourceDir.mkdir();
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -223,7 +286,7 @@ public class S3DataManagerTest {
         FileUtils.write(srcFile, srcFileContents);
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -277,7 +340,7 @@ public class S3DataManagerTest {
         FileUtils.write(srcFile2, srcFile2Contents);
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -342,7 +405,7 @@ public class S3DataManagerTest {
         FileUtils.write(srcFile2, srcFile2Contents.toString());
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -404,7 +467,7 @@ public class S3DataManagerTest {
         FileUtils.write(file5, nestedFile5Contents);
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
@@ -451,7 +514,7 @@ public class S3DataManagerTest {
         FileUtils.write(buildSpec, contents.toString());
 
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        S3DataManager dataManager = createDefaultSource();
+        S3DataManager dataManager = createDefaultSource("");
         ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
         out.close();
 
