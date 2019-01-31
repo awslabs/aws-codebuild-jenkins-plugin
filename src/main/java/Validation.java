@@ -16,6 +16,7 @@
 
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
 import hudson.FilePath;
 
@@ -52,6 +53,10 @@ public class Validation {
     public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE'";
     public static final String invalidCloudWatchLogsStatusError = "CloudWatch Logs status override must be one of 'ENABLED', 'DISABLED'";
     public static final String invalidS3LogsStatusError = "S3 logs status override must be one of 'ENABLED', 'DISABLED'";
+    public static final String invalidSourceUploaderNullWorkspaceError = "Project workspace is null";
+    public static final String invalidSourceUploaderNullS3ClientError = "S3 client cannot be null";
+    public static final String invalidSourceUploaderConfigError = "Cannot specify both localSourcePath and workspaceSubdir";
+
 
     //CodeBuilder
     public static final String projectRequiredError = "CodeBuild project name is required";
@@ -214,9 +219,17 @@ public class Validation {
     }
 
     //S3DataManager
-    public static void checkS3SourceUploaderConfig(FilePath workspace) throws Exception {
+    public static void checkS3SourceUploaderConfig(FilePath workspace, AmazonS3Client s3Client, String localSourcePath, String workspaceSubdir) throws InvalidInputException {
         if(workspace == null) {
-            throw new Exception("Null workspace for project.");
+            throw new InvalidInputException(invalidSourceUploaderNullWorkspaceError);
+        }
+
+        if(s3Client == null) {
+            throw new InvalidInputException(invalidSourceUploaderNullS3ClientError);
+        }
+
+        if((localSourcePath != null && !localSourcePath.isEmpty()) && (workspaceSubdir != null && !workspaceSubdir.isEmpty())) {
+            throw new InvalidInputException(invalidSourceUploaderConfigError);
         }
     }
 

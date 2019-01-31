@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.services.codebuild.model.InvalidInputException;
 import hudson.FilePath;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
@@ -87,15 +88,15 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     //     The given directory is /tmp/dir/folder/ which contains one file /tmp/dir/folder/file.txt
     //     The given prefixToTrim is /tmp/dir/folder
     //     Then the zip file created will expand into file.txt
-    public static void zipSource(FilePath workspace, final String directory, final ZipOutputStream out, final String prefixToTrim) throws Exception {
+    public static void zipSource(FilePath workspace, final String directory, final ZipOutputStream out, final String prefixToTrim) throws InvalidInputException, IOException, InterruptedException {
         if (!Paths.get(directory).startsWith(Paths.get(prefixToTrim))) {
-            throw new Exception(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
+            throw new InvalidInputException(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
         }
 
         FilePath dir = new FilePath(workspace, directory);
         List<FilePath> dirFiles = dir.list();
         if (dirFiles == null) {
-            throw new Exception("Empty or invalid source directory: " + directory + ". Did you download any source as part of your build?");
+            throw new InvalidInputException("Empty or invalid source directory: " + directory);
         }
         byte[] buffer = new byte[1024];
         int bytesRead;

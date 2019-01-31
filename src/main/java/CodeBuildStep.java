@@ -53,6 +53,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String projectName;
     @Getter private String sourceControlType;
     @Getter private String localSourcePath;
+    @Getter private String workspaceSubdir;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
@@ -149,6 +150,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setLocalSourcePath(String localSourcePath) {
         this.localSourcePath = localSourcePath;
+    }
+
+    @DataBoundSetter
+    public void setWorkspaceSubdir(String workspaceSubdir) {
+        this.workspaceSubdir = workspaceSubdir;
     }
 
     @DataBoundSetter
@@ -549,8 +555,8 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getCredentialsType(), step.getCredentialsId(),
                     step.getProxyHost(), step.getProxyPort(),
                     step.getAwsAccessKey(), Secret.fromString(step.getAwsSecretKey()), step.getAwsSessionToken(),
-                    step.getRegion(), step.getProjectName(),
-                    step.getSourceVersion(), step.getSseAlgorithm(), step.getSourceControlType(), step.getLocalSourcePath(), step.getGitCloneDepthOverride(),
+                    step.getRegion(), step.getProjectName(), step.getSourceVersion(), step.getSseAlgorithm(),
+                    step.getSourceControlType(), step.getLocalSourcePath(), step.getWorkspaceSubdir(), step.getGitCloneDepthOverride(),
                     step.getReportBuildStatusOverride(), step.getArtifactTypeOverride(), step.getArtifactLocationOverride(),
                     step.getArtifactNameOverride(), step.getArtifactNamespaceOverride(), step.getArtifactPackagingOverride(),
                     step.getArtifactPathOverride(), step.getArtifactEncryptionDisabledOverride(), step.getOverrideArtifactName(),

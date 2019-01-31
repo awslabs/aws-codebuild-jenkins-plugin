@@ -92,6 +92,11 @@
           <f:textbox />
         </f:entry>
 
+        <f:entry title="Workspace Subdirectory (optional)" field="workspaceSubdir" help="/plugin/aws-codebuild/help-workspaceSubdir.html">
+          <f:textbox />
+        </f:entry>
+
+
     </f:radioBlock>
 
 

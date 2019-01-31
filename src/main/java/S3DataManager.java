@@ -54,11 +54,12 @@ public class S3DataManager {
     private final String s3InputKey;
     private final String sseAlgorithm;
     private final String localSourcePath;
+    private final String workspaceSubdir;
 
     // if localSourcePath is empty, clones, zips, and uploads the given workspace. Otherwise, uploads the file referred to by localSourcePath.
     // The upload bucket used is this.s3InputBucket and the name of the zip file is this.s3InputKey.
     public UploadToS3Output uploadSourceToS3(TaskListener listener, FilePath workspace) throws Exception {
-        Validation.checkS3SourceUploaderConfig(workspace);
+        Validation.checkS3SourceUploaderConfig(workspace, s3Client, localSourcePath, workspaceSubdir);
 
         String zipFileName = this.s3InputKey;
         FilePath localFile;
@@ -67,9 +68,15 @@ public class S3DataManager {
 
         if(localSourcePath != null && !localSourcePath.isEmpty()) {
             localFile = new FilePath(workspace, localSourcePath);
+            LoggingHelper.log(listener, "Local file to be uploaded to S3: " + localFile.getRemote());
             zipFileMD5 = ZipSourceCallable.getZipMD5(new File(localFile.getRemote()));
         } else {
+            if(workspaceSubdir != null && !workspaceSubdir.isEmpty()) {
+                workspace = workspace.child(workspaceSubdir);
+            }
             String sourceFilePath = workspace.getRemote();
+            LoggingHelper.log(listener, "Zipping directory to upload to S3: " + sourceFilePath);
+
             String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)+1) + UUID.randomUUID().toString() + "-" + zipFileName;
             localFile = new FilePath(workspace, zipFilePath);
             zipFileMD5 = localFile.act(new ZipSourceCallable(workspace));
@@ -78,7 +85,7 @@ public class S3DataManager {
         // Add MD5 checksum as S3 Object metadata
         objectMetadata.setContentMD5(zipFileMD5);
         objectMetadata.setContentLength(localFile.length());
-        if(!sseAlgorithm.isEmpty()) {
+        if(sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
             objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
         }
 
@@ -87,7 +94,7 @@ public class S3DataManager {
 
         try(InputStream zipFileInputStream = localFile.read()) {
             putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, zipFileInputStream, objectMetadata);
-            LoggingHelper.log(listener, "Uploading code to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
+            LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
             putObjectResult = s3Client.putObject(putObjectRequest);
         } finally {
             if(localSourcePath == null || localSourcePath.isEmpty()) {

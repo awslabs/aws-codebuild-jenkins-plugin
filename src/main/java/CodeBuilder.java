@@ -57,6 +57,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String projectName;
     @Getter private String sourceControlType;
     @Getter private String localSourcePath;
+    @Getter private String workspaceSubdir;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
@@ -121,7 +122,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
-                       String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String localSourcePath, String gitCloneDepthOverride,
+                       String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String localSourcePath, String workspaceSubdir, String gitCloneDepthOverride,
                        String reportBuildStatusOverride, String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride, String artifactNamespaceOverride,
                        String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
@@ -188,6 +189,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         projectName = Validation.sanitize(projectName);
         sourceControlType = Validation.sanitize(sourceControlType);
         localSourcePath = Validation.sanitize(localSourcePath);
+        workspaceSubdir = Validation.sanitize(workspaceSubdir);
         sourceVersion = Validation.sanitize(sourceVersion);
         sseAlgorithm = Validation.sanitize(sseAlgorithm);
         gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
@@ -356,7 +358,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, getParameterized(sseAlgorithm), getParameterized(localSourcePath));
+            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, getParameterized(sseAlgorithm), getParameterized(localSourcePath), getParameterized(workspaceSubdir));
             String uploadedSourceVersion = "";
 
             try {
