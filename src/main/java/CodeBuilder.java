@@ -433,8 +433,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     //only need to set these once, the others will need to be updated below as the build progresses.
                     String buildARN = currentBuild.getArn();
                     codeBuildResult.setBuildInformation(currentBuild.getId(), buildARN);
-                    BuildArtifacts artifacts = currentBuild.getArtifacts();
-                    codeBuildResult.setArtifactsLocation(artifacts != null ? artifacts.getLocation() : null);
+
                     action.setBuildId(buildId);
                     action.setBuildARN(buildARN);
                     action.setStartTime(currentBuild.getStartTime().toString());
@@ -512,6 +511,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
             }
         } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
+
+        // Read artifacts location once the build is complete and artifact name finalized
+        codeBuildResult.setArtifactsLocation(currentBuild.getArtifacts() != null ? currentBuild.getArtifacts().getLocation() : null);
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
