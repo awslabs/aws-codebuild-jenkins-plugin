@@ -19,32 +19,18 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-import hudson.scm.SCM;
-import jenkins.MasterToSlaveFileCallable;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.CharEncoding;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Paths;
-import java.util.List;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import static org.apache.commons.codec.binary.Base64.encodeBase64;
-
 
 @RequiredArgsConstructor
 public class S3DataManager {
@@ -61,24 +47,24 @@ public class S3DataManager {
     public UploadToS3Output uploadSourceToS3(TaskListener listener, FilePath workspace) throws Exception {
         Validation.checkS3SourceUploaderConfig(workspace, s3Client, localSourcePath, workspaceSubdir);
 
-        String zipFileName = this.s3InputKey;
         FilePath localFile;
         String zipFileMD5;
         ObjectMetadata objectMetadata = new ObjectMetadata();
 
         if(localSourcePath != null && !localSourcePath.isEmpty()) {
-            localFile = new FilePath(workspace, localSourcePath);
-            LoggingHelper.log(listener, "Local file to be uploaded to S3: " + localFile.getRemote());
-            zipFileMD5 = ZipSourceCallable.getZipMD5(new File(localFile.getRemote()));
+            String sourcePath = workspace.child(localSourcePath).getRemote();
+            LoggingHelper.log(listener, "Local file to be uploaded to S3: " + sourcePath);
+
+            localFile = new FilePath(workspace, getTempFilePath(sourcePath));
+            zipFileMD5 = localFile.act(new LocalSourceCallable(workspace, localSourcePath));
         } else {
             if(workspaceSubdir != null && !workspaceSubdir.isEmpty()) {
                 workspace = workspace.child(workspaceSubdir);
             }
-            String sourceFilePath = workspace.getRemote();
-            LoggingHelper.log(listener, "Zipping directory to upload to S3: " + sourceFilePath);
+            String sourcePath = workspace.getRemote();
+            LoggingHelper.log(listener, "Zipping directory to upload to S3: " + sourcePath);
 
-            String zipFilePath = sourceFilePath.substring(0, sourceFilePath.lastIndexOf(File.separator)+1) + UUID.randomUUID().toString() + "-" + zipFileName;
-            localFile = new FilePath(workspace, zipFilePath);
+            localFile = new FilePath(workspace, getTempFilePath(sourcePath));
             zipFileMD5 = localFile.act(new ZipSourceCallable(workspace));
         }
 
@@ -97,11 +83,17 @@ public class S3DataManager {
             LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
             putObjectResult = s3Client.putObject(putObjectRequest);
         } finally {
-            if(localSourcePath == null || localSourcePath.isEmpty()) {
-                localFile.delete();
-            }
+            localFile.delete();
         }
 
         return new UploadToS3Output(putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey(), putObjectResult.getVersionId());
+    }
+
+    private String getTempFilePath(String filePath) {
+        return filePath.substring(0, filePath.lastIndexOf(File.separator)+1) + UUID.randomUUID().toString() + "-" + s3InputKey;
+    }
+
+    public static String getZipMD5(File zipFile) throws IOException {
+        return new String(encodeBase64(DigestUtils.md5(new FileInputStream(zipFile))), Charsets.UTF_8);
     }
 }

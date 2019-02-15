@@ -18,8 +18,6 @@ import com.amazonaws.services.codebuild.model.InvalidInputException;
 import hudson.FilePath;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
-import org.apache.commons.codec.Charsets;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -32,8 +30,6 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static org.apache.commons.codec.binary.Base64.encodeBase64;
 
 
 public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
@@ -73,7 +69,7 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
             // good citizens here.
         }
 
-        return getZipMD5(f);
+        return S3DataManager.getZipMD5(f);
     }
 
     // Recursively zips everything in the given directory into a zip file using the given ZipOutputStream.
@@ -143,7 +139,5 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
         return Paths.get(prefixToTrim).relativize(Paths.get(path)).toString();
     }
 
-    public static String getZipMD5(File zipFile) throws IOException {
-        return new String(encodeBase64(DigestUtils.md5(new FileInputStream(zipFile))), Charsets.UTF_8);
-    }
+
 }

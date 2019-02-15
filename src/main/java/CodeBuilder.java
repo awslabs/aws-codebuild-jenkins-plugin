@@ -142,6 +142,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.projectName = Validation.sanitize(projectName);
         this.sourceControlType = Validation.sanitize(sourceControlType);
         this.localSourcePath = Validation.sanitize(localSourcePath);
+        this.workspaceSubdir = Validation.sanitize(workspaceSubdir);
         this.sourceVersion = Validation.sanitize(sourceVersion);
         this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
         this.gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);

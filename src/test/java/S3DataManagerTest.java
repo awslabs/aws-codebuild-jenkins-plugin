@@ -182,7 +182,7 @@ public class S3DataManagerTest {
         try {
             createDefaultSource("non-existent-file", "").uploadSourceToS3(listener, testWorkSpace);
         } catch(IOException e) {
-            assert(e.getMessage().contains("non-existent-file (No such file or directory)"));
+            assert(e.getMessage().contains("non-existent-file' does not exist"));
         } catch(Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -200,7 +200,7 @@ public class S3DataManagerTest {
         verify(s3Client).putObject(savedPutObjectRequest.capture());
         assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
         assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), ZipSourceCallable.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), S3DataManager.getZipMD5(file));
         assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
         assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
     }
@@ -222,7 +222,7 @@ public class S3DataManagerTest {
         verify(s3Client).putObject(savedPutObjectRequest.capture());
         assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
         assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), ZipSourceCallable.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), S3DataManager.getZipMD5(file));
         assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
         assertNull(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm());
     }
