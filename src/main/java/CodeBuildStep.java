@@ -86,6 +86,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String envParameters;
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
+    @Getter private String cwlStreamingDisabled;
 
     @DataBoundSetter
     public void setCredentialsType(String credentialsType) {
@@ -305,6 +306,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setBuildTimeoutOverride(String buildTimeoutOverride) {
         this.buildTimeoutOverride = buildTimeoutOverride;
+    }
+
+    @DataBoundSetter
+    public void setCwlStreamingDisabled(String cwlStreamingDisabled) {
+        this.cwlStreamingDisabled = cwlStreamingDisabled;
     }
 
     @Extension
@@ -528,6 +534,16 @@ public class CodeBuildStep extends AbstractStepImpl {
             return selections;
         }
 
+        public ListBoxModel doFillCwlStreamingDisabledItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+
+            return selections;
+        }
+
     }
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
@@ -565,7 +581,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
                     step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
-                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride()
+                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled()
             ).readResolve();
             builder.perform(run, ws, launcher, listener, getContext());
 

@@ -208,5 +208,9 @@
       <f:textbox />
     </f:entry>
 
+    <f:entry title="Disable CloudWatch Streaming" field="cwlStreamingDisabled" help="/plugin/aws-codebuild/help-cwlStreamingDisabled.html">
+      <f:select />
+    </f:entry>
+
   </f:section>
 </j:jelly>

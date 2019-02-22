@@ -34,24 +34,33 @@ public class CloudWatchMonitor {
     @Setter @Getter private LogsLocation logsLocation;
     @Getter private List<String> latestLogs;
     @Getter private Long lastPollTime;
+    private boolean cwlStreamingDisabled;
 
     private static final int htmlMaxLineLength = 2000;
     public static final String noLogsMessage = "No CloudWatch logs found for this build.";
+    public static final String streamingDisabledMessage = "CloudWatch logs streaming is disabled for this build.";
     public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
-    public CloudWatchMonitor(AWSLogsClient client) {
+    public CloudWatchMonitor(AWSLogsClient client, boolean cwlStreamingDisabled) {
         this.logsClient = client;
+        this.cwlStreamingDisabled = cwlStreamingDisabled;
         if(!Validation.checkCloudWatchMonitorConfig(logsClient)) {
             latestLogs = Arrays.asList(failedConfigurationLogsMessage);
             return;
+        }
+        if(cwlStreamingDisabled) {
+            latestLogs = Arrays.asList(streamingDisabledMessage);
         }
         lastPollTime = 0L;
     }
 
     // Checks if the CloudWatch logs exist. If they do, retrieves/stores them in this.latestLogs.
     // If the logs don't exist yet, sets this.latestLogs to an error message.
+    // Does nothing if CloudWatch logs streaming is disabled
     public void pollForLogs(TaskListener listener) {
-        if(this.logsLocation != null && this.logsLocation.getGroupName() != null && this.logsLocation.getStreamName() != null) {
+        if(cwlStreamingDisabled) {
+            return;
+        } else if(this.logsLocation != null && this.logsLocation.getGroupName() != null && this.logsLocation.getStreamName() != null) {
             this.latestLogs = new ArrayList();
             GetLogEventsRequest logRequest = new GetLogEventsRequest()
                 .withStartTime(lastPollTime)
@@ -69,7 +78,6 @@ public class CloudWatchMonitor {
             latestLogs = Arrays.asList(noLogsMessage);
             return;
         }
-
     }
 
     private void getAndFormatLogs(List<OutputLogEvent> logs, TaskListener listener) {

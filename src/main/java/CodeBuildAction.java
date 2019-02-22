@@ -168,10 +168,14 @@ public class CodeBuildAction implements Action {
 
     public void updateLogs(List<String> newLogs) {
         if(logs != null) {
-            if(logs.size() == 1 && logs.get(0).equals(CloudWatchMonitor.noLogsMessage)) { //no logs message already displayed
-                if(newLogs.size() > 0 && !newLogs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
-                    logs = new ArrayList();
-                } else {
+            if(logs.size() == 1) {
+                if(logs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
+                    if (newLogs.size() > 0 && !newLogs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
+                        logs = new ArrayList();
+                    } else {
+                        return;
+                    }
+                } else if(logs.get(0).equals(CloudWatchMonitor.streamingDisabledMessage)) {
                     return;
                 }
             }

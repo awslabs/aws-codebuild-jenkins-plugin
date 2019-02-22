@@ -92,6 +92,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String envParameters;
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
+    @Getter private String cwlStreamingDisabled;
 
     @Getter private final CodeBuildResult codeBuildResult;
     private EnvVars envVars;
@@ -129,7 +130,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
                        String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
-                       String insecureSslOverride, String privilegedModeOverride) {
+                       String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled) {
 
         this.credentialsType = Validation.sanitize(credentialsType);
         this.credentialsId = Validation.sanitize(credentialsId);
@@ -175,6 +176,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
         this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
+        this.cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
         this.codeBuildResult = new CodeBuildResult();
         this.batchGetBuildsCalls = 0;
     }
@@ -223,6 +225,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
         insecureSslOverride = Validation.sanitize(insecureSslOverride);
         privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
+        cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
         return this;
     }
 
@@ -428,7 +431,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
                 currentBuild = buildsForId.get(0);
                 if(!haveInitializedAction) {
-                    logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient());
+                    logMonitor = new CloudWatchMonitor(awsClientFactory.getCloudWatchLogsClient(), Boolean.parseBoolean(getParameterized(cwlStreamingDisabled)));
                     action = new CodeBuildAction(build);
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
@@ -707,6 +710,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
         if(!serviceRoleOverride.isEmpty()) {
             message.append("\n\t> service role: " + getParameterized(serviceRoleOverride));
+        }
+        if(!cwlStreamingDisabled.isEmpty()) {
+            message.append("\n\t> CloudWatch logs streaming disabled: " + getParameterized(cwlStreamingDisabled));
         }
         if(!buildSpecFile.isEmpty()) {
             message.append("\n\t> build spec: \n" + getParameterized(buildSpecFile));
@@ -1123,6 +1129,16 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             for(EncryptionAlgorithm e: EncryptionAlgorithm.values()) {
                 selections.add(e.toString());
+            }
+
+            return selections;
+        }
+
+        public ListBoxModel doFillCwlStreamingDisabledItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t: BooleanValue.values()) {
+                selections.add(t.toString());
             }
 
             return selections;

@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.*;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Matchers.any;
@@ -54,7 +55,7 @@ public class CloudWatchMonitorTest {
 
     @Test
     public void testInvalidConfig() throws Exception {
-        CloudWatchMonitor c = new CloudWatchMonitor(null);
+        CloudWatchMonitor c = new CloudWatchMonitor(null, false);
         assertLogsContainErrorMessage(c);
     }
 
@@ -113,8 +114,18 @@ public class CloudWatchMonitorTest {
         assert(c.getLastPollTime() == 4L);
     }
 
+    @Test
+    public void testCwlStreamingDisabled() throws Exception {
+        CloudWatchMonitor c = new CloudWatchMonitor(mockClient, true);
+        assertEquals(c.getLatestLogs().size(), 1);
+        assertEquals(c.getLatestLogs().get(0), CloudWatchMonitor.streamingDisabledMessage);
+        c.pollForLogs(listener);
+        assertEquals(c.getLatestLogs().size(), 1);
+        assertEquals(c.getLatestLogs().get(0), CloudWatchMonitor.streamingDisabledMessage);
+    }
+
     private CloudWatchMonitor getMockCloudWatchMonitor() {
-        CloudWatchMonitor c = new CloudWatchMonitor(mockClient);
+        CloudWatchMonitor c = new CloudWatchMonitor(mockClient, false);
         c.setLogsLocation(new LogsLocation().withGroupName(mockGroup).withStreamName(mockStream));
         return c;
     }
