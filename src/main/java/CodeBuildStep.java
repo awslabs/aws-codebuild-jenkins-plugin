@@ -87,6 +87,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String buildSpecFile;
     @Getter private String buildTimeoutOverride;
     @Getter private String cwlStreamingDisabled;
+    @Getter private String exceptionFailureMode;
 
     @DataBoundSetter
     public void setCredentialsType(String credentialsType) {
@@ -311,6 +312,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setCwlStreamingDisabled(String cwlStreamingDisabled) {
         this.cwlStreamingDisabled = cwlStreamingDisabled;
+    }
+
+    @DataBoundSetter
+    public void setExceptionFailureMode(String exceptionFailureMode) {
+        this.exceptionFailureMode = exceptionFailureMode;
     }
 
     @Extension
@@ -544,6 +550,17 @@ public class CodeBuildStep extends AbstractStepImpl {
             return selections;
         }
 
+        public ListBoxModel doFillExceptionFailureModeItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            // ENABLED/DISABLED
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
+            return selections;
+        }
+
     }
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
@@ -581,7 +598,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
                     step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
-                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled()
+                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode()
             ).readResolve();
             builder.perform(run, ws, launcher, listener, getContext());
 

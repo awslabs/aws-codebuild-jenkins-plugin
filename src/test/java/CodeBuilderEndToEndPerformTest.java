@@ -21,10 +21,13 @@ import com.amazonaws.services.codebuild.model.Build;
 import com.amazonaws.services.codebuild.model.StatusType;
 import com.amazonaws.services.codebuild.model.BuildPhaseType;
 
+import hudson.AbortException;
 import hudson.model.Result;
 import hudson.util.Secret;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -42,6 +45,9 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
+
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     @Before
     public void SetUp() throws Exception {
@@ -184,5 +190,20 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.ABORTED);
+    }
+
+    @Test
+    public void testBuildFailsWithExceptionFailureMode() throws Exception {
+        //exceptionFailureMode should be enabled
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                "ENABLED");
+
+        exception.expect(AbortException.class);
+        exception.expectMessage(CodeBuilder.configuredImproperlyError + "\n\t> " + Validation.projectRequiredError);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 }

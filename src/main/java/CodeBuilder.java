@@ -95,6 +95,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String cwlStreamingDisabled;
 
     @Getter private final CodeBuildResult codeBuildResult;
+    @Getter private String exceptionFailureMode;
     private EnvVars envVars;
 
     @Getter@Setter String artifactLocation;
@@ -130,7 +131,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
                        String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
-                       String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled) {
+                       String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode) {
 
         this.credentialsType = Validation.sanitize(credentialsType);
         this.credentialsId = Validation.sanitize(credentialsId);
@@ -177,6 +178,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
         this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
         this.cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
+        this.exceptionFailureMode = Validation.sanitize(exceptionFailureMode);
         this.codeBuildResult = new CodeBuildResult();
         this.batchGetBuildsCalls = 0;
     }
@@ -226,6 +228,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         insecureSslOverride = Validation.sanitize(insecureSslOverride);
         privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
         cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
+        exceptionFailureMode = Validation.sanitize(exceptionFailureMode);
         return this;
     }
 
@@ -525,8 +528,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             build.setResult(Result.SUCCESS);
         } else {
             action.setJenkinsBuildSucceeds(false);
-            String errorMessage = "Build " + currentBuild.getId() + " failed" + "\n\t> " + action.getPhaseErrorMessage();
-            failBuild(build, listener, errorMessage, "");
+            failBuild(build, listener, "Build " + currentBuild.getId() + " failed", action.getPhaseErrorMessage());
         }
         return;
     }
@@ -714,6 +716,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!cwlStreamingDisabled.isEmpty()) {
             message.append("\n\t> CloudWatch logs streaming disabled: " + getParameterized(cwlStreamingDisabled));
         }
+        if(!exceptionFailureMode.isEmpty()) {
+            message.append("\n\t> exception failure mode status: " + getParameterized(exceptionFailureMode));
+        }
         if(!buildSpecFile.isEmpty()) {
             message.append("\n\t> build spec: \n" + getParameterized(buildSpecFile));
         }
@@ -881,8 +886,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
         this.codeBuildResult.setFailure(errorMessage, secondaryError);
-        build.setResult(Result.FAILURE);
         LoggingHelper.log(listener, errorMessage, secondaryError);
+
+        if(!exceptionFailureMode.isEmpty() && getParameterized(exceptionFailureMode).equalsIgnoreCase(LogsConfigStatusType.ENABLED.toString())) {
+            throw new AbortException(errorMessage + "\n\t> " + secondaryError);
+        } else {
+            build.setResult(Result.FAILURE);
+        }
     }
 
     //Given a CodeBuild build parameter, checks if it contains any Jenkins parameters and if so, evaluates and returns the
@@ -1141,6 +1151,17 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 selections.add(t.toString());
             }
 
+            return selections;
+        }
+
+        public ListBoxModel doFillExceptionFailureModeItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            // ENABLED/DISABLED
+            for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                selections.add(t.toString());
+            }
+            selections.add("");
             return selections;
         }
 

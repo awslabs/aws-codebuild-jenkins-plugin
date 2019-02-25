@@ -208,9 +208,17 @@
       <f:textbox />
     </f:entry>
 
+  </f:section>
+
+  <f:section title="Miscellaneous Configuration" >
     <f:entry title="Disable CloudWatch Streaming" field="cwlStreamingDisabled" help="/plugin/aws-codebuild/help-cwlStreamingDisabled.html">
       <f:select />
     </f:entry>
 
+    <f:entry title="Exception Failure Mode Status" field="exceptionFailureMode" help="/plugin/aws-codebuild/help-exceptionFailureMode.html">
+      <f:select />
+    </f:entry>
+
   </f:section>
+
 </j:jelly>
