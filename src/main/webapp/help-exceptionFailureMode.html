@@ -12,6 +12,8 @@
   -->
 
 <div>
-    If set to ENABLED, throws an AbortException when a failure is detected (which could be due to invalid configuration or a failed CodeBuild build).
-    DISABLED signifies the existing behavior in which the Jenkins build result is set to FAILURE in failure scenarios. The default value is DISABLED.
+    If set to ENABLED and a failure is detected (e.g., invalid configuration or a failed CodeBuild build): throws a CodeBuildException for pipeline
+    builds and an AbortException for all other builds.
+    DISABLED signifies the existing behavior in which the Jenkins build result is set to FAILURE (a CodeBuildException is also thrown for pipeline builds).
+    The default value is DISABLED.
 </div>

@@ -600,10 +600,14 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
                     step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode()
             ).readResolve();
-            builder.perform(run, ws, launcher, listener, getContext());
+
+            try {
+                builder.perform(run, ws, launcher, listener, getContext());
+            } catch (AbortException e) {
+                throw new CodeBuildException(builder.getCodeBuildResult());
+            }
 
             CodeBuildResult result = builder.getCodeBuildResult();
-
             if(result.getStatus().equals(CodeBuildResult.FAILURE) || result.getStatus().equals(CodeBuildResult.STOPPED)) {
                 throw new CodeBuildException(result);
             }
