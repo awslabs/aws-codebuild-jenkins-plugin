@@ -136,6 +136,10 @@
       <f:select />
     </f:entry>
 
+    <f:entry title="Secondary Artifacts Override" field="secondaryArtifactsOverride" help="/plugin/aws-codebuild/help-secondaryArtifactsOverride.html">
+      <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
+    </f:entry>
+
     <f:entry title="Buildspec Override" field="buildSpecFile" help="/plugin/aws-codebuild/help-buildSpecFileHelp.html">
       <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
     </f:entry>
@@ -154,6 +158,14 @@
 
     <f:entry title="Insecure SSL Override" field="insecureSslOverride" help="/plugin/aws-codebuild/help-insecureSslOverride.html">
       <f:select />
+    </f:entry>
+
+    <f:entry title="Secondary Sources Override" field="secondarySourcesOverride" help="/plugin/aws-codebuild/help-secondarySourcesOverride.html">
+      <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
+    </f:entry>
+
+    <f:entry title="Secondary Source Versions Override" field="secondarySourcesVersionOverride" help="/plugin/aws-codebuild/help-secondarySourcesVersionOverride.html">
+      <f:textarea codemirror-mode="yaml" codemirror-config="mode: 'text/x-yaml'" />
     </f:entry>
 
     <f:entry title="Compute Type Override" field="computeTypeOverride" help="/plugin/aws-codebuild/help-computeTypeOverride.html">

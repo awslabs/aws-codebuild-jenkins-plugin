@@ -58,6 +58,9 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
     @Getter private String reportBuildStatusOverride;
+    @Getter private String secondarySourcesOverride;
+    @Getter private String secondarySourcesVersionOverride;
+
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
     @Getter private String artifactNameOverride;
@@ -66,6 +69,8 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String artifactPathOverride;
     @Getter private String artifactEncryptionDisabledOverride;
     @Getter private String overrideArtifactName;
+    @Getter private String secondaryArtifactsOverride;
+
     @Getter private String environmentTypeOverride;
     @Getter private String imageOverride;
     @Getter private String computeTypeOverride;
@@ -170,6 +175,16 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
+    public void setSecondarySourcesOverride(String secondarySourcesOverride) {
+        this.secondarySourcesOverride = secondarySourcesOverride;
+    }
+
+    @DataBoundSetter
+    public void setSecondarySourcesVersionOverride(String secondarySourcesVersionOverride) {
+        this.secondarySourcesVersionOverride = secondarySourcesVersionOverride;
+    }
+
+    @DataBoundSetter
     public void setArtifactTypeOverride(String artifactTypeOverride) {
         this.artifactTypeOverride = artifactTypeOverride;
     }
@@ -207,6 +222,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setOverrideArtifactName(String overrideArtifactName) {
         this.overrideArtifactName = overrideArtifactName;
+    }
+
+    @DataBoundSetter
+    public void setSecondaryArtifactsOverride(String secondaryArtifactsOverride) {
+        this.secondaryArtifactsOverride = secondaryArtifactsOverride;
     }
 
     @DataBoundSetter
@@ -590,10 +610,10 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getAwsAccessKey(), Secret.fromString(step.getAwsSecretKey()), step.getAwsSessionToken(),
                     step.getRegion(), step.getProjectName(), step.getSourceVersion(), step.getSseAlgorithm(),
                     step.getSourceControlType(), step.getLocalSourcePath(), step.getWorkspaceSubdir(), step.getGitCloneDepthOverride(),
-                    step.getReportBuildStatusOverride(), step.getArtifactTypeOverride(), step.getArtifactLocationOverride(),
-                    step.getArtifactNameOverride(), step.getArtifactNamespaceOverride(), step.getArtifactPackagingOverride(),
-                    step.getArtifactPathOverride(), step.getArtifactEncryptionDisabledOverride(), step.getOverrideArtifactName(),
-                    step.getEnvVariables(), step.getEnvParameters(), step.getBuildSpecFile(), step.getBuildTimeoutOverride(),
+                    step.getReportBuildStatusOverride(), step.getSecondarySourcesOverride(), step.getSecondarySourcesVersionOverride(),
+                    step.getArtifactTypeOverride(), step.getArtifactLocationOverride(), step.getArtifactNameOverride(), step.getArtifactNamespaceOverride(),
+                    step.getArtifactPackagingOverride(), step.getArtifactPathOverride(), step.getArtifactEncryptionDisabledOverride(), step.getOverrideArtifactName(),
+                    step.getSecondaryArtifactsOverride(), step.getEnvVariables(), step.getEnvParameters(), step.getBuildSpecFile(), step.getBuildTimeoutOverride(),
                     step.getSourceTypeOverride(), step.getSourceLocationOverride(), step.getEnvironmentTypeOverride(),
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),

@@ -46,14 +46,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllNull() throws Exception {
-        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null,
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, null, null, null,
-                null, null, null, null, null, null);
+        CodeBuilder test = new CodeBuilder(null, null, null, null, null, null, null, null, null, null, null, null,
+                                           null, null, null, null, null, null, null, null, null, null, null, null,
+                                           null, null, null, null, null, null, null, null, null, null, null, null,
+                                           null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -68,14 +64,9 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testConfigAllBlank() throws Exception {
-        CodeBuilder test = new CodeBuilder("", "", "", "", "",
-                null, "", "", "", "", "", "", "",
-                "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "");
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -93,11 +84,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
                 null, "", CodeBuildRegions.IAD.toString(), "", "", "",
                 SourceControlType.ProjectSource.toString(), "", "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "");
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -117,12 +105,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testNoSourceType() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
                 null, "", CodeBuildRegions.IAD.toString(), "project", "", "", "",
-                "", "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "", "");
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -194,8 +178,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testComputeTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", "invalidComputeType", CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
@@ -215,8 +199,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testCacheTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "invalidCacheType", "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
@@ -236,8 +220,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testCloudWatchLogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 "invalidCloudWatchLogsStatus", "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
@@ -257,8 +241,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testS3LogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", "invalidS3LogsStatus", "location",
@@ -278,8 +262,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testSourceTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidSourceType", "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
@@ -299,8 +283,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testEnvironmentTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                 "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 "invalidEnvironmentType", "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
@@ -324,8 +308,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         CodeBuilder cb = new CodeBuilder("keys", "id123", "host", "60", "a",
                 awsSecretKey, "", "us-east-1", "$foo", "$foo2-$foo3", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "",
-                "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(),
+                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",

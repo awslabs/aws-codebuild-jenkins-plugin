@@ -65,6 +65,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
     @Getter private String reportBuildStatusOverride;
+    @Getter private String secondarySourcesOverride;
+    @Getter private String secondarySourcesVersionOverride;
 
     @Getter private String artifactTypeOverride;
     @Getter private String artifactLocationOverride;
@@ -74,6 +76,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String artifactPathOverride;
     @Getter private String artifactEncryptionDisabledOverride;
     @Getter private String overrideArtifactName;
+    @Getter private String secondaryArtifactsOverride;
 
     @Getter private String environmentTypeOverride;
     @Getter private String imageOverride;
@@ -116,6 +119,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
     public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
+    public static final String invalidSecondarySourceArtifacts = "Invalid secondary source/artifacts";
 
     public static final String httpTimeoutMessage = "Unable to execute HTTP request";
 
@@ -126,8 +130,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @DataBoundConstructor
     public CodeBuilder(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
                        String region, String projectName, String sourceVersion, String sseAlgorithm, String sourceControlType, String localSourcePath, String workspaceSubdir, String gitCloneDepthOverride,
-                       String reportBuildStatusOverride, String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride, String artifactNamespaceOverride,
-                       String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName,
+                       String reportBuildStatusOverride, String secondarySourcesOverride, String secondarySourcesVersionOverride, String artifactTypeOverride, String artifactLocationOverride, String artifactNameOverride, String artifactNamespaceOverride,
+                       String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName, String secondaryArtifactsOverride,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
@@ -150,6 +154,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
         this.gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
         this.reportBuildStatusOverride = Validation.sanitize(reportBuildStatusOverride);
+        this.secondarySourcesOverride = decodeJSON(Validation.sanitize(secondarySourcesOverride));
+        this.secondarySourcesVersionOverride = decodeJSON(Validation.sanitize(secondarySourcesVersionOverride));
         this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
         this.artifactNameOverride = Validation.sanitize(artifactNameOverride);
@@ -158,6 +164,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
         this.artifactEncryptionDisabledOverride = Validation.sanitize(artifactEncryptionDisabledOverride);
         this.overrideArtifactName = Validation.sanitize(overrideArtifactName);
+        this.secondaryArtifactsOverride = decodeJSON(Validation.sanitize(secondaryArtifactsOverride));
         this.sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
         this.sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
         this.environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
@@ -200,6 +207,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         sseAlgorithm = Validation.sanitize(sseAlgorithm);
         gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
         reportBuildStatusOverride = Validation.sanitize(reportBuildStatusOverride);
+        secondarySourcesOverride = decodeJSON(Validation.sanitize(secondarySourcesOverride));
+        secondarySourcesVersionOverride = decodeJSON(Validation.sanitize(secondarySourcesVersionOverride));
         artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
         artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
         artifactNameOverride = Validation.sanitize(artifactNameOverride);
@@ -208,6 +217,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         artifactPathOverride = Validation.sanitize(artifactPathOverride);
         artifactEncryptionDisabledOverride = Validation.sanitize(artifactEncryptionDisabledOverride);
         overrideArtifactName = Validation.sanitize(overrideArtifactName);
+        secondaryArtifactsOverride = decodeJSON(Validation.sanitize(secondaryArtifactsOverride));
         sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
         sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
         environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
@@ -351,6 +361,31 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(!getParameterized(privilegedModeOverride).isEmpty()) {
             startBuildRequest.setPrivilegedModeOverride(Boolean.parseBoolean(getParameterized(privilegedModeOverride)));
+        }
+
+        List<ProjectSource> secondarySources;
+        List<ProjectSourceVersion> secondarySourceVersions;
+        List<ProjectArtifacts> secondaryArtifacts;
+
+        try {
+            secondarySources = Utils.parseDataList(getParameterized(secondarySourcesOverride), ProjectSource.class);
+            secondarySourceVersions = Utils.parseDataList(getParameterized(secondarySourcesVersionOverride), ProjectSourceVersion.class);
+            secondaryArtifacts = Utils.parseDataList(getParameterized(secondaryArtifactsOverride), ProjectArtifacts.class);
+        } catch (InvalidInputException e) {
+            failBuild(build, listener, invalidSecondarySourceArtifacts, e.getMessage());
+            return;
+        }
+
+        if(secondarySources != null && !secondarySources.isEmpty()) {
+            startBuildRequest.setSecondarySourcesOverride(secondarySources);
+        }
+
+        if(secondarySourceVersions != null && !secondarySourceVersions.isEmpty()) {
+            startBuildRequest.setSecondarySourcesVersionOverride(secondarySourceVersions);
+        }
+
+        if(secondaryArtifacts != null && !secondaryArtifacts.isEmpty()) {
+            startBuildRequest.setSecondaryArtifactsOverride(secondaryArtifacts);
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
@@ -642,6 +677,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);
         }
+        if(!secondarySourcesOverride.isEmpty()) {
+            message.append("\n\t> secondary source overrides: " + getParameterized(secondarySourcesOverride));
+        }
+        if(!secondarySourcesVersionOverride.isEmpty()) {
+            message.append("\n\t> secondary source version overrides: " + getParameterized(secondarySourcesVersionOverride));
+        }
         if(!artifactTypeOverride.isEmpty()) {
             message.append("\n\t> artifact type: " + getParameterized(artifactTypeOverride));
         }
@@ -665,6 +706,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
         if(!artifactEncryptionDisabledOverride.isEmpty()) {
             message.append("\n\t> artifact encryption disabled: " + getParameterized(artifactEncryptionDisabledOverride));
+        }
+        if(!secondaryArtifactsOverride.isEmpty()) {
+            message.append("\n\t> secondary artifact overrides: " + getParameterized(secondaryArtifactsOverride));
         }
         if(!envVariables.isEmpty()) {
             message.append("\n\t> environment variables: " + getParameterized(envVariables));
@@ -914,6 +958,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     public String credentialsTypeEquals(String given) {
         return String.valueOf((credentialsType != null) && (credentialsType.equals(given)));
+    }
+
+    public static String decodeJSON(String json) {
+        return json.replaceAll("&amp;quot;", "\"").replaceAll("&quot;", "\"");
     }
 
     // Overridden for better type safety.

@@ -195,7 +195,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
     @Test
     public void testBuildFailsWithExceptionFailureMode() throws Exception {
         //exceptionFailureMode should be enabled
-        CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "", "",
+        CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                 "ENABLED");
 

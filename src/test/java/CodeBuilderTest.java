@@ -88,8 +88,8 @@ public class CodeBuilderTest {
     protected CodeBuilder createDefaultCodeBuilder() {
         CodeBuilder cb = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey, "",
                 CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(), "", "",
-                GitCloneDepth.One.toString(), BooleanValue.False.toString(), ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
-                "", BooleanValue.False.toString(), BooleanValue.False.toString(), "[{k, v}]", "[{k, p}]",
+                GitCloneDepth.One.toString(), BooleanValue.False.toString(), "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                "", BooleanValue.False.toString(), BooleanValue.False.toString(), "", "[{k, v}]", "[{k, p}]",
                 "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
                 EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
                 LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "location",
