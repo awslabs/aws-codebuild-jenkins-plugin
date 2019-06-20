@@ -1177,15 +1177,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return selections;
         }
 
-        public ListBoxModel doFillRegionItems() {
-            final ListBoxModel selections = new ListBoxModel();
-
-            for(CodeBuildRegions r: CodeBuildRegions.values()) {
-                selections.add(r.toString());
-            }
-            return selections;
-        }
-
         public ListBoxModel doFillCredentialsIdItems() {
             final ListBoxModel selections = new ListBoxModel();
 

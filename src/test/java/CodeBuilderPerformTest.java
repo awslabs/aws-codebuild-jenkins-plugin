@@ -82,7 +82,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoProjectName() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
-                null, "", CodeBuildRegions.IAD.toString(), "", "", "",
+                null, "", "us-east-1", "", "", "",
                 SourceControlType.ProjectSource.toString(), "", "", "", "", "", "", "",
                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                 "", "", "", "", "", "", "", "", "", "", "", "");
@@ -104,7 +104,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoSourceType() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
-                null, "", CodeBuildRegions.IAD.toString(), "project", "", "", "",
+                null, "", "us-east-1", "project", "", "", "",
                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
 
@@ -177,7 +177,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testComputeTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
@@ -198,7 +198,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testCacheTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
@@ -219,7 +219,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testCloudWatchLogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
@@ -240,7 +240,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testS3LogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
@@ -261,7 +261,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testSourceTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidSourceType", "https://1.0.0.0.86/my_repo",
@@ -282,7 +282,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testEnvironmentTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", CodeBuildRegions.IAD.toString(), "existingProject", "sourceVersion", "",
+                "", "us-east-1", "existingProject", "sourceVersion", "",
                 SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                 "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                 "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",

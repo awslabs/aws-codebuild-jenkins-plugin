@@ -50,8 +50,8 @@
 
   <f:section title="Project Configuration" >
 
-    <f:entry title="Region" field="region">
-      <f:select />
+    <f:entry title="Region" field="region" help="/plugin/aws-codebuild/help-region.html">
+      <f:textbox />
     </f:entry>
 
     <f:entry title="Project Name" field="projectName" help="/plugin/aws-codebuild/help-projectNameHelp.html">
