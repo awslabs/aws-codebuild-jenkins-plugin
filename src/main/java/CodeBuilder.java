@@ -919,14 +919,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     // Given a string of the form "key,value", returns a CodeBuild Environment Variable with that data.
     // Throws an InvalidInputException when the input string doesn't match the form described in mapEnvVariables
     private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev, EnvironmentVariableType envVarType) throws InvalidInputException {
-        if(ev.replaceAll("[^,]", "").length() != 1) {
+        if(ev.replaceAll("\\\\,", "").replaceAll("[^,]", "").length() != 1) {
             throw new InvalidInputException(envVariableSyntaxError);
         }
-        String[] keyAndValue = ev.split(",");
+
+        String[] keyAndValue = ev.split("(?<!\\\\),");
         if(keyAndValue.length != 2 || keyAndValue[0].isEmpty() || keyAndValue[1].isEmpty()) {
             throw new InvalidInputException(envVariableSyntaxError);
         }
-        return new EnvironmentVariable().withName(keyAndValue[0].trim()).withValue(keyAndValue[1].trim()).withType(envVarType);
+        return new EnvironmentVariable().withName(keyAndValue[0].trim().replaceAll("\\\\,", ",")).withValue(keyAndValue[1].trim().replaceAll("\\\\,", ",")).withType(envVarType);
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {

@@ -42,4 +42,31 @@
             }
         ]
     </code>
+
+    <br/>
+    <br/>
+
+    Commas in the name or value must be escaped. For freestyle projects, escape with one backslash:
+
+    <br/>
+
+    <code>
+        [
+        {
+        VAR,
+        value1\,value2
+        }
+        ]
+    </code>
+
+    <br/>
+
+    For pipeline projects, escape with two backslashes:
+
+    <br/>
+
+    <code>
+        awsCodeBuild ... envVariables: '[{VAR, value1\\,value2}]'
+    </code>
+
 </div>

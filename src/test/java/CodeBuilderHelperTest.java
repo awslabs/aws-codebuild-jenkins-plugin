@@ -228,4 +228,28 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         CodeBuilder.mapEnvVariables("[{,name value,}]", evType);
     }
 
+    @Test
+    public void TestMapEnvVarsComma1() throws InvalidInputException {
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("na\\,me").withValue("value").withType(evType);
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{na\\,me, value}]", evType);
+        assert(result.size() == 1);
+        assert(result.contains(ev1));
+    }
+
+    @Test
+    public void TestMapEnvVarsComma2() throws InvalidInputException {
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("\\,").withValue("value").withType(evType);
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, value}]", evType);
+        assert(result.size() == 1);
+        assert(result.contains(ev1));
+    }
+
+    @Test
+    public void TestMapEnvVarsComma3() throws InvalidInputException {
+        EnvironmentVariable ev1 = new EnvironmentVariable().withName("\\,").withValue("\\,").withType(evType);
+        Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, \\,}]", evType);
+        assert(result.size() == 1);
+        assert(result.contains(ev1));
+    }
+
 }
