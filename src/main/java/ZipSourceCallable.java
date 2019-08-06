@@ -96,31 +96,38 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
         byte[] buffer = new byte[1024];
         int bytesRead;
 
-        for (int i = 0; i < dirFiles.size(); i++) {
-            FilePath f = new FilePath(workspace, dirFiles.get(i).getRemote());
-            if (f.isDirectory()) {
-                zipSource(workspace, f.getRemote() + File.separator, out, prefixToTrim);
-            } else {
-                InputStream inputStream = f.read();
-                try {
-                    String path = trimPrefix(f.getRemote(), prefixToTrim);
+        if (dirFiles.isEmpty()) {
+            String path = trimPrefix(dir.getRemote(), prefixToTrim);
+            if (!path.isEmpty()) {
+                out.putNextEntry(new ZipEntry(path + "/"));
+            }
+        } else {
+            for (int i = 0; i < dirFiles.size(); i++) {
+                FilePath f = new FilePath(workspace, dirFiles.get(i).getRemote());
+                if (f.isDirectory()) {
+                    zipSource(workspace, f.getRemote() + File.separator, out, prefixToTrim);
+                } else {
+                    InputStream inputStream = f.read();
+                    try {
+                        String path = trimPrefix(f.getRemote(), prefixToTrim);
 
-                    if(path.startsWith(File.separator)) {
-                        path = path.substring(1, path.length());
+                        if(path.startsWith(File.separator)) {
+                            path = path.substring(1, path.length());
+                        }
+
+                        // Zip files created on the windows file system will not unzip
+                        // properly on unix systems. Without this change, no directory structure
+                        // is built when unzipping.
+                        path = path.replace(File.separator, "/");
+
+                        ZipEntry entry = new ZipEntry(path);
+                        out.putNextEntry(entry);
+                        while ((bytesRead = inputStream.read(buffer)) != -1) {
+                            out.write(buffer, 0, bytesRead);
+                        }
+                    } finally {
+                        inputStream.close();
                     }
-
-                    // Zip files created on the windows file system will not unzip
-                    // properly on unix systems. Without this change, no directory structure
-                    // is built when unzipping.
-                    path = path.replace(File.separator, "/");
-
-                    ZipEntry entry = new ZipEntry(path);
-                    out.putNextEntry(entry);
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        out.write(buffer, 0, bytesRead);
-                    }
-                } finally {
-                    inputStream.close();
                 }
             }
         }

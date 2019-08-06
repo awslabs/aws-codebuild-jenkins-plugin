@@ -287,10 +287,14 @@ public class S3DataManagerTest {
         unzipFolder.mkdir();
         ZipFile z = new ZipFile(zip.getPath());
         z.extractAll(unzipFolder.getPath());
-        assertTrue(unzipFolder.list().length == 1);
-        assertTrue(unzipFolder.list()[0].equals(buildSpecName));
+        assertEquals(2, unzipFolder.list().length);
+        assertEquals(buildSpecName, unzipFolder.list()[0]);
+        assertEquals("src", unzipFolder.list()[1]);
         File extractedBuildSpec = new File(unzipFolder.getPath() + "/" + buildSpecName);
-        assertTrue(FileUtils.readFileToString(extractedBuildSpec).equals(buildSpecContents));
+        assertEquals(buildSpecContents, FileUtils.readFileToString(extractedBuildSpec));
+        File srcDir = new File(unzipFolder.getPath() + "/src");
+        assertTrue(srcDir.isDirectory());
+        assertEquals(0, srcDir.list().length);
     }
 
     @Test
