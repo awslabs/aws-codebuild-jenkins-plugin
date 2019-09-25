@@ -23,7 +23,6 @@ import hudson.model.TaskListener;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.xml.bind.Marshaller;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -61,7 +60,7 @@ public class CloudWatchMonitor {
         if(cwlStreamingDisabled) {
             return;
         } else if(this.logsLocation != null && this.logsLocation.getGroupName() != null && this.logsLocation.getStreamName() != null) {
-            this.latestLogs = new ArrayList();
+            this.latestLogs = new ArrayList<>();
             GetLogEventsRequest logRequest = new GetLogEventsRequest()
                 .withStartTime(lastPollTime)
                 .withStartFromHead(true)

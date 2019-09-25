@@ -25,7 +25,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.scm.SCM;
-import net.lingala.zip4j.core.ZipFile;
+import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Before;
@@ -51,7 +51,7 @@ public class S3DataManagerTest {
     private static final String mockWorkspaceDir = "/tmp/jenkins/workspace/proj";
     private FilePath testWorkSpace = new FilePath(new File(mockWorkspaceDir));
     private FilePath testZipSourceWorkspace = new FilePath(new File("/"));
-    Map<String, String> s3ARNs = new HashMap<String, String>();
+    Map<String, String> s3ARNs = new HashMap<>();
     private String s3InputBucketName = "Inputbucket";
     private String s3InputKeyName = "InputKey";
     private String sseAlgorithm = EncryptionAlgorithm.AES256.toString();
@@ -326,7 +326,6 @@ public class S3DataManagerTest {
         File extractedBuildSpec = new File(unzipFolder.getPath() + "/" + buildSpecName);
         assertEquals(FileUtils.readFileToString(extractedBuildSpec), buildSpecContents);
 
-        String s = fileList[1];
         assertEquals(fileList[1], "src");
         File extractedSrcFile = new File(unzipFolder.getPath() + "/src/file.java");
         assertTrue(extractedSrcFile.exists());

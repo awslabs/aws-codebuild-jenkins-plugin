@@ -1182,7 +1182,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
-            Set<String> displayCredentials = new HashSet();
+            Set<String> displayCredentials = new HashSet<>();
 
             for (Credentials c: s.getCredentials()) {
                 if (c instanceof CodeBuildCredentials) {

@@ -171,7 +171,7 @@ public class CodeBuildAction implements Action {
             if(logs.size() == 1) {
                 if(logs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
                     if (newLogs.size() > 0 && !newLogs.get(0).equals(CloudWatchMonitor.noLogsMessage)) {
-                        logs = new ArrayList();
+                        logs = new ArrayList<>();
                     } else {
                         return;
                     }

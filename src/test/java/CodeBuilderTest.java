@@ -29,11 +29,9 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -58,7 +56,7 @@ public class CodeBuilderTest {
     AWSLogsClient mockLogsClient = mock(AWSLogsClient.class);
     CloudWatchMonitor mockMonitor = mock(CloudWatchMonitor.class);
     CodeBuildAction mockAction = mock(CodeBuildAction.class);
-    Answer mockInterruptedException = new Answer() {
+    Answer<Object> mockInterruptedException = new Answer<Object>() {
         public Object answer(InvocationOnMock invocation) throws InterruptedException {
             throw new InterruptedException();
         }
