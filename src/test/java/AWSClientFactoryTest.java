@@ -17,6 +17,7 @@
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.cloudbees.plugins.credentials.*;
 import hudson.EnvVars;
@@ -39,6 +40,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
+import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -87,7 +89,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory(null, null, null, null, null, null, null, null, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidRegionError));
+            assert(e.getMessage().contains(CodeBuilderValidation.invalidRegionError));
         }
     }
 
@@ -96,7 +98,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("", "", "", "", "", null, "", "", build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidRegionError));
+            assert(e.getMessage().contains(CodeBuilderValidation.invalidRegionError));
         }
     }
 
@@ -110,7 +112,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("bad", "", "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidCredTypeError));
+            assert(e.getMessage().contains(invalidCredTypeError));
         }
     }
 
@@ -118,7 +120,7 @@ public class AWSClientFactoryTest {
     public void testSpecifyCreds() {
         AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "a", awsSecretKey, "t", REGION, build, null);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
-        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+        assert(awsClientFactory.getProxyPort().equals(parseInt(proxyPort)));
 
     }
 
@@ -126,7 +128,7 @@ public class AWSClientFactoryTest {
     public void testDefaultCreds() {
         AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", proxyHost, proxyPort, "", awsSecretKey, "", REGION, build, null);
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
-        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+        assert(awsClientFactory.getProxyPort().equals(parseInt(proxyPort)));
     }
 
 
@@ -136,7 +138,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("jenkins", null, "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+            assert(e.getMessage().contains(CodeBuilderValidation.invalidCredentialsIdError));
         }
     }
 
@@ -145,7 +147,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("jenkins", "", "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+            assert(e.getMessage().contains(CodeBuilderValidation.invalidCredentialsIdError));
         }
     }
 
@@ -155,7 +157,7 @@ public class AWSClientFactoryTest {
         AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
-        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+        assert(awsClientFactory.getProxyPort().equals(parseInt(proxyPort)));
         assert(awsClientFactory.getCredentialsDescriptor().contains(codeBuildDescriptor));
         assert(awsClientFactory.getCredentialsDescriptor().contains(credentialsId));
     }
@@ -165,7 +167,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("keys", null, "", "", "a", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidSecretKeyError));
+            assert(e.getMessage().contains(invalidSecretKeyError));
         }
     }
 
@@ -200,7 +202,7 @@ public class AWSClientFactoryTest {
         AWSClientFactory awsClientFactory = new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
 
         assert(awsClientFactory.getProxyHost().equals(proxyHost));
-        assert(awsClientFactory.getProxyPort().equals(Validation.parseInt(proxyPort)));
+        assert(awsClientFactory.getProxyPort().equals(parseInt(proxyPort)));
         assert(awsClientFactory.getCredentialsDescriptor().contains(codeBuildDescriptor));
         assert(awsClientFactory.getCredentialsDescriptor().contains(credentialsId));
     }
@@ -230,7 +232,7 @@ public class AWSClientFactoryTest {
         try {
             new AWSClientFactory("jenkins", credentialsId, "", "", "", null, "", REGION, build, null);
         } catch (InvalidInputException e) {
-            assert(e.getMessage().contains(Validation.invalidCredentialsIdError));
+            assert(e.getMessage().contains(CodeBuilderValidation.invalidCredentialsIdError));
             throw e;
         }
     }
@@ -249,7 +251,7 @@ public class AWSClientFactoryTest {
 
         AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "", awsSecretKey, "", REGION, build, mockStepContext);
 
-        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.stepCredentials));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(stepCredentials));
     }
 
     @Test
@@ -266,7 +268,7 @@ public class AWSClientFactoryTest {
 
         AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "", awsSecretKey, "", REGION, build, mockStepContext);
 
-        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.stepCredentials));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(stepCredentials));
     }
 
     @Test
@@ -282,7 +284,7 @@ public class AWSClientFactoryTest {
 
         AWSClientFactory awsClientFactory = new AWSClientFactory("keys", "", "", "", "accessKey", awsSecretKey, "", REGION, build, mockStepContext);
 
-        assert(awsClientFactory.getCredentialsDescriptor().contains(Validation.basicAWSCredentials));
+        assert(awsClientFactory.getCredentialsDescriptor().contains(CodeBuildBaseCredentials.BASIC_AWS_CREDS));
     }
 
 }

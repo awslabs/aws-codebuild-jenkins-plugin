@@ -45,7 +45,7 @@ public class S3DataManager {
     // if localSourcePath is empty, clones, zips, and uploads the given workspace. Otherwise, uploads the file referred to by localSourcePath.
     // The upload bucket used is this.s3InputBucket and the name of the zip file is this.s3InputKey.
     public UploadToS3Output uploadSourceToS3(TaskListener listener, FilePath workspace) throws Exception {
-        Validation.checkS3SourceUploaderConfig(workspace, s3Client, localSourcePath, workspaceSubdir);
+        CodeBuilderValidation.checkS3SourceUploaderConfig(workspace, s3Client, localSourcePath, workspaceSubdir);
 
         FilePath localFile;
         String zipFileMD5;

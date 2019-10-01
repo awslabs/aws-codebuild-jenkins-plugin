@@ -43,7 +43,7 @@ public class CloudWatchMonitor {
     public CloudWatchMonitor(AWSLogsClient client, boolean cwlStreamingDisabled) {
         this.logsClient = client;
         this.cwlStreamingDisabled = cwlStreamingDisabled;
-        if(!Validation.checkCloudWatchMonitorConfig(logsClient)) {
+        if(!CodeBuilderValidation.checkCloudWatchMonitorConfig(logsClient)) {
             latestLogs = Arrays.asList(failedConfigurationLogsMessage);
             return;
         }

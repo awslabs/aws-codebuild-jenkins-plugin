@@ -200,7 +200,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 "ENABLED");
 
         exception.expect(AbortException.class);
-        exception.expectMessage(CodeBuilder.configuredImproperlyError + "\n\t> " + Validation.projectRequiredError);
+        exception.expectMessage(CodeBuilder.configuredImproperlyError + "\n\t> " + CodeBuilderValidation.projectRequiredError);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
         CodeBuildResult result = test.getCodeBuildResult();

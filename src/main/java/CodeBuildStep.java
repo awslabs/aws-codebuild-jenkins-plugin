@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.services.codebuild.model.*;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
@@ -515,8 +516,8 @@ public class CodeBuildStep extends AbstractStepImpl {
             Set<String> displayCredentials = new HashSet<>();
 
             for (Credentials c: s.getCredentials()) {
-                if (c instanceof CodeBuildCredentials) {
-                    displayCredentials.add(((CodeBuildCredentials) c).getId());
+                if (c instanceof CodeBuildBaseCredentials) {
+                    displayCredentials.add(((CodeBuildBaseCredentials) c).getId());
                 }
             }
 
@@ -526,8 +527,8 @@ public class CodeBuildStep extends AbstractStepImpl {
                 for(Folder folder: folders) {
                     List<Credentials> creds = CredentialsProvider.lookupCredentials(Credentials.class, (Item) folder);
                     for(Credentials cred: creds) {
-                        if (cred instanceof CodeBuildCredentials) {
-                            displayCredentials.add(((CodeBuildCredentials) cred).getId());
+                        if (cred instanceof CodeBuildBaseCredentials) {
+                            displayCredentials.add(((CodeBuildBaseCredentials) cred).getId());
                         }
                     }
                 }

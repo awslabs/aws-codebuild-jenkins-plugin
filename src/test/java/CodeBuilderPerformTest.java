@@ -29,6 +29,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+//import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -94,11 +95,11 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         assertEquals(savedResult.getValue(), Result.FAILURE);
         verify(listener, times(1)).getLogger();
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.projectRequiredError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.projectRequiredError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
-        assertTrue(result.getErrorMessage().contains(Validation.projectRequiredError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.projectRequiredError));
     }
 
     @Test
@@ -116,11 +117,11 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         verify(listener, times(1)).getLogger();
 
         assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilder.configuredImproperlyError), true);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.sourceControlTypeRequiredError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.sourceControlTypeRequiredError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue(result.getErrorMessage().contains(CodeBuilder.configuredImproperlyError));
-        assertTrue(result.getErrorMessage().contains(Validation.sourceControlTypeRequiredError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.sourceControlTypeRequiredError));
     }
 
     @Test
@@ -189,10 +190,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidComputeTypeError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidComputeTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidComputeTypeError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidComputeTypeError));
     }
 
     @Test
@@ -210,10 +211,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidCacheTypeError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidCacheTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidCacheTypeError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidCacheTypeError));
     }
 
     @Test
@@ -231,10 +232,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidCloudWatchLogsStatusError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidCloudWatchLogsStatusError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidCloudWatchLogsStatusError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidCloudWatchLogsStatusError));
     }
 
     @Test
@@ -252,10 +253,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidS3LogsStatusError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidS3LogsStatusError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidS3LogsStatusError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidS3LogsStatusError));
     }
 
     @Test
@@ -273,10 +274,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidSourceTypeError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidSourceTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidSourceTypeError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidSourceTypeError));
     }
 
     @Test
@@ -294,10 +295,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(savedResult.getValue(), Result.FAILURE);
-        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(Validation.invalidEnvironmentTypeError), true);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidEnvironmentTypeError), true);
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
-        assertTrue(result.getErrorMessage().contains(Validation.invalidEnvironmentTypeError));
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidEnvironmentTypeError));
     }
 
     @Test

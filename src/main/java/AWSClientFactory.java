@@ -33,13 +33,15 @@
  *     SOFTWARE.
  */
 
-import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.*;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.retry.PredefinedBackoffStrategies;
 import com.amazonaws.retry.RetryPolicy;
+import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.amazonaws.services.logs.AWSLogsClient;
@@ -48,23 +50,21 @@ import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-
-import com.cloudbees.plugins.credentials.Credentials.*;
-import com.cloudbees.hudson.plugins.folder.*;
-
-
 import enums.CredentialsType;
 import hudson.EnvVars;
-import hudson.model.*;
+import hudson.model.Item;
+import hudson.model.Run;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import lombok.Getter;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+
+import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
+import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
 
 public class AWSClientFactory {
@@ -84,21 +84,21 @@ public class AWSClientFactory {
     public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
                        String region, Run<?, ?> build, StepContext stepContext) {
 
-        this.awsAccessKey = Validation.sanitize(awsAccessKey);
+        this.awsAccessKey = sanitize(awsAccessKey);
         this.awsSecretKey = awsSecretKey;
-        this.awsSessionToken = Validation.sanitize(awsSessionToken);
-        this.region = Validation.sanitize(region);
+        this.awsSessionToken = sanitize(awsSessionToken);
+        this.region = sanitize(region);
         this.properties = new Properties();
 
-        Validation.checkAWSClientFactoryRegionConfig(this.region);
+        CodeBuilderValidation.checkAWSClientFactoryRegionConfig(this.region);
         this.credentialsDescriptor = "";
 
         if(credentialsType.equals(CredentialsType.Jenkins.toString())) {
-            credentialsId = Validation.sanitize(credentialsId);
-            Validation.checkAWSClientFactoryJenkinsCredentialsConfig(credentialsId);
-            CodeBuildCredentials codeBuildCredentials;
+            credentialsId = sanitize(credentialsId);
+            CodeBuilderValidation.checkAWSClientFactoryJenkinsCredentialsConfig(credentialsId);
+            com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials codeBuildCredentials;
 
-            codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(SystemCredentialsProvider.getInstance().getCredentials(),
+            codeBuildCredentials = (CodeBuildBaseCredentials) CredentialsMatchers.firstOrNull(SystemCredentialsProvider.getInstance().getCredentials(),
                     CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
 
             if(codeBuildCredentials == null) {
@@ -106,7 +106,7 @@ public class AWSClientFactory {
                 Jenkins instance = Jenkins.getInstance();
                 if(instance != null) {
                     folder = instance.getItemByFullName(build.getParent().getParent().getFullName());
-                    codeBuildCredentials = (CodeBuildCredentials) CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(Credentials.class, folder),
+                    codeBuildCredentials = (CodeBuildBaseCredentials) CredentialsMatchers.firstOrNull(CredentialsProvider.lookupCredentials(Credentials.class, folder),
                             CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
                 }
             }
@@ -114,14 +114,14 @@ public class AWSClientFactory {
             if(codeBuildCredentials != null) {
                 this.awsCredentialsProvider = codeBuildCredentials;
                 this.proxyHost = codeBuildCredentials.getProxyHost();
-                this.proxyPort = Validation.parseInt(codeBuildCredentials.getProxyPort());
+                this.proxyPort = parseInt(codeBuildCredentials.getProxyPort());
                 this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
             } else {
-                throw new InvalidInputException(Validation.invalidCredentialsIdError);
+                throw new InvalidInputException(CodeBuilderValidation.invalidCredentialsIdError);
             }
         } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
             if(this.awsSecretKey == null) {
-                throw new InvalidInputException(Validation.invalidSecretKeyError);
+                throw new InvalidInputException(invalidSecretKeyError);
             }
 
             if(stepContext != null && awsAccessKey.isEmpty() && awsSecretKey.getPlainText().isEmpty()) {
@@ -132,12 +132,12 @@ public class AWSClientFactory {
             }
 
             if(awsCredentialsProvider == null) {
-                awsCredentialsProvider = getBasicCredentialsOrDefaultChain(Validation.sanitize(awsAccessKey), awsSecretKey.getPlainText(), Validation.sanitize(awsSessionToken));
+                awsCredentialsProvider = getBasicCredentialsOrDefaultChain(sanitize(awsAccessKey), awsSecretKey.getPlainText(), sanitize(awsSessionToken));
             }
-            this.proxyHost = Validation.sanitize(proxyHost);
-            this.proxyPort = Validation.parseInt(proxyPort);
+            this.proxyHost = sanitize(proxyHost);
+            this.proxyPort = parseInt(proxyPort);
         } else {
-            throw new InvalidInputException(Validation.invalidCredTypeError);
+            throw new InvalidInputException(invalidCredTypeError);
         }
     }
 
@@ -159,17 +159,13 @@ public class AWSClientFactory {
         return client;
     }
 
-    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
-        return getBasicCredentialsOrDefaultChain(accessKey, secretKey, "");
-    }
-
     private AWSCredentialsProvider getStepCreds(EnvVars stepEnvVars) {
         String stepAccessKey = stepEnvVars.get(AWS_ACCESS_KEY_ID);
         String stepSecretKey = stepEnvVars.get(AWS_SECRET_ACCESS_KEY);
         String stepSessionToken = stepEnvVars.get(AWS_SESSION_TOKEN);
 
         if(stepAccessKey != null && !stepAccessKey.isEmpty() && stepSecretKey != null && !stepSecretKey.isEmpty()) {
-            this.credentialsDescriptor = Validation.stepCredentials;
+            this.credentialsDescriptor = stepCredentials;
             if(stepSessionToken != null && !stepSessionToken.isEmpty()) {
                 return new AWSStaticCredentialsProvider(new BasicSessionCredentials(stepAccessKey, stepSecretKey, stepSessionToken));
             } else {
@@ -178,24 +174,6 @@ public class AWSClientFactory {
         }
 
         return null;
-    }
-
-    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {
-        AWSCredentialsProvider result;
-        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(awsSessionToken)) {
-            result = new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKey, secretKey, awsSessionToken));
-        }
-        else if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
-            result = new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
-        } else {
-            result = DefaultAWSCredentialsProviderChain.getInstance();
-            try {
-                result.getCredentials();
-            } catch (SdkClientException e) {
-                throw new InvalidInputException(Validation.invalidDefaultCredentialsError);
-            }
-        }
-        return result;
     }
 
     private ClientConfiguration getClientConfiguration() {
@@ -221,9 +199,9 @@ public class AWSClientFactory {
     public String getCredentialsDescriptor() {
         if(this.credentialsDescriptor.isEmpty()) {
             if(awsAccessKey.isEmpty()) {
-                return Validation.defaultChainCredentials;
+                return CodeBuildBaseCredentials.DEFAULT_CHAIN_CREDS;
             } else {
-                return Validation.basicAWSCredentials;
+                return CodeBuildBaseCredentials.BASIC_AWS_CREDS;
             }
         } else {
             return credentialsDescriptor;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
  *     A copy of the License is located at
@@ -13,7 +13,6 @@
  *  Portions copyright Copyright 2004-2011 Oracle Corporation.
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
-
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -22,31 +21,19 @@ import hudson.FilePath;
 
 import java.util.Collection;
 
+import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 import static enums.SourceControlType.JenkinsSource;
 import static enums.SourceControlType.ProjectSource;
-import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
-import static org.apache.commons.lang.StringEscapeUtils.escapeSql;
 
-public class Validation {
+public class CodeBuilderValidation {
 
-    public static final String validSourceUrlPrefix = "https://";
-
-    //AWSClientFactory
     public static final String invalidArtifactTypeError = "Artifact type override must be one of 'NO_ARTIFACTS', 'S3', ''";
     public static final String invalidArtifactsPackagingError = "Artifact packaging override must be one of 'NONE', 'ZIP', ''";
     public static final String invalidArtifactNamespaceTypeError = "Artifact namespace override must be one of 'NONE', 'BUILD_ID', ''";
     public static final String invalidTimeoutOverrideError = "Build timeout override must be a number between 5 and 480 (minutes)";
-    public static final String invalidDefaultCredentialsError = "AWS credentials couldn't be loaded from the default provider chain";
     public static final String invalidRegionError = "Enter a valid AWS region";
     public static final String invalidProxyError = "Enter a valid proxy host and port (greater than zero)";
-    public static final String invalidCredTypeError = "Invalid credentialsType option; must be 'jenkins' or 'keys'";
-    public static final String invalidSecretKeyError = "awsSecretKey cannot be null";
     public static final String invalidCredentialsIdError = "Invalid credentials ID. Verify that the credentials are of type CodeBuildCredentials and are accessible in this project.";
-    public static final String unableToGetJobFolder = "Unable to retrieve folder for this job.";
-    public static final String basicAWSCredentials = "Using given AWS access and secret key for authorization";
-    public static final String defaultChainCredentials = "Using credentials provided by the DefaultAWSCredentialsProviderChain for authorization";
-    public static final String stepCredentials = "Using credentials provided by the Jenkins step context for authorization";
-    public static final String IAMRoleCredentials = "Authorizing with the IAM role defined in credentials ";
     public static final String invalidSourceTypeError = "Source type override must be one of 'CODECOMMIT', 'S3', 'GITHUB', 'GITHUB_ENTERPRISE', 'BITBUCKET'";
     public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";
     public static final String invalidEnvironmentTypeError = "Environment type override must be one of 'LINUX_CONTAINER', 'WINDOWS_CONTAINER'";
@@ -56,41 +43,12 @@ public class Validation {
     public static final String invalidSourceUploaderNullWorkspaceError = "Project workspace is null";
     public static final String invalidSourceUploaderNullS3ClientError = "S3 client cannot be null";
     public static final String invalidSourceUploaderConfigError = "Cannot specify both localSourcePath and workspaceSubdir";
-
-
-    //CodeBuilder
     public static final String projectRequiredError = "CodeBuild project name is required";
     public static final String sourceControlTypeRequiredError = "Source control type is required and must be 'jenkins' or 'project'";
 
-    public static String sanitize(final String s) {
-        if(s == null) {
-            return "";
-        } else {
-            return escapeSql(escapeHtml(s.trim()));
-        }
-    }
-
-    public static Integer parseInt(String s) {
-        if(s == null || s.isEmpty()) {
-            return null;
-        } else {
-            return Integer.parseInt(s);
-        }
-    }
-
-    public static String sanitizeYAML(final String s) {
-        if(s == null) {
-            return "";
-        } else {
-            return s.replace("\t", " ");
-        }
-    }
-
     //// Configuration-checking functions ////
-
     // CodeBuilder: if any of the parameters in CodeBuilder are bad, this will cause the build to end in failure in CodeBuilder.perform()
-
-    public static String checkCodeBuilderConfig(CodeBuilder cb) {
+    public static String checkEssentialConfig(CodeBuilder cb) {
         String projectName = cb.getParameterized(cb.getProjectName());
         if(projectName == null || projectName.isEmpty()) {
             return projectRequiredError;
@@ -104,7 +62,7 @@ public class Validation {
     }
 
     // Returns empty string if configuration valid
-    public static String checkCodeBuilderStartBuildOverridesConfig(CodeBuilder cb) {
+    public static String checkStartBuildOverridesConfig(CodeBuilder cb) {
         String artifactTypeOverride = cb.getParameterized(cb.getArtifactTypeOverride());
         if(!artifactTypeOverride.isEmpty()) {
             try {
@@ -255,15 +213,6 @@ public class Validation {
     public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
         if (region.isEmpty()) {
             throw new InvalidInputException(invalidRegionError);
-        }
-    }
-
-    public static void checkAWSClientFactoryProxyConfig(String proxyHost, String proxyPort) throws InvalidInputException {
-        if(proxyHost != null && !proxyHost.isEmpty()) {
-            Integer proxyPortInt = Validation.parseInt(proxyPort);
-            if(proxyPortInt != null && proxyPortInt < 0) {
-                throw new InvalidInputException(invalidProxyError);
-            }
         }
     }
 }

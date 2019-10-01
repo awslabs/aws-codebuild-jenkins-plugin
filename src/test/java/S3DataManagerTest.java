@@ -122,7 +122,7 @@ public class S3DataManagerTest {
         try {
             new S3DataManager(null, null, null, null, null, null).uploadSourceToS3(listener, testWorkSpace);
         } catch (InvalidInputException e) {
-            assertEquals(e.getErrorMessage(), Validation.invalidSourceUploaderNullS3ClientError);
+            assertEquals(e.getErrorMessage(), CodeBuilderValidation.invalidSourceUploaderNullS3ClientError);
         } catch(Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -171,7 +171,7 @@ public class S3DataManagerTest {
         try {
             createDefaultSource("source.zip", "subdir").uploadSourceToS3(listener, testWorkSpace);
         } catch (InvalidInputException e) {
-            assertEquals(e.getErrorMessage(), Validation.invalidSourceUploaderConfigError);
+            assertEquals(e.getErrorMessage(), CodeBuilderValidation.invalidSourceUploaderConfigError);
         } catch(Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -288,8 +288,8 @@ public class S3DataManagerTest {
         ZipFile z = new ZipFile(zip.getPath());
         z.extractAll(unzipFolder.getPath());
         assertEquals(2, unzipFolder.list().length);
-        assertEquals(buildSpecName, unzipFolder.list()[0]);
-        assertEquals("src", unzipFolder.list()[1]);
+        assertTrue(Arrays.asList(unzipFolder.list()).contains(buildSpecName));
+        assertTrue(Arrays.asList(unzipFolder.list()).contains("src"));
         File extractedBuildSpec = new File(unzipFolder.getPath() + "/" + buildSpecName);
         assertEquals(buildSpecContents, FileUtils.readFileToString(extractedBuildSpec));
         File srcDir = new File(unzipFolder.getPath() + "/src");

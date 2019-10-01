@@ -17,6 +17,8 @@ import com.amazonaws.services.codebuild.model.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
+
 public class ProjectFactory {
 
     private AWSCodeBuildClient cbClient;
@@ -51,7 +53,7 @@ public class ProjectFactory {
                     .withArtifacts(artifacts)
                     .withEnvironment(environment)
                     .withServiceRole(serviceIAMRole)
-                    .withTimeoutInMinutes(Validation.parseInt(timeout))
+                    .withTimeoutInMinutes(parseInt(timeout))
                     .withEncryptionKey(encryptionKey));
 
             return upResult.getProject().getName();
@@ -63,7 +65,7 @@ public class ProjectFactory {
                     .withArtifacts(artifacts)
                     .withEnvironment(environment)
                     .withServiceRole(serviceIAMRole)
-                    .withTimeoutInMinutes(Validation.parseInt(timeout))
+                    .withTimeoutInMinutes(parseInt(timeout))
                     .withEncryptionKey(encryptionKey));
 
             return cpResult.getProject().getName();

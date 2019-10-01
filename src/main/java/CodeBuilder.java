@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
@@ -46,6 +47,8 @@ import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+
+import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
 public class CodeBuilder extends Builder implements SimpleBuildStep {
 
@@ -138,108 +141,108 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
                        String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode) {
 
-        this.credentialsType = Validation.sanitize(credentialsType);
-        this.credentialsId = Validation.sanitize(credentialsId);
-        this.proxyHost = Validation.sanitize(proxyHost);
-        this.proxyPort = Validation.sanitize(proxyPort);
-        this.awsAccessKey = Validation.sanitize(awsAccessKey);
+        this.credentialsType = sanitize(credentialsType);
+        this.credentialsId = sanitize(credentialsId);
+        this.proxyHost = sanitize(proxyHost);
+        this.proxyPort = sanitize(proxyPort);
+        this.awsAccessKey = sanitize(awsAccessKey);
         this.awsSecretKey = awsSecretKey;
-        this.awsSessionToken = Validation.sanitize(awsSessionToken);
-        this.region = Validation.sanitize(region);
-        this.projectName = Validation.sanitize(projectName);
-        this.sourceControlType = Validation.sanitize(sourceControlType);
-        this.localSourcePath = Validation.sanitize(localSourcePath);
-        this.workspaceSubdir = Validation.sanitize(workspaceSubdir);
-        this.sourceVersion = Validation.sanitize(sourceVersion);
-        this.sseAlgorithm = Validation.sanitize(sseAlgorithm);
-        this.gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
-        this.reportBuildStatusOverride = Validation.sanitize(reportBuildStatusOverride);
-        this.secondarySourcesOverride = decodeJSON(Validation.sanitize(secondarySourcesOverride));
-        this.secondarySourcesVersionOverride = decodeJSON(Validation.sanitize(secondarySourcesVersionOverride));
-        this.artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
-        this.artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
-        this.artifactNameOverride = Validation.sanitize(artifactNameOverride);
-        this.artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
-        this.artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
-        this.artifactPathOverride = Validation.sanitize(artifactPathOverride);
-        this.artifactEncryptionDisabledOverride = Validation.sanitize(artifactEncryptionDisabledOverride);
-        this.overrideArtifactName = Validation.sanitize(overrideArtifactName);
-        this.secondaryArtifactsOverride = decodeJSON(Validation.sanitize(secondaryArtifactsOverride));
-        this.sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
-        this.sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
-        this.environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
-        this.imageOverride = Validation.sanitize(imageOverride);
-        this.computeTypeOverride = Validation.sanitize(computeTypeOverride);
-        this.cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
-        this.cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
-        this.cloudWatchLogsStatusOverride = Validation.sanitize(cloudWatchLogsStatusOverride);
-        this.cloudWatchLogsGroupNameOverride = Validation.sanitize(cloudWatchLogsGroupNameOverride);
-        this.cloudWatchLogsStreamNameOverride = Validation.sanitize(cloudWatchLogsStreamNameOverride);
-        this.s3LogsStatusOverride = Validation.sanitize(s3LogsStatusOverride);
-        this.s3LogsLocationOverride = Validation.sanitize(s3LogsLocationOverride);
-        this.certificateOverride = Validation.sanitize(certificateOverride);
-        this.serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
-        this.envVariables = Validation.sanitize(envVariables);
-        this.envParameters = Validation.sanitize(envParameters);
-        this.buildSpecFile = Validation.sanitize(buildSpecFile);
-        this.buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
-        this.insecureSslOverride = Validation.sanitize(insecureSslOverride);
-        this.privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
-        this.cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
-        this.exceptionFailureMode = Validation.sanitize(exceptionFailureMode);
+        this.awsSessionToken = sanitize(awsSessionToken);
+        this.region = sanitize(region);
+        this.projectName = sanitize(projectName);
+        this.sourceControlType = sanitize(sourceControlType);
+        this.localSourcePath = sanitize(localSourcePath);
+        this.workspaceSubdir = sanitize(workspaceSubdir);
+        this.sourceVersion = sanitize(sourceVersion);
+        this.sseAlgorithm = sanitize(sseAlgorithm);
+        this.gitCloneDepthOverride = sanitize(gitCloneDepthOverride);
+        this.reportBuildStatusOverride = sanitize(reportBuildStatusOverride);
+        this.secondarySourcesOverride = decodeJSON(sanitize(secondarySourcesOverride));
+        this.secondarySourcesVersionOverride = decodeJSON(sanitize(secondarySourcesVersionOverride));
+        this.artifactTypeOverride = sanitize(artifactTypeOverride);
+        this.artifactLocationOverride = sanitize(artifactLocationOverride);
+        this.artifactNameOverride = sanitize(artifactNameOverride);
+        this.artifactNamespaceOverride = sanitize(artifactNamespaceOverride);
+        this.artifactPackagingOverride = sanitize(artifactPackagingOverride);
+        this.artifactPathOverride = sanitize(artifactPathOverride);
+        this.artifactEncryptionDisabledOverride = sanitize(artifactEncryptionDisabledOverride);
+        this.overrideArtifactName = sanitize(overrideArtifactName);
+        this.secondaryArtifactsOverride = decodeJSON(sanitize(secondaryArtifactsOverride));
+        this.sourceTypeOverride = sanitize(sourceTypeOverride);
+        this.sourceLocationOverride = sanitize(sourceLocationOverride);
+        this.environmentTypeOverride = sanitize(environmentTypeOverride);
+        this.imageOverride = sanitize(imageOverride);
+        this.computeTypeOverride = sanitize(computeTypeOverride);
+        this.cacheTypeOverride = sanitize(cacheTypeOverride);
+        this.cacheLocationOverride = sanitize(cacheLocationOverride);
+        this.cloudWatchLogsStatusOverride = sanitize(cloudWatchLogsStatusOverride);
+        this.cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
+        this.cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
+        this.s3LogsStatusOverride = sanitize(s3LogsStatusOverride);
+        this.s3LogsLocationOverride = sanitize(s3LogsLocationOverride);
+        this.certificateOverride = sanitize(certificateOverride);
+        this.serviceRoleOverride = sanitize(serviceRoleOverride);
+        this.envVariables = sanitize(envVariables);
+        this.envParameters = sanitize(envParameters);
+        this.buildSpecFile = sanitize(buildSpecFile);
+        this.buildTimeoutOverride = sanitize(buildTimeoutOverride);
+        this.insecureSslOverride = sanitize(insecureSslOverride);
+        this.privilegedModeOverride = sanitize(privilegedModeOverride);
+        this.cwlStreamingDisabled = sanitize(cwlStreamingDisabled);
+        this.exceptionFailureMode = sanitize(exceptionFailureMode);
         this.codeBuildResult = new CodeBuildResult();
         this.batchGetBuildsCalls = 0;
     }
 
     protected Object readResolve() {
-        credentialsType = Validation.sanitize(credentialsType);
-        credentialsId = Validation.sanitize(credentialsId);
-        proxyHost = Validation.sanitize(proxyHost);
-        proxyPort = Validation.sanitize(proxyPort);
-        awsAccessKey = Validation.sanitize(awsAccessKey);
-        awsSessionToken = Validation.sanitize(awsSessionToken);
-        region = Validation.sanitize(region);
-        projectName = Validation.sanitize(projectName);
-        sourceControlType = Validation.sanitize(sourceControlType);
-        localSourcePath = Validation.sanitize(localSourcePath);
-        workspaceSubdir = Validation.sanitize(workspaceSubdir);
-        sourceVersion = Validation.sanitize(sourceVersion);
-        sseAlgorithm = Validation.sanitize(sseAlgorithm);
-        gitCloneDepthOverride = Validation.sanitize(gitCloneDepthOverride);
-        reportBuildStatusOverride = Validation.sanitize(reportBuildStatusOverride);
-        secondarySourcesOverride = decodeJSON(Validation.sanitize(secondarySourcesOverride));
-        secondarySourcesVersionOverride = decodeJSON(Validation.sanitize(secondarySourcesVersionOverride));
-        artifactTypeOverride = Validation.sanitize(artifactTypeOverride);
-        artifactLocationOverride = Validation.sanitize(artifactLocationOverride);
-        artifactNameOverride = Validation.sanitize(artifactNameOverride);
-        artifactNamespaceOverride = Validation.sanitize(artifactNamespaceOverride);
-        artifactPackagingOverride = Validation.sanitize(artifactPackagingOverride);
-        artifactPathOverride = Validation.sanitize(artifactPathOverride);
-        artifactEncryptionDisabledOverride = Validation.sanitize(artifactEncryptionDisabledOverride);
-        overrideArtifactName = Validation.sanitize(overrideArtifactName);
-        secondaryArtifactsOverride = decodeJSON(Validation.sanitize(secondaryArtifactsOverride));
-        sourceTypeOverride = Validation.sanitize(sourceTypeOverride);
-        sourceLocationOverride = Validation.sanitize(sourceLocationOverride);
-        environmentTypeOverride = Validation.sanitize(environmentTypeOverride);
-        imageOverride = Validation.sanitize(imageOverride);
-        computeTypeOverride = Validation.sanitize(computeTypeOverride);
-        cacheTypeOverride = Validation.sanitize(cacheTypeOverride);
-        cacheLocationOverride = Validation.sanitize(cacheLocationOverride);
-        cloudWatchLogsStatusOverride = Validation.sanitize(cloudWatchLogsStatusOverride);
-        cloudWatchLogsGroupNameOverride = Validation.sanitize(cloudWatchLogsGroupNameOverride);
-        cloudWatchLogsStreamNameOverride = Validation.sanitize(cloudWatchLogsStreamNameOverride);
-        s3LogsStatusOverride = Validation.sanitize(s3LogsStatusOverride);
-        s3LogsLocationOverride = Validation.sanitize(s3LogsLocationOverride);
-        certificateOverride = Validation.sanitize(certificateOverride);
-        serviceRoleOverride = Validation.sanitize(serviceRoleOverride);
-        envVariables = Validation.sanitize(envVariables);
-        envParameters = Validation.sanitize(envParameters);
-        buildSpecFile = Validation.sanitizeYAML(buildSpecFile);
-        buildTimeoutOverride = Validation.sanitize(buildTimeoutOverride);
-        insecureSslOverride = Validation.sanitize(insecureSslOverride);
-        privilegedModeOverride = Validation.sanitize(privilegedModeOverride);
-        cwlStreamingDisabled = Validation.sanitize(cwlStreamingDisabled);
-        exceptionFailureMode = Validation.sanitize(exceptionFailureMode);
+        credentialsType = sanitize(credentialsType);
+        credentialsId = sanitize(credentialsId);
+        proxyHost = sanitize(proxyHost);
+        proxyPort = sanitize(proxyPort);
+        awsAccessKey = sanitize(awsAccessKey);
+        awsSessionToken = sanitize(awsSessionToken);
+        region = sanitize(region);
+        projectName = sanitize(projectName);
+        sourceControlType = sanitize(sourceControlType);
+        localSourcePath = sanitize(localSourcePath);
+        workspaceSubdir = sanitize(workspaceSubdir);
+        sourceVersion = sanitize(sourceVersion);
+        sseAlgorithm = sanitize(sseAlgorithm);
+        gitCloneDepthOverride = sanitize(gitCloneDepthOverride);
+        reportBuildStatusOverride = sanitize(reportBuildStatusOverride);
+        secondarySourcesOverride = decodeJSON(sanitize(secondarySourcesOverride));
+        secondarySourcesVersionOverride = decodeJSON(sanitize(secondarySourcesVersionOverride));
+        artifactTypeOverride = sanitize(artifactTypeOverride);
+        artifactLocationOverride = sanitize(artifactLocationOverride);
+        artifactNameOverride = sanitize(artifactNameOverride);
+        artifactNamespaceOverride = sanitize(artifactNamespaceOverride);
+        artifactPackagingOverride = sanitize(artifactPackagingOverride);
+        artifactPathOverride = sanitize(artifactPathOverride);
+        artifactEncryptionDisabledOverride = sanitize(artifactEncryptionDisabledOverride);
+        overrideArtifactName = sanitize(overrideArtifactName);
+        secondaryArtifactsOverride = decodeJSON(sanitize(secondaryArtifactsOverride));
+        sourceTypeOverride = sanitize(sourceTypeOverride);
+        sourceLocationOverride = sanitize(sourceLocationOverride);
+        environmentTypeOverride = sanitize(environmentTypeOverride);
+        imageOverride = sanitize(imageOverride);
+        computeTypeOverride = sanitize(computeTypeOverride);
+        cacheTypeOverride = sanitize(cacheTypeOverride);
+        cacheLocationOverride = sanitize(cacheLocationOverride);
+        cloudWatchLogsStatusOverride = sanitize(cloudWatchLogsStatusOverride);
+        cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
+        cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
+        s3LogsStatusOverride = sanitize(s3LogsStatusOverride);
+        s3LogsLocationOverride = sanitize(s3LogsLocationOverride);
+        certificateOverride = sanitize(certificateOverride);
+        serviceRoleOverride = sanitize(serviceRoleOverride);
+        envVariables = sanitize(envVariables);
+        envParameters = sanitize(envParameters);
+        buildSpecFile = sanitizeYAML(buildSpecFile);
+        buildTimeoutOverride = sanitize(buildTimeoutOverride);
+        insecureSslOverride = sanitize(insecureSslOverride);
+        privilegedModeOverride = sanitize(privilegedModeOverride);
+        cwlStreamingDisabled = sanitize(cwlStreamingDisabled);
+        exceptionFailureMode = sanitize(exceptionFailureMode);
         return this;
     }
 
@@ -274,13 +277,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        String projectConfigError = Validation.checkCodeBuilderConfig(this);
+        String projectConfigError = CodeBuilderValidation.checkEssentialConfig(this);
         if(!projectConfigError.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, projectConfigError);
             return;
         }
 
-        String overridesErrorMessage = Validation.checkCodeBuilderStartBuildOverridesConfig(this);
+        String overridesErrorMessage = CodeBuilderValidation.checkStartBuildOverridesConfig(this);
         if(!overridesErrorMessage.isEmpty()) {
             failBuild(build, listener, configuredImproperlyError, overridesErrorMessage);
             return;
@@ -294,7 +297,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             failBuild(build, listener, configuredImproperlyError, e.getMessage());
             return;
         }
-        if(Validation.envVariablesHaveRestrictedPrefix(codeBuildEnvVars)) {
+        if(CodeBuilderValidation.envVariablesHaveRestrictedPrefix(codeBuildEnvVars)) {
             failBuild(build, listener, configuredImproperlyError, envVariableNameSpaceError);
             return;
         }
@@ -318,7 +321,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
                 withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
-                withTimeoutInMinutesOverride(Validation.parseInt(getParameterized(buildTimeoutOverride)));
+                withTimeoutInMinutesOverride(parseInt(getParameterized(buildTimeoutOverride)));
 
         ProjectArtifacts artifactsOverride = generateStartBuildArtifactOverride();
         if(artifactsOverride != null) {
@@ -389,14 +392,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
-            if(!Validation.checkSourceTypeS3(this.projectSourceType)) {
+            if(!CodeBuilderValidation.checkSourceTypeS3(this.projectSourceType)) {
                 failBuild(build, listener, invalidProjectError, "");
                 return;
             }
 
             String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
             String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
-            if(!Validation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
+            if(!CodeBuilderValidation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 failBuild(build, listener, notVersionsedS3BucketError, "");
                 return;
             }
@@ -1185,8 +1188,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             Set<String> displayCredentials = new HashSet<>();
 
             for (Credentials c: s.getCredentials()) {
-                if (c instanceof CodeBuildCredentials) {
-                    displayCredentials.add(((CodeBuildCredentials) c).getId());
+                if (c instanceof CodeBuildBaseCredentials) {
+                    displayCredentials.add(((CodeBuildBaseCredentials) c).getId());
                 }
             }
 
@@ -1196,8 +1199,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 for(Folder folder: folders) {
                     List<Credentials> creds = CredentialsProvider.lookupCredentials(Credentials.class, (Item) folder);
                     for(Credentials cred: creds) {
-                        if (cred instanceof CodeBuildCredentials) {
-                            displayCredentials.add(((CodeBuildCredentials) cred).getId());
+                        if (cred instanceof CodeBuildBaseCredentials) {
+                            displayCredentials.add(((CodeBuildBaseCredentials) cred).getId());
                         }
                     }
                 }
@@ -1245,7 +1248,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         public FormValidation doCheckMaxSleepTime(@QueryParameter String minSleepTime, @QueryParameter String maxSleepTime, @QueryParameter String sleepJitter) {
             Integer min = 0;
             try {
-                min = Validation.parseInt(minSleepTime);
+                min = parseInt(minSleepTime);
             } catch (NumberFormatException e) {
                 return FormValidation.error("Not a positive integer");
             }
@@ -1257,7 +1260,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             Integer max = 0;
             try {
-                max = Validation.parseInt(maxSleepTime);
+                max = parseInt(maxSleepTime);
             } catch (NumberFormatException e) {
                 return FormValidation.error("Not a positive integer");
             }
@@ -1272,7 +1275,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             Integer jitter = 0;
             try {
-                jitter = Validation.parseInt(sleepJitter);
+                jitter = parseInt(sleepJitter);
             } catch (NumberFormatException e) {
                 return FormValidation.error("Not a positive integer");
             }
