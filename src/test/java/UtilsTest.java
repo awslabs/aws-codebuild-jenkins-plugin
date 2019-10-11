@@ -301,4 +301,13 @@ public class UtilsTest {
         assert(artifacts.contains(new ProjectArtifacts().withType("t1")));
         assert(artifacts.contains(new ProjectArtifacts().withType("t2")));
     }
+
+    @Test
+    public void testDecodeJSON() {
+        assertEquals(CodeBuilder.decodeJSON("abc"), "abc");
+        assertEquals(CodeBuilder.decodeJSON("&amp;quot;"), "\"");
+        assertEquals(CodeBuilder.decodeJSON("&amp;quot;&quot;"), "\"\"");
+        assertEquals(CodeBuilder.decodeJSON("''a&amp;b&gt;c&lt;''"), "'a&b>c<'");
+    }
+
 }

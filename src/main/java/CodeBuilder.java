@@ -184,7 +184,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.serviceRoleOverride = sanitize(serviceRoleOverride);
         this.envVariables = sanitize(envVariables);
         this.envParameters = sanitize(envParameters);
-        this.buildSpecFile = sanitize(buildSpecFile);
+        this.buildSpecFile = sanitizeYAML(buildSpecFile);
         this.buildTimeoutOverride = sanitize(buildTimeoutOverride);
         this.insecureSslOverride = sanitize(insecureSslOverride);
         this.privilegedModeOverride = sanitize(privilegedModeOverride);
@@ -965,7 +965,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     public static String decodeJSON(String json) {
-        return json.replaceAll("&amp;quot;", "\"").replaceAll("&quot;", "\"");
+        return json.replaceAll("&amp;quot;", "\"").replaceAll("&quot;", "\"").replaceAll("&amp;", "&").replaceAll("&gt;", ">").replaceAll("&lt;","<").replaceAll("''", "'");
     }
 
     // Overridden for better type safety.
