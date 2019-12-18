@@ -14,6 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -76,17 +77,23 @@ public class S3DataManager {
         }
 
         PutObjectRequest putObjectRequest;
-        PutObjectResult putObjectResult;
+        PutObjectResult putObjectResult = new PutObjectResult();
 
         try(InputStream zipFileInputStream = localFile.read()) {
             putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, zipFileInputStream, objectMetadata);
             LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
             putObjectResult = s3Client.putObject(putObjectRequest);
-        } finally {
-            localFile.delete();
+        } catch (SdkClientException e) {
+            LoggingHelper.log(listener, "Unexpected exception upon uploading source zip to S3: " + e.getMessage());
         }
 
-        return new UploadToS3Output(putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey(), putObjectResult.getVersionId());
+        try {
+            localFile.delete();
+        } catch (IOException e) {
+            LoggingHelper.log(listener, "Unexpected exception upon deleting source file: " + e.getMessage());
+        }
+
+        return new UploadToS3Output(s3InputBucket + "/" + s3InputKey, putObjectResult.getVersionId());
     }
 
     private String getTempFilePath(String filePath) {
