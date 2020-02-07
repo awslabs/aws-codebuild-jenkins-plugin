@@ -17,6 +17,7 @@
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -30,13 +31,18 @@ public class Utils {
         The given string can be in ARN format or <bucket>/<key> format, so handle both.
      */
     public static String getS3BucketFromObjectArn(String s3ObjectString) {
-        Matcher stringRegex = Pattern.compile("(arn:(aws|aws-cn):s3:::)?([^/]+)/.*").matcher(s3ObjectString);
+        Matcher stringRegex = Pattern.compile("(arn:(aws|aws-cn):s3:::)?([^/]+)(/.*)*").matcher(s3ObjectString);
         stringRegex.find();
         return stringRegex.group(3);
     }
 
     public static String getS3KeyFromObjectArn(String s3ObjectArn) {
-        return s3ObjectArn.substring(s3ObjectArn.indexOf('/') + 1, s3ObjectArn.length());
+        int index = s3ObjectArn.indexOf('/');
+        if (index < 0) {
+            return "";
+        }
+
+        return s3ObjectArn.substring(index + 1);
     }
 
     public static String formatStringWithEllipsis(String s, int length) {
@@ -60,4 +66,17 @@ public class Utils {
         return data;
     }
 
+    public static void ensureFileExists(File file) throws IOException {
+        File dir = file.getParentFile();
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                throw new IOException("Failed to create directory " + dir.getAbsolutePath());
+            }
+        }
+        if (!file.exists()) {
+            if (!file.createNewFile()) {
+                throw new IOException("Failed to create file " + file.getAbsolutePath());
+            }
+        }
+    }
 }

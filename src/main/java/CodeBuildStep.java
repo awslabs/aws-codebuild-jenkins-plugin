@@ -94,6 +94,8 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String buildTimeoutOverride;
     @Getter private String cwlStreamingDisabled;
     @Getter private String exceptionFailureMode;
+    @Getter private String downloadArtifacts;
+    @Getter private String downloadArtifactsRelativePath;
 
     @DataBoundSetter
     public void setCredentialsType(String credentialsType) {
@@ -340,6 +342,16 @@ public class CodeBuildStep extends AbstractStepImpl {
         this.exceptionFailureMode = exceptionFailureMode;
     }
 
+    @DataBoundSetter
+    public void setDownloadArtifacts(String downloadArtifacts) {
+        this.downloadArtifacts = downloadArtifacts;
+    }
+
+    @DataBoundSetter
+    public void setDownloadArtifactsRelativePath(String downloadArtifactsRelativePath) {
+        this.downloadArtifactsRelativePath = downloadArtifactsRelativePath;
+    }
+
     @Extension
     public static final class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -572,7 +584,6 @@ public class CodeBuildStep extends AbstractStepImpl {
             selections.add("");
             return selections;
         }
-
     }
 
     public static final class CodeBuildExecution extends AbstractSynchronousNonBlockingStepExecution<CodeBuildResult> {
@@ -610,7 +621,8 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
                     step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
-                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode()
+                    step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode(),
+                    step.getDownloadArtifacts(), step.getDownloadArtifactsRelativePath()
             ).readResolve();
 
             try {

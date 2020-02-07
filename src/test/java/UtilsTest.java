@@ -15,6 +15,7 @@
  */
 
 import com.amazonaws.services.codebuild.model.*;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
@@ -44,10 +45,18 @@ public class UtilsTest {
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
     }
 
-    @Test(expected=RuntimeException.class)
-    public void testExtractS3BucketInvalid() {
+    @Test
+    public void testExtractS3BucketValidWithPeriod() {
         String objectArn = "arn:aws:s3:::my-corporate-bucketexampleobject.png";
         String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+        assertEquals("my-corporate-bucketexampleobject.png", bucket);
+    }
+
+    @Test
+    public void testExtractS3BucketValidWithPeriodAndNested() {
+        String objectArn = "arn:aws:s3:::my-corporate-bucketexampleobject.png/test/dir/file.txt";
+        String bucket = Utils.getS3BucketFromObjectArn(objectArn);
+        assertEquals("my-corporate-bucketexampleobject.png", bucket);
     }
 
     @Test
@@ -55,6 +64,20 @@ public class UtilsTest {
         String objectArn = "arn:aws:s3:::my-corporate-bucket/exampleobject.png";
         String key = Utils.getS3KeyFromObjectArn(objectArn);
         assertEquals("exampleobject.png", key);
+    }
+
+    @Test
+    public void testExtractS3KeyWithNoKey() {
+        String objectArn = "arn:aws:s3:::my-corporate-bucket";
+        String key = Utils.getS3KeyFromObjectArn(objectArn);
+        assertEquals("", key);
+    }
+
+    @Test
+    public void testExtractS3KeyWithNoKeyWithTrailingSlash() {
+        String objectArn = "arn:aws:s3:::my-corporate-bucket/";
+        String key = Utils.getS3KeyFromObjectArn(objectArn);
+        assertEquals("", key);
     }
 
     @Test

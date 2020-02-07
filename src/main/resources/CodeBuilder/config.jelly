@@ -231,6 +231,11 @@
       <f:select />
     </f:entry>
 
+    <f:optionalBlock title="Download Artifacts" name="downloadArtifacts" checked="${instance.downloadArtifactsEquals('true')}" inline="true" help="/plugin/aws-codebuild/help-downloadArtifacts.html">
+      <f:entry title="Relative Path" field="downloadArtifactsRelativePath" help="/plugin/aws-codebuild/help-downloadArtifactsRelativePath.html">
+        <f:textbox />
+      </f:entry>
+    </f:optionalBlock>
   </f:section>
 
 </j:jelly>

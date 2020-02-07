@@ -18,6 +18,7 @@ import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -41,6 +42,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -105,6 +107,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     @Getter private final CodeBuildResult codeBuildResult;
     @Getter private String exceptionFailureMode;
+    @Getter private String downloadArtifacts;
+    @Getter private String downloadArtifactsRelativePath;
     private EnvVars envVars;
 
     @Getter@Setter String artifactLocation;
@@ -139,7 +143,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
                        String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
-                       String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode) {
+                       String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode, String downloadArtifacts, String downloadArtifactsRelativePath) {
 
         this.credentialsType = sanitize(credentialsType);
         this.credentialsId = sanitize(credentialsId);
@@ -190,6 +194,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.privilegedModeOverride = sanitize(privilegedModeOverride);
         this.cwlStreamingDisabled = sanitize(cwlStreamingDisabled);
         this.exceptionFailureMode = sanitize(exceptionFailureMode);
+        this.downloadArtifacts = sanitize(downloadArtifacts);
+        this.downloadArtifactsRelativePath = sanitize(downloadArtifactsRelativePath);
         this.codeBuildResult = new CodeBuildResult();
         this.batchGetBuildsCalls = 0;
     }
@@ -243,6 +249,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         privilegedModeOverride = sanitize(privilegedModeOverride);
         cwlStreamingDisabled = sanitize(cwlStreamingDisabled);
         exceptionFailureMode = sanitize(exceptionFailureMode);
+        downloadArtifacts = sanitize(downloadArtifacts);
+        downloadArtifactsRelativePath = sanitize(downloadArtifactsRelativePath);
         return this;
     }
 
@@ -561,6 +569,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         codeBuildResult.setArtifactsLocation(currentBuild.getArtifacts() != null ? currentBuild.getArtifacts().getLocation() : null);
 
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
+            // Download build artifacts
+            if(downloadArtifacts.equalsIgnoreCase(Boolean.TRUE.toString())) {
+                downloadArtifactsFromS3(listener, awsClientFactory.getS3Client(), currentBuild, this.getArtifactRoot(ws));
+            }
             action.setJenkinsBuildSucceeds(true);
             this.codeBuildResult.setSuccess();
             build.setResult(Result.SUCCESS);
@@ -569,6 +581,21 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             failBuild(build, listener, "Build " + currentBuild.getId() + " failed", action.getPhaseErrorMessage());
         }
         return;
+    }
+
+    private void downloadArtifactsFromS3(@Nonnull TaskListener listener, AmazonS3Client s3Client, Build build, String artifactRoot) {
+        try {
+            S3Downloader s3Downloader = new S3Downloader(s3Client);
+            s3Downloader.downloadBuildArtifacts(listener, build, artifactRoot);
+        } catch (Exception e)
+        {
+            LoggingHelper.log(listener, e.getMessage());
+        }
+    }
+
+    public String getArtifactRoot(FilePath ws) {
+        StringBuilder destinationPath = new StringBuilder(ws.getRemote());
+        return destinationPath.append(File.separatorChar).append(this.downloadArtifactsRelativePath).toString();
     }
 
     private int getSleepTime(DescriptorImpl desc) {
@@ -767,6 +794,12 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!exceptionFailureMode.isEmpty()) {
             message.append("\n\t> exception failure mode status: " + getParameterized(exceptionFailureMode));
         }
+        if(!downloadArtifacts.isEmpty()) {
+            message.append("\n\t> Download build artifacts: " + getParameterized(downloadArtifacts));
+        }
+        if(!downloadArtifactsRelativePath.isEmpty()) {
+            message.append("\n\t> Download build artifacts relative path: " + getParameterized(downloadArtifactsRelativePath));
+        }
         if(!buildSpecFile.isEmpty()) {
             message.append("\n\t> build spec: \n" + getParameterized(buildSpecFile));
         }
@@ -962,6 +995,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     public String credentialsTypeEquals(String given) {
         return String.valueOf((credentialsType != null) && (credentialsType.equals(given)));
+    }
+
+    public String downloadArtifactsEquals(String given) {
+        return String.valueOf((downloadArtifacts != null) && (downloadArtifacts.equalsIgnoreCase(given)));
     }
 
     public static String decodeJSON(String json) {

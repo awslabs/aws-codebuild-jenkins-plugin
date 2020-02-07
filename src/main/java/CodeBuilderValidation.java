@@ -45,6 +45,7 @@ public class CodeBuilderValidation {
     public static final String invalidSourceUploaderConfigError = "Cannot specify both localSourcePath and workspaceSubdir";
     public static final String projectRequiredError = "CodeBuild project name is required";
     public static final String sourceControlTypeRequiredError = "Source control type is required and must be 'jenkins' or 'project'";
+    public static final String buildInstanceRequiredError = "Build instance is required";
 
     //// Configuration-checking functions ////
     // CodeBuilder: if any of the parameters in CodeBuilder are bad, this will cause the build to end in failure in CodeBuilder.perform()
