@@ -93,6 +93,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String cloudWatchLogsGroupNameOverride;
     @Getter private String cloudWatchLogsStreamNameOverride;
     @Getter private String s3LogsStatusOverride;
+    @Getter private String s3LogsEncryptionDisabledOverride;
     @Getter private String s3LogsLocationOverride;
     @Getter private String serviceRoleOverride;
     @Getter private String privilegedModeOverride;
@@ -142,7 +143,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
                        String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
-                       String s3LogsStatusOverride, String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
+                       String s3LogsStatusOverride, String s3LogsEncryptionDisabledOverride,  String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
                        String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode, String downloadArtifacts, String downloadArtifactsRelativePath) {
 
         this.credentialsType = sanitize(credentialsType);
@@ -183,6 +184,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
         this.cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
         this.s3LogsStatusOverride = sanitize(s3LogsStatusOverride);
+        this.s3LogsEncryptionDisabledOverride = sanitize(s3LogsEncryptionDisabledOverride);
         this.s3LogsLocationOverride = sanitize(s3LogsLocationOverride);
         this.certificateOverride = sanitize(certificateOverride);
         this.serviceRoleOverride = sanitize(serviceRoleOverride);
@@ -238,6 +240,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
         cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
         s3LogsStatusOverride = sanitize(s3LogsStatusOverride);
+        s3LogsEncryptionDisabledOverride = sanitize(s3LogsEncryptionDisabledOverride);
         s3LogsLocationOverride = sanitize(s3LogsLocationOverride);
         certificateOverride = sanitize(certificateOverride);
         serviceRoleOverride = sanitize(serviceRoleOverride);
@@ -764,6 +767,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!s3LogsStatusOverride.isEmpty()) {
             message.append("\n\t> s3 logs status: " + getParameterized(s3LogsStatusOverride));
         }
+        if(!s3LogsEncryptionDisabledOverride.isEmpty()) {
+            message.append("\n\t> s3 logs encryption disabled: " + getParameterized(s3LogsEncryptionDisabledOverride));
+        }
         if(!s3LogsLocationOverride.isEmpty()) {
             message.append("\n\t> s3 logs location: " + getParameterized(s3LogsLocationOverride));
         }
@@ -892,6 +898,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         if(!getParameterized(s3LogsStatusOverride).isEmpty()) {
             s3LogsConfig.setStatus(getParameterized(s3LogsStatusOverride));
+            overridesS3LogsSpecified = true;
+        }
+        if(!getParameterized(s3LogsEncryptionDisabledOverride).isEmpty()) {
+            s3LogsConfig.setEncryptionDisabled(Boolean.parseBoolean(getParameterized(s3LogsEncryptionDisabledOverride)));
             overridesS3LogsSpecified = true;
         }
         if(!getParameterized(s3LogsLocationOverride).isEmpty()) {
@@ -1208,6 +1218,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return selections;
         }
 
+        public ListBoxModel doFillS3LogsEncryptionDisabledOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t : BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+            return selections;
+        }
+
         public ListBoxModel doFillEnvironmentTypeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
@@ -1324,6 +1343,31 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             return FormValidation.ok();
         }
+
+        public FormValidation doCheckS3LogsEncryptionDisabledOverride(@QueryParameter String s3LogsEncryptionDisabledOverride, @QueryParameter String s3LogsStatusOverride) {
+            if (s3LogsStatusOverride == null || s3LogsStatusOverride.isEmpty()) {
+                if (s3LogsEncryptionDisabledOverride != null && !s3LogsEncryptionDisabledOverride.isEmpty()) {
+                    return FormValidation.error("'S3 Logs Status Override' value must be provided");
+                }
+            }
+
+            return FormValidation.ok();
+        }
+
+        public FormValidation doCheckS3LogsLocationOverride(@QueryParameter String s3LogsLocationOverride, @QueryParameter String s3LogsStatusOverride) {
+            if (!LogsConfigStatusType.ENABLED.toString().equals(s3LogsStatusOverride)) {
+                if (s3LogsLocationOverride != null && !s3LogsLocationOverride.isEmpty()) {
+                    return FormValidation.error("'S3 Logs Location Override' must be null if 'S3 Logs Status Override' is 'DISABLED' or empty");
+                }
+            } else {
+                if (s3LogsLocationOverride == null || s3LogsLocationOverride.isEmpty()) {
+                    return FormValidation.error("'S3 Logs Location Override' must be provided if 'S3 Logs Status Override' is 'ENABLED'");
+                }
+            }
+
+            return FormValidation.ok();
+        }
+
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types

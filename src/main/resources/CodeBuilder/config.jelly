@@ -196,6 +196,10 @@
       <f:select />
     </f:entry>
 
+    <f:entry title="S3 Logs Encryption Disabled Override" field="s3LogsEncryptionDisabledOverride" help="/plugin/aws-codebuild/help-s3LogsEncryptionDisabledOverride.html">
+      <f:select />
+    </f:entry>
+
     <f:entry title="S3 Logs Location Override" field="s3LogsLocationOverride" help="/plugin/aws-codebuild/help-s3LogsLocationOverride.html">
       <f:textbox />
     </f:entry>

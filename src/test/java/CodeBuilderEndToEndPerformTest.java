@@ -196,7 +196,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
     public void testBuildFailsWithExceptionFailureMode() throws Exception {
         //exceptionFailureMode should be enabled
         CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                 "ENABLED", "DISABLED", "");
 
         exception.expect(AbortException.class);

@@ -82,6 +82,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String cloudWatchLogsGroupNameOverride;
     @Getter private String cloudWatchLogsStreamNameOverride;
     @Getter private String s3LogsStatusOverride;
+    @Getter private String s3LogsEncryptionDisabledOverride;
     @Getter private String s3LogsLocationOverride;
     @Getter private String serviceRoleOverride;
     @Getter private String privilegedModeOverride;
@@ -280,6 +281,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setS3LogsStatusOverride(String s3LogsStatusOverride) {
         this.s3LogsStatusOverride = s3LogsStatusOverride;
+    }
+
+    @DataBoundSetter
+    public void setS3LogsEncryptionDisabledOverrideOverride(String s3LogsEncryptionDisabledOverride) {
+        this.s3LogsEncryptionDisabledOverride = s3LogsEncryptionDisabledOverride;
     }
 
     @DataBoundSetter
@@ -511,6 +517,15 @@ public class CodeBuildStep extends AbstractStepImpl {
             return selections;
         }
 
+        public ListBoxModel doFillS3LogsEncryptionDisabledOverrideItems() {
+            final ListBoxModel selections = new ListBoxModel();
+
+            for(BooleanValue t : BooleanValue.values()) {
+                selections.add(t.toString());
+            }
+            return selections;
+        }
+
         public ListBoxModel doFillEnvironmentTypeOverrideItems() {
             final ListBoxModel selections = new ListBoxModel();
 
@@ -620,7 +635,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getSourceTypeOverride(), step.getSourceLocationOverride(), step.getEnvironmentTypeOverride(),
                     step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
-                    step.getS3LogsStatusOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
+                    step.getS3LogsStatusOverride(), step.getS3LogsEncryptionDisabledOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
                     step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode(),
                     step.getDownloadArtifacts(), step.getDownloadArtifactsRelativePath()
             ).readResolve();
