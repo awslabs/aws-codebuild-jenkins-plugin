@@ -571,11 +571,11 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         // Read artifacts location once the build is complete and artifact name finalized
         codeBuildResult.setArtifactsLocation(currentBuild.getArtifacts() != null ? currentBuild.getArtifacts().getLocation() : null);
 
+        // Download build artifacts
+        if(downloadArtifacts.equalsIgnoreCase(Boolean.TRUE.toString())) {
+            downloadArtifactsFromS3(listener, awsClientFactory.getS3Client(), currentBuild, this.getArtifactRoot(ws));
+        }
         if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
-            // Download build artifacts
-            if(downloadArtifacts.equalsIgnoreCase(Boolean.TRUE.toString())) {
-                downloadArtifactsFromS3(listener, awsClientFactory.getS3Client(), currentBuild, this.getArtifactRoot(ws));
-            }
             action.setJenkinsBuildSucceeds(true);
             this.codeBuildResult.setSuccess();
             build.setResult(Result.SUCCESS);
@@ -590,8 +590,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             S3Downloader s3Downloader = new S3Downloader(s3Client);
             s3Downloader.downloadBuildArtifacts(listener, build, artifactRoot);
-        } catch (Exception e)
-        {
+        } catch (Exception e) {
             LoggingHelper.log(listener, e.getMessage());
         }
     }
