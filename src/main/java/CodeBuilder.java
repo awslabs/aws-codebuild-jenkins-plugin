@@ -15,6 +15,7 @@
  */
 
 import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
+import com.amazonaws.codebuild.jenkinsplugin.Validation;
 import com.amazonaws.services.codebuild.AWSCodeBuildClient;
 import com.amazonaws.services.codebuild.model.*;
 import com.amazonaws.services.codebuild.model.Build;
@@ -49,6 +50,7 @@ import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
@@ -89,6 +91,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String certificateOverride;
     @Getter private String cacheTypeOverride;
     @Getter private String cacheLocationOverride;
+    @Getter private List<String> cacheModeOverride;
     @Getter private String cloudWatchLogsStatusOverride;
     @Getter private String cloudWatchLogsGroupNameOverride;
     @Getter private String cloudWatchLogsStreamNameOverride;
@@ -142,7 +145,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                        String artifactPackagingOverride, String artifactPathOverride, String artifactEncryptionDisabledOverride, String overrideArtifactName, String secondaryArtifactsOverride,
                        String envVariables, String envParameters, String buildSpecFile, String buildTimeoutOverride, String sourceTypeOverride,
                        String sourceLocationOverride, String environmentTypeOverride, String imageOverride, String computeTypeOverride,
-                       String cacheTypeOverride, String cacheLocationOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
+                       String cacheTypeOverride, String cacheLocationOverride, List<String> cacheModeOverride, String cloudWatchLogsStatusOverride, String cloudWatchLogsGroupNameOverride, String cloudWatchLogsStreamNameOverride,
                        String s3LogsStatusOverride, String s3LogsEncryptionDisabledOverride,  String s3LogsLocationOverride, String certificateOverride, String serviceRoleOverride,
                        String insecureSslOverride, String privilegedModeOverride, String cwlStreamingDisabled, String exceptionFailureMode, String downloadArtifacts, String downloadArtifactsRelativePath) {
 
@@ -180,6 +183,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         this.computeTypeOverride = sanitize(computeTypeOverride);
         this.cacheTypeOverride = sanitize(cacheTypeOverride);
         this.cacheLocationOverride = sanitize(cacheLocationOverride);
+        this.cacheModeOverride = cacheModeOverride.stream().map(Validation::sanitize).collect(Collectors.toList());
         this.cloudWatchLogsStatusOverride = sanitize(cloudWatchLogsStatusOverride);
         this.cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
         this.cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
@@ -236,6 +240,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         computeTypeOverride = sanitize(computeTypeOverride);
         cacheTypeOverride = sanitize(cacheTypeOverride);
         cacheLocationOverride = sanitize(cacheLocationOverride);
+        cacheModeOverride = cacheModeOverride.stream().map(Validation::sanitize).collect(Collectors.toList());
         cloudWatchLogsStatusOverride = sanitize(cloudWatchLogsStatusOverride);
         cloudWatchLogsGroupNameOverride = sanitize(cloudWatchLogsGroupNameOverride);
         cloudWatchLogsStreamNameOverride = sanitize(cloudWatchLogsStreamNameOverride);
@@ -754,6 +759,9 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(!cacheLocationOverride.isEmpty()) {
             message.append("\n\t> cache location: " + getParameterized(cacheLocationOverride));
         }
+        if(!cacheModeOverride.isEmpty()) {
+            message.append("\n\t> cache mode: " + getParameterized(cacheModeOverride));
+        }
         if(!cloudWatchLogsStatusOverride.isEmpty()) {
             message.append("\n\t> cloudwatch logs status: " + getParameterized(cloudWatchLogsStatusOverride));
         }
@@ -867,10 +875,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             cache.setType(getParameterized(cacheTypeOverride));
             overridesSpecified = true;
         }
+        if(getParameterized(cacheModeOverride).isEmpty() && cache.getType() == "LOCAL") {
+            cache.setMode(getParameterized(cacheModeOverride));
+            overridesSpecified = true;
+        }
         if(!getParameterized(cacheLocationOverride).isEmpty()) {
             cache.setLocation(getParameterized(cacheLocationOverride));
             overridesSpecified = true;
         }
+
         return overridesSpecified ? cache : null;
     }
 
