@@ -884,7 +884,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             cache.setLocation(getParameterized(cacheLocationOverride));
             overridesSpecified = true;
         }
-
         return overridesSpecified ? cache : null;
     }
 
