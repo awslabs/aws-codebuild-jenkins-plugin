@@ -226,7 +226,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                                            "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                                            "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "LOCAL", "", "[invalidMode, ]",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "LOCAL", "", "[invalidMode, LOCAL_DOCKER_LAYER_CACHE]",
                                            LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
                                            "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -247,7 +247,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                                            "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                                            "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_DOCKER_LAYER_CACHE]",
                                            "invalidCloudWatchLogsStatus", "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
                                            "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -268,7 +268,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                                            "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                                            "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_CUSTOM_CACHE]",
                                            LogsConfigStatusType.ENABLED.toString(), "group", "stream", "invalidS3LogsStatus", "", "location",
                                            "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -289,7 +289,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
                                            "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
                                            "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidSourceType", "https://1.0.0.0.86/my_repo",
-                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_CUSTOM_CACHE, LOCAL_SOURCE_CACHE]",
                                            LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
                                            "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
