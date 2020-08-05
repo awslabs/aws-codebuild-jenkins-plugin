@@ -38,7 +38,7 @@ public class CodeBuilderValidation {
     public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";
     public static final String invalidEnvironmentTypeError = "Environment type override must be one of 'LINUX_CONTAINER', 'WINDOWS_CONTAINER'";
     public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE', 'LOCAL'";
-    public static final String invalidCacheModesError = "Cache modes override must be one or more from 'LOCAL_SOURCE_CACHE', 'LOCAL_DOCKER_LAYER_CACHE', 'LOCAL_CUSTOM_CACHE'";
+    public static final String invalidCacheModesError = "Cache modes override must be one or more of 'LOCAL_SOURCE_CACHE', 'LOCAL_DOCKER_LAYER_CACHE', 'LOCAL_CUSTOM_CACHE' and enclosed in brackets";
     public static final String invalidCloudWatchLogsStatusError = "CloudWatch Logs status override must be one of 'ENABLED', 'DISABLED'";
     public static final String invalidS3LogsStatusError = "S3 logs status override must be one of 'ENABLED', 'DISABLED'";
     public static final String invalidSourceUploaderNullWorkspaceError = "Project workspace is null";

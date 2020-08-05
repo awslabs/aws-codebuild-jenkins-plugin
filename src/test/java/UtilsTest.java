@@ -18,6 +18,8 @@ import com.amazonaws.services.codebuild.model.*;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -331,6 +333,15 @@ public class UtilsTest {
         assertEquals(CodeBuilder.decodeJSON("&amp;quot;"), "\"");
         assertEquals(CodeBuilder.decodeJSON("&amp;quot;&quot;"), "\"\"");
         assertEquals(CodeBuilder.decodeJSON("''a&amp;b&gt;c&lt;''"), "'a&b>c<'");
+    }
+
+    @Test
+    public void testListCacheModes() {
+        assertEquals(CodeBuilder.listCacheModes(null), Arrays.asList());
+        assertEquals(CodeBuilder.listCacheModes(""), Arrays.asList());
+        assertEquals(CodeBuilder.listCacheModes("[]"), Arrays.asList(""));
+        assertEquals(CodeBuilder.listCacheModes("[mode]"), Arrays.asList("mode"));
+        assertEquals(CodeBuilder.listCacheModes("[mode1,mode2]"), Arrays.asList("mode1", "mode2"));
     }
 
 }

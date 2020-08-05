@@ -889,7 +889,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Given a String representing cache modes, returns a list of String
     // The input string must be in the form [LOCAL_DOCKER_LAYER_CACHE, LOCAL_CUSTOM_CACHE] or else empty list is returned
-    public List<String> listCacheModes(String cacheModes) {
+    public static List<String> listCacheModes(String cacheModes) {
         if(cacheModes == null || cacheModes.isEmpty()) {
             return Collections.emptyList();
         }
