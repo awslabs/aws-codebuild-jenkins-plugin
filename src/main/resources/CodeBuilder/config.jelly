@@ -180,6 +180,10 @@
       <f:textbox />
     </f:entry>
 
+    <f:entry title="Cache Modes Override" field="cacheModesOverride" help="/plugin/aws-codebuild/help-cacheModesOverride.html">
+      <f:textbox />
+    </f:entry>
+
     <f:entry title="CloudWatch Logs Status Override" field="cloudWatchLogsStatusOverride" help="/plugin/aws-codebuild/help-cloudWatchLogsStatusOverride.html">
       <f:select />
     </f:entry>

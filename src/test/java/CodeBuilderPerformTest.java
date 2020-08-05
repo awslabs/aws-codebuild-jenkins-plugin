@@ -51,7 +51,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            null, null, null, null, null, null, null, null, null, null, null, null,
                                            null, null, null, null, null, null, null, null, null, null, null, null,
                                            null, null, null, null, null, null, "", null, null, null,
-                                            null, null, null, null, null, null);
+                                           null, null, null, null, null, null, null);
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -68,7 +68,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testConfigAllBlank() throws Exception {
         CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "",
                                            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -84,10 +84,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoProjectName() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
-                null, "", "us-east-1", "", "", "",
-                SourceControlType.ProjectSource.toString(), "", "", "", "", "", "", "",
-                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
+                                           null, "", "us-east-1", "", "", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -106,10 +106,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testNoSourceType() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "", "", "", "",
-                null, "", "us-east-1", "project", "", "", "",
-                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-                "", "", "", "", "");
+                                           null, "", "us-east-1", "project", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "");
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -180,13 +180,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testComputeTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", "invalidComputeType", CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", "invalidComputeType", CacheType.NO_CACHE.toString(), "", "",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -201,13 +201,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testCacheTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "invalidCacheType", "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "",  "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "invalidCacheType", "", "",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -220,15 +220,36 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     }
 
     @Test
+    public void testCacheModesOverrideException() throws Exception {
+        CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), "LOCAL", "", "[invalidMode, LOCAL_DOCKER_LAYER_CACHE]",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Invalid log contents: " + log.toString(), log.toString().contains(CodeBuilderValidation.invalidCacheModesError), true);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(CodeBuilderValidation.invalidCacheModesError));
+    }
+
+    @Test
     public void testCloudWatchLogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                "invalidCloudWatchLogsStatus", "group", "stream", LogsConfigStatusType.ENABLED.toString(), "",  "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_DOCKER_LAYER_CACHE]",
+                                           "invalidCloudWatchLogsStatus", "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -243,13 +264,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testS3LogsStatusOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", "invalidS3LogsStatus", "", "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_CUSTOM_CACHE]",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", "invalidS3LogsStatus", "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -264,13 +285,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testSourceTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidSourceType", "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", "invalidSourceType", "https://1.0.0.0.86/my_repo",
+                                           EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "[LOCAL_CUSTOM_CACHE, LOCAL_SOURCE_CACHE]",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -285,13 +306,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     @Test
     public void testEnvironmentTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
-                "", "us-east-1", "existingProject", "sourceVersion", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                "invalidEnvironmentType", "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "",  "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                           "", "us-east-1", "existingProject", "sourceVersion", "",
+                                           SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                           "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                           "[{k, v}]", "[{k, p}]", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                           "invalidEnvironmentType", "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                           LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                           "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -310,13 +331,13 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         envVars.put("foo3", "bar3");
 
         CodeBuilder cb = new CodeBuilder("keys", "id123", "host", "60", "a",
-                awsSecretKey, "", "us-east-1", "$foo", "$foo2-$foo3", "",
-                SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
-                "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
-                "[{k, v}]", "", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "",  "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                         awsSecretKey, "", "us-east-1", "$foo", "$foo2-$foo3", "",
+                                         SourceControlType.ProjectSource.toString(), "", "", GitCloneDepth.One.toString(), BooleanValue.False.toString(),
+                                         "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "", "", BooleanValue.False.toString(), BooleanValue.False.toString(), "",
+                                         "[{k, v}]", "", "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                         EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                         LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                         "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
 
         cb.perform(build, ws, launcher, listener, mockStepContext);
 

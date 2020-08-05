@@ -78,6 +78,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String certificateOverride;
     @Getter private String cacheTypeOverride;
     @Getter private String cacheLocationOverride;
+    @Getter private String cacheModesOverride;
     @Getter private String cloudWatchLogsStatusOverride;
     @Getter private String cloudWatchLogsGroupNameOverride;
     @Getter private String cloudWatchLogsStreamNameOverride;
@@ -261,6 +262,11 @@ public class CodeBuildStep extends AbstractStepImpl {
     @DataBoundSetter
     public void setCacheLocationOverride(String cacheLocationOverride) {
         this.cacheLocationOverride = cacheLocationOverride;
+    }
+
+    @DataBoundSetter
+    public void setCacheModeOverride(String cacheModesOverride) {
+        this.cacheModesOverride = cacheModesOverride;
     }
 
     @DataBoundSetter
@@ -633,7 +639,7 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getArtifactPackagingOverride(), step.getArtifactPathOverride(), step.getArtifactEncryptionDisabledOverride(), step.getOverrideArtifactName(),
                     step.getSecondaryArtifactsOverride(), step.getEnvVariables(), step.getEnvParameters(), step.getBuildSpecFile(), step.getBuildTimeoutOverride(),
                     step.getSourceTypeOverride(), step.getSourceLocationOverride(), step.getEnvironmentTypeOverride(),
-                    step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(),
+                    step.getImageOverride(), step.getComputeTypeOverride(), step.getCacheTypeOverride(), step.getCacheLocationOverride(), step.getCacheModesOverride(),
                     step.getCloudWatchLogsStatusOverride(), step.getCloudWatchLogsGroupNameOverride(), step.getCloudWatchLogsStreamNameOverride(),
                     step.getS3LogsStatusOverride(), step.getS3LogsEncryptionDisabledOverride(), step.getS3LogsLocationOverride(), step.getCertificateOverride(), step.getServiceRoleOverride(),
                     step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode(),

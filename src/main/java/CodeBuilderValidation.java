@@ -37,7 +37,8 @@ public class CodeBuilderValidation {
     public static final String invalidSourceTypeError = "Source type override must be one of 'CODECOMMIT', 'S3', 'GITHUB', 'GITHUB_ENTERPRISE', 'BITBUCKET'";
     public static final String invalidComputeTypeError = "Compute type override must be one of 'BUILD_GENERAL1_SMALL', 'BUILD_GENERAL1_MEDIUM', 'BUILD_GENERAL1_LARGE'";
     public static final String invalidEnvironmentTypeError = "Environment type override must be one of 'LINUX_CONTAINER', 'WINDOWS_CONTAINER'";
-    public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE'";
+    public static final String invalidCacheTypeError = "Cache type override must be one of 'S3', 'NO_CACHE', 'LOCAL'";
+    public static final String invalidCacheModesError = "Cache modes override must be one or more from 'LOCAL_SOURCE_CACHE', 'LOCAL_DOCKER_LAYER_CACHE', 'LOCAL_CUSTOM_CACHE'";
     public static final String invalidCloudWatchLogsStatusError = "CloudWatch Logs status override must be one of 'ENABLED', 'DISABLED'";
     public static final String invalidS3LogsStatusError = "S3 logs status override must be one of 'ENABLED', 'DISABLED'";
     public static final String invalidSourceUploaderNullWorkspaceError = "Project workspace is null";
@@ -123,6 +124,17 @@ public class CodeBuilderValidation {
                 CacheType.fromValue(cacheTypeOverride);
             } catch(IllegalArgumentException e) {
                 return invalidCacheTypeError;
+            }
+        }
+
+        String cacheModesOverride = cb.getParameterized(cb.getCacheModesOverride());
+        if (!cacheModesOverride.isEmpty()) {
+            try {
+                for (String mode : cb.listCacheModes(cacheModesOverride)) {
+                    CacheMode.fromValue(mode);
+                }
+            } catch (IllegalArgumentException e) {
+                return invalidCacheModesError;
             }
         }
 

@@ -39,6 +39,7 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 
 import static org.mockito.Matchers.any;
@@ -85,13 +86,13 @@ public class CodeBuilderTest {
     //creates a CodeBuilder with mock parameters that reflect a typical use case.
     protected CodeBuilder createDefaultCodeBuilder() {
         CodeBuilder cb = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey, "",
-                "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(), "", "",
-                GitCloneDepth.One.toString(), BooleanValue.False.toString(), "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
-                "", BooleanValue.False.toString(), BooleanValue.False.toString(), "", "[{k, v}]", "[{k, p}]",
-                "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
-                EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "",
-                LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
-                "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+                                         "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.ProjectSource.toString(), "", "",
+                                         GitCloneDepth.One.toString(), BooleanValue.False.toString(), "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                                         "", BooleanValue.False.toString(), BooleanValue.False.toString(), "", "[{k, v}]", "[{k, p}]",
+                                         "buildspec.yml", "5", SourceType.GITHUB_ENTERPRISE.toString(), "https://1.0.0.0.86/my_repo",
+                                         EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                         LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                         "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
 
             // It will be a mock factory during testing.
         return cb;
