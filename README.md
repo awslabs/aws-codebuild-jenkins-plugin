@@ -8,7 +8,7 @@ The AWS CodeBuild plugin for Jenkins provides a build step for your Jenkins proj
 We have written a blog post for setting up Jenkins with AWS CodeBuild plugin pre-installed. Learn more: https://aws.amazon.com/blogs/devops/simplify-your-jenkins-builds-with-aws-codebuild/.
 
 ## Plugin Installation (optional)
-If you already have a Jenkins setup and would like to only install the AWS CodeBuild plugin, then the recommended approach would be to search for "AWS CodeBuild Plugin for Jenkins" in the Plugin Manager on your Jenkins instance.
+If you already have a Jenkins setup and would like to only install the AWS CodeBuild plugin, then the recommended approach would be to search for "AWS CodeBuild" in the Plugin Manager on your Jenkins instance.
 
 ## Plugin Usage
 
