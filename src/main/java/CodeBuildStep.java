@@ -265,7 +265,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
-    public void setCacheModeOverride(String cacheModesOverride) {
+    public void setCacheModesOverride(String cacheModesOverride) {
         this.cacheModesOverride = cacheModesOverride;
     }
 
@@ -290,7 +290,7 @@ public class CodeBuildStep extends AbstractStepImpl {
     }
 
     @DataBoundSetter
-    public void setS3LogsEncryptionDisabledOverrideOverride(String s3LogsEncryptionDisabledOverride) {
+    public void setS3LogsEncryptionDisabledOverride(String s3LogsEncryptionDisabledOverride) {
         this.s3LogsEncryptionDisabledOverride = s3LogsEncryptionDisabledOverride;
     }
 
