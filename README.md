@@ -4,11 +4,10 @@ The AWS CodeBuild plugin for Jenkins provides a build step for your Jenkins proj
 ![Build Status](https://codebuild.us-west-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiK0hKUGVGdFlLS0ZmWTY3TnpIaitFcHZydlg1THlsK1dYNGN4dEtxSHZPQzBna0EwWkwzY3JQMUdGaGF3THVkd3NSYmFKT2NmOFRaNmFTak9Ma1VZd0xzPSIsIml2UGFyYW1ldGVyU3BlYyI6IlVvZ0Fpc3NvdGxLY002UjIiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master) [![license](http://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)](https://github.com/jenkinsci/aws-codebuild-plugin/blob/master/LICENSE)
 [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/aws-codebuild-plugin/master)](https://ci.jenkins.io/job/Plugins/job/aws-codebuild-plugin/job/master/)
 
-## Setup Jenkins
-We have written a blog post for setting up Jenkins with AWS CodeBuild plugin pre-installed. Learn more: https://aws.amazon.com/blogs/devops/simplify-your-jenkins-builds-with-aws-codebuild/.
-
-## Plugin Installation (optional)
+## Plugin Installation
 If you already have a Jenkins setup and would like to only install the AWS CodeBuild plugin, then the recommended approach would be to search for "AWS CodeBuild" in the Plugin Manager on your Jenkins instance.
+
+We have also written a blog post for setting up a new Jenkins server with AWS CloudFormation and integrating it with AWS CodeBuild and AWS CodeDeploy. Learn more: https://aws.amazon.com/blogs/devops/setting-up-a-ci-cd-pipeline-by-integrating-jenkins-with-aws-codebuild-and-aws-codedeploy
 
 ## Plugin Usage
 
