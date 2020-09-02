@@ -15,11 +15,7 @@
  */
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.codebuild.model.BatchGetBuildsRequest;
-import com.amazonaws.services.codebuild.model.BatchGetBuildsResult;
-import com.amazonaws.services.codebuild.model.Build;
-import com.amazonaws.services.codebuild.model.StatusType;
-import com.amazonaws.services.codebuild.model.BuildPhaseType;
+import com.amazonaws.services.codebuild.model.*;
 
 import hudson.AbortException;
 import hudson.model.Result;
@@ -68,8 +64,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenSuccess() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(inProgress),
@@ -101,8 +97,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenFails() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build failed = new Build().withBuildStatus(StatusType.FAILED).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build failed = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.FAILED).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
                 new BatchGetBuildsResult().withBuilds(inProgress),
                 new BatchGetBuildsResult().withBuilds(inProgress),
@@ -120,8 +116,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsHttpTimeout() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
 
         AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
@@ -139,8 +135,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsMultipleHttpTimeout() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
+        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
 
         AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
@@ -159,8 +155,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptedBuild() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
-        Build stopped = new Build().withBuildStatus(StatusType.STOPPED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
+        Build stopped = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.STOPPED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
                 .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
                 .then(mockInterruptedException)
@@ -177,8 +173,8 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptedCompletedBuild() throws Exception {
-        Build inProgress = new Build().withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
-        Build completed = new Build().withBuildStatus(StatusType.SUCCEEDED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
+        Build completed = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
                 .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
                 .then(mockInterruptedException)

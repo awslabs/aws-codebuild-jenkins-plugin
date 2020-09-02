@@ -119,6 +119,7 @@ public class CodeBuilderTest {
 
         when(mockBuild.getBuildStatus()).thenReturn(StatusType.SUCCEEDED.toString().toUpperCase());
         when(mockBuild.getStartTime()).thenReturn(new Date(0));
+        when(mockBuild.getArtifacts()).thenReturn(new BuildArtifacts().withLocation("arn:aws:s3:::my_corporate_bucket/artifact"));
         when(mockBGPResult.getProjects()).thenReturn(projects);
         when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
         when(mockFactory.getS3Client()).thenReturn(mockS3Client);

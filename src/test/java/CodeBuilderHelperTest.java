@@ -39,25 +39,40 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     public void TestGenerateS3URLNull() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder cb = createDefaultCodeBuilder();
-        assert(cb.generateS3ArtifactURL(null, null, null).isEmpty());
+        assert(cb.generateS3ArtifactURL(null, null).isEmpty());
     }
 
     @Test
     public void TestGenerateS3URLEmpty() throws Exception {
         setUpBuildEnvironment();
         CodeBuilder cb = createDefaultCodeBuilder();
-        assert(cb.generateS3ArtifactURL("", "", "").isEmpty());
+        assert(cb.generateS3ArtifactURL("", "").isEmpty());
+    }
+
+    @Test
+    public void TestGenerateS3URLNoArtifacts() throws Exception {
+        setUpBuildEnvironment();
+        CodeBuilder cb = createDefaultCodeBuilder();
+        assert(cb.generateS3ArtifactURL("NO_ARTIFACTS", "").isEmpty());
     }
 
     @Test
     public void TestGenerateS3URL() throws Exception {
         setUpBuildEnvironment();
-        String baseURL = "https://url.com/";
         String location = "bucket1";
         String type = "S3";
         CodeBuilder cb = createDefaultCodeBuilder();
-        String result = cb.generateS3ArtifactURL(baseURL, location, type);
-        assert(result.equals(baseURL + location));
+        String result = cb.generateS3ArtifactURL(type, location);
+        assert(result.equals("https://s3.console.aws.amazon.com/s3/buckets/" + location));
+    }
+
+    @Test
+    public void TestGenerateS3URLNoOverride() throws Exception {
+        setUpBuildEnvironment();
+        String location = "bucket1";
+        CodeBuilder cb = createDefaultCodeBuilder();
+        String result = cb.generateS3ArtifactURL("", location);
+        assert(result.equals("https://s3.console.aws.amazon.com/s3/buckets/" + location));
     }
 
     @Test

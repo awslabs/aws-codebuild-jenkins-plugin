@@ -131,7 +131,7 @@
                             document.write('<h2>Build Artifacts</h2>');
                             document.write('<table class="pane bigtable stripped-odd">');
                             document.write('<tbody>');
-                            document.write('<tr align="left"><th>S3 Bucket</th></tr>');
+                            document.write('<tr align="left"><th>S3</th></tr>');
                             document.write('<tr style="border-top: 0px;"><td>' +
                                     '<a href="' + '${it.s3ArtifactURL}' + '">' + '${it.s3BucketName}' + '</a>' + '</td></tr>');
                             document.write("</tbody></table>");

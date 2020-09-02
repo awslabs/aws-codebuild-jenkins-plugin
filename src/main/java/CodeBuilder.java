@@ -115,8 +115,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String downloadArtifactsRelativePath;
     private EnvVars envVars;
 
-    @Getter@Setter String artifactLocation;
-    @Getter@Setter String artifactType;
     @Getter@Setter String projectSourceLocation;
     @Getter@Setter String projectSourceType;
 
@@ -125,7 +123,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     //These messages are used in the Jenkins console log.
     public static final String authorizationError = "Authorization error";
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings";
-    public static final String s3BucketBaseURL = "https://console.aws.amazon.com/s3/buckets/";
+    public static final String s3BucketBaseURL = "https://s3.console.aws.amazon.com/s3/buckets/";
+    public static final String s3ARNPrefix = "arn:aws:s3:::";
     public static final String envVariableSyntaxError = "CodeBuild environment variable keys and values cannot be empty and the string must be of the form [{key, value}, {key2, value2}]";
     public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
     public static final String invalidProjectError = "Please select a project with S3 source type";
@@ -329,7 +328,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         try {
-            retrieveArtifactAndSourceInfo(cbClient);
+            retrieveSourceInfo(cbClient);
         } catch (Exception e) {
             failBuild(build, listener, e.getMessage(), "");
             return;
@@ -524,10 +523,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                         }
                     }
 
-                    action.setS3ArtifactURL(generateS3ArtifactURL(this.s3BucketBaseURL, artifactLocation, artifactType));
                     action.setArtifactTypeOverride(getParameterized(artifactTypeOverride));
                     action.setCodeBuildDashboardURL(generateDashboardURL(buildId));
-                    action.setS3BucketName(artifactLocation);
                     action.setLogs(new ArrayList());
                     action.setCloudWatchLogsURL("");
                     action.setS3LogsURL("");
@@ -612,19 +609,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return Math.min(sleepTimeInMs, secondToMs*desc.getMaxSleepTime()) + ThreadLocalRandom.current().nextInt(secondToMs*desc.getSleepJitter());
     }
 
-    // finds the name of the artifact S3 bucket associated with this project.
-    // Sets this.artifactLocation equal to it and updates this.action.
+    // Calls BatchGetProjects to get the source metadata for the configured project.
     // @param cbClient: the CodeBuild client used by this build.
-    private void retrieveArtifactAndSourceInfo(AWSCodeBuildClient cbClient) throws Exception {
+    private void retrieveSourceInfo(AWSCodeBuildClient cbClient) throws Exception {
         BatchGetProjectsResult bgpResult = cbClient.batchGetProjects(
                 new BatchGetProjectsRequest().withNames(getParameterized(projectName)));
-
         if(bgpResult.getProjects().isEmpty()) {
             throw new RuntimeException("Project " + getParameterized(projectName) + " does not exist.");
         } else {
-            this.artifactLocation = bgpResult.getProjects().get(0).getArtifacts().getLocation();
-            this.artifactType = bgpResult.getProjects().get(0).getArtifacts().getType();
-
             this.projectSourceLocation = bgpResult.getProjects().get(0).getSource().getLocation();
             this.projectSourceType = bgpResult.getProjects().get(0).getSource().getType();
         }
@@ -636,11 +628,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         if(action != null) {
             action.setCurrentStatus(b.getBuildStatus());
             logMonitor.setLogsLocation(b.getLogs());
-
             logMonitor.pollForLogs(listener);
             action.updateLogs(logMonitor.getLatestLogs());
 
             action.setPhases(b.getPhases());
+            action.setS3ArtifactURL(generateS3ArtifactURL(artifactTypeOverride, b.getArtifacts().getLocation()));
+            action.setS3BucketName(b.getArtifacts().getLocation());
+
             if(logMonitor.getLogsLocation() != null) {
                 LogsLocation logsLocation = logMonitor.getLogsLocation();
 
@@ -668,17 +662,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    // @param baseURL: a link to the S3 dashboard for the user running the build.
-    // @param buildARN: the ARN for this build.
-    // @return: a URL to the S3 artifacts for this build.
-    public String generateS3ArtifactURL(String baseURL, String artifactLocation, String artifactType) throws UnsupportedEncodingException {
-        if(artifactLocation == null || artifactLocation.isEmpty() ||
-                artifactType == null || !artifactType.equals(ArtifactsType.S3.toString())) {
+    // @param artifactsTypeOverride: part of the plugin configuration
+    // @param artifactLocation: an S3 ARN representing the artifact location for this specific build
+    // @return: a URL to the S3 artifact for this build as long as the artifactsTypeOverride isn't NO_ARTIFACTS
+    public String generateS3ArtifactURL(String artifactsTypeOverride, String artifactLocation) {
+        if((artifactsTypeOverride != null && artifactsTypeOverride.equals(ArtifactsType.NO_ARTIFACTS.toString())) ||
+           artifactLocation == null || artifactLocation.isEmpty()) {
             return "";
         } else {
-            return new StringBuilder()
-                .append(baseURL)
-                .append(URLEncoder.encode(artifactLocation, "UTF-8")).toString();
+            return new StringBuilder().append(s3BucketBaseURL).append(artifactLocation.replace(s3ARNPrefix, "")).toString();
         }
     }
 
