@@ -114,10 +114,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String downloadArtifacts;
     @Getter private String downloadArtifactsRelativePath;
     private EnvVars envVars;
-
-    @Getter@Setter String projectSourceLocation;
-    @Getter@Setter String projectSourceType;
-
     private StepContext stepContext;
 
     //These messages are used in the Jenkins console log.
@@ -125,9 +121,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String configuredImproperlyError = "CodeBuild configured improperly in project settings";
     public static final String s3BucketBaseURL = "https://s3.console.aws.amazon.com/s3/buckets/";
     public static final String s3ARNPrefix = "arn:aws:s3:::";
+    public static final String jenkinsSourceOverrideError = "When using Jenkins source, sourceTypeOverride must be S3 and you must specify both sourceTypeOverride and sourceLocationOverride";
+    public static final String jenkinsSourceProjectSourceTypeError = "Please select a project with S3 source type";
     public static final String envVariableSyntaxError = "CodeBuild environment variable keys and values cannot be empty and the string must be of the form [{key, value}, {key2, value2}]";
     public static final String envVariableNameSpaceError = "CodeBuild environment variable keys cannot start with CODEBUILD_";
-    public static final String invalidProjectError = "Please select a project with S3 source type";
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String invalidSecondarySourceArtifacts = "Invalid secondary source/artifacts";
 
@@ -327,13 +324,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        try {
-            retrieveSourceInfo(cbClient);
-        } catch (Exception e) {
-            failBuild(build, listener, e.getMessage(), "");
-            return;
-        }
-
         StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
                 withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
                 withTimeoutInMinutesOverride(parseInt(getParameterized(buildTimeoutOverride)));
@@ -407,13 +397,25 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
-            if(!CodeBuilderValidation.checkSourceTypeS3(this.projectSourceType)) {
-                failBuild(build, listener, invalidProjectError, "");
-                return;
+            String buildSourceLocation = "";
+            if(!getParameterized(sourceTypeOverride).isEmpty() || !getParameterized(sourceLocationOverride).isEmpty()) {
+                if(!CodeBuilderValidation.checkJenkinsSourceOverrides(getParameterized(sourceTypeOverride), getParameterized(sourceLocationOverride))) {
+                    failBuild(build, listener, configuredImproperlyError, jenkinsSourceOverrideError);
+                    return;
+                }
+
+                buildSourceLocation = getParameterized(sourceLocationOverride);
+            } else {
+                try {
+                    buildSourceLocation = retrieveProjectSourceInfo(cbClient);
+                } catch(Exception e) {
+                    failBuild(build, listener, configuredImproperlyError, e.getMessage());
+                    return;
+                }
             }
 
-            String sourceS3Bucket = Utils.getS3BucketFromObjectArn(this.projectSourceLocation);
-            String sourceS3Key = Utils.getS3KeyFromObjectArn(this.projectSourceLocation);
+            String sourceS3Bucket = Utils.getS3BucketFromObjectArn(buildSourceLocation);
+            String sourceS3Key = Utils.getS3KeyFromObjectArn(buildSourceLocation);
             if(!CodeBuilderValidation.checkBucketIsVersioned(sourceS3Bucket, awsClientFactory)) {
                 failBuild(build, listener, notVersionsedS3BucketError, "");
                 return;
@@ -441,16 +443,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             logStartBuildMessage(listener, uploadedSourceVersion);
 
         } else {
-            if(!getParameterized(sourceTypeOverride).isEmpty()) {
-                startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
-                SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
-                if(auth != null) {
-                    startBuildRequest.setSourceAuthOverride(auth);
-                }
-            }
-            if(!getParameterized(sourceLocationOverride).isEmpty()) {
-                startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
-            }
             startBuildRequest.setSourceVersion(getParameterized(sourceVersion));
             startBuildRequest.setGitCloneDepthOverride(generateStartBuildGitCloneDepthOverride());
             if(!getParameterized(reportBuildStatusOverride).isEmpty()) {
@@ -458,6 +450,17 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             }
 
             logStartBuildMessage(listener, getParameterized(sourceVersion));
+        }
+
+        if(!getParameterized(sourceTypeOverride).isEmpty()) {
+            startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
+            SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
+            if(auth != null) {
+                startBuildRequest.setSourceAuthOverride(auth);
+            }
+        }
+        if(!getParameterized(sourceLocationOverride).isEmpty()) {
+            startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
         }
 
         final StartBuildResult sbResult;
@@ -610,15 +613,21 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     // Calls BatchGetProjects to get the source metadata for the configured project.
+    // Validates that the project source type is S3 and returns the source location.
     // @param cbClient: the CodeBuild client used by this build.
-    private void retrieveSourceInfo(AWSCodeBuildClient cbClient) throws Exception {
+    private String retrieveProjectSourceInfo(AWSCodeBuildClient cbClient) throws RuntimeException, InvalidInputException {
         BatchGetProjectsResult bgpResult = cbClient.batchGetProjects(
                 new BatchGetProjectsRequest().withNames(getParameterized(projectName)));
         if(bgpResult.getProjects().isEmpty()) {
             throw new RuntimeException("Project " + getParameterized(projectName) + " does not exist.");
         } else {
-            this.projectSourceLocation = bgpResult.getProjects().get(0).getSource().getLocation();
-            this.projectSourceType = bgpResult.getProjects().get(0).getSource().getType();
+            String projectSourceLocation = bgpResult.getProjects().get(0).getSource().getLocation();
+            String projectSourceType = bgpResult.getProjects().get(0).getSource().getType();
+            if(!CodeBuilderValidation.checkSourceTypeS3(projectSourceType)) {
+                throw new InvalidInputException(jenkinsSourceProjectSourceTypeError);
+            }
+
+            return projectSourceLocation;
         }
     }
 
@@ -690,18 +699,18 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     private void logStartBuildMessage(TaskListener listener, String sourceVersion) {
         StringBuilder message = new StringBuilder().append("Starting build with \n\t> project name: " + getParameterized(projectName));
         if(!SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
-            if(!sourceTypeOverride.isEmpty()) {
-                message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
-            }
-            if(!sourceLocationOverride.isEmpty()) {
-                message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
-            }
             if(!gitCloneDepthOverride.isEmpty()) {
                 message.append("\n\t> git clone depth: " + getParameterized(gitCloneDepthOverride) + " (git clone depth is omitted when source provider is Amazon S3)");
             }
             if(!reportBuildStatusOverride.isEmpty()) {
                 message.append("\n\t> report build status: " + getParameterized(reportBuildStatusOverride) + " (report build status is valid when source provider is GitHub)");
             }
+        }
+        if(!sourceTypeOverride.isEmpty()) {
+            message.append("\n\t> source type: " + getParameterized(sourceTypeOverride));
+        }
+        if(!sourceLocationOverride.isEmpty()) {
+            message.append("\n\t> source location: " + getParameterized(sourceLocationOverride));
         }
         if(!sourceVersion.isEmpty()) {
             message.append("\n\t> source version: " + sourceVersion);

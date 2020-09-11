@@ -304,6 +304,53 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     }
 
     @Test
+    public void testInvalidExistingSourceTypeForJenkinsSource() throws Exception {
+        CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey, "",
+                                         "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.JenkinsSource.toString(), "", "",
+                                         GitCloneDepth.One.toString(), BooleanValue.False.toString(), "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                                         "", BooleanValue.False.toString(), BooleanValue.False.toString(), "", "[{k, v}]", "[{k, p}]",
+                                         "buildspec.yml", "5", "", "",
+                                         EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                         LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                         "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+
+        Project mockProject = new Project().withSource(new ProjectSource().withType(SourceType.BITBUCKET));
+        when(mockClient.batchGetProjects(any(BatchGetProjectsRequest.class))).thenReturn(new BatchGetProjectsResult().withProjects(mockProject));
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Unexpected log contents: " + log.toString(), log.toString().contains(CodeBuilder.jenkinsSourceProjectSourceTypeError), true);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(CodeBuilder.jenkinsSourceProjectSourceTypeError));
+    }
+
+    @Test
+    public void testInvalidSourceTypeOverrideForJenkinsSource() throws Exception {
+        CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey, "",
+                                         "us-east-1", "existingProject", "sourceVersion", "", SourceControlType.JenkinsSource.toString(), "", "",
+                                         GitCloneDepth.One.toString(), BooleanValue.False.toString(), "", "", ArtifactsType.NO_ARTIFACTS.toString(), "", "", "", "",
+                                         "", BooleanValue.False.toString(), BooleanValue.False.toString(), "", "[{k, v}]", "[{k, p}]",
+                                         "buildspec.yml", "5", SourceType.GITHUB.toString(), "",
+                                         EnvironmentType.LINUX_CONTAINER.toString(), "aws/codebuild/openjdk-8", ComputeType.BUILD_GENERAL1_SMALL.toString(), CacheType.NO_CACHE.toString(), "", "",
+                                         LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
+                                         "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
+
+        Project mockProject = new Project().withSource(new ProjectSource().withType(SourceType.BITBUCKET));
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(savedResult.getValue(), Result.FAILURE);
+        assertEquals("Unexpected log contents: " + log.toString(), log.toString().contains(CodeBuilder.jenkinsSourceOverrideError), true);
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue(result.getErrorMessage().contains(CodeBuilder.jenkinsSourceOverrideError));
+    }
+
+    @Test
     public void testEnvironmentTypeOverrideException() throws Exception {
         CodeBuilder test = new CodeBuilder("keys", "id123", "host", "60", "a", awsSecretKey,
                                            "", "us-east-1", "existingProject", "sourceVersion", "",

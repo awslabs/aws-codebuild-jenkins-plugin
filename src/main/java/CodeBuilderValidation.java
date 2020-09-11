@@ -211,6 +211,15 @@ public class CodeBuilderValidation {
         return false;
     }
 
+    public static boolean checkJenkinsSourceOverrides(String sourceTypeOverride, String sourceLocationOverride) {
+        if(sourceTypeOverride.isEmpty() != sourceLocationOverride.isEmpty()) {
+            return false;
+        }
+
+        return sourceTypeOverride.equals("S3");
+    }
+
+
     public static boolean checkBucketIsVersioned(String bucketName, AWSClientFactory awsClientFactory) {
         final BucketVersioningConfiguration bucketVersioningConfig = awsClientFactory.getS3Client().getBucketVersioningConfiguration(bucketName);
         return bucketVersioningConfig.getStatus().equals(BucketVersioningConfiguration.ENABLED);

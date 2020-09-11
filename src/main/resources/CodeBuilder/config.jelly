@@ -58,15 +58,16 @@
       <f:textbox />
     </f:entry>
 
+    <f:entry title="Source Type Override (optional)" field="sourceTypeOverride" help="/plugin/aws-codebuild/help-sourceTypeOverride.html">
+      <f:select />
+    </f:entry>
+
+    <f:entry title="Source Location Override (optional)" field="sourceLocationOverride" help="/plugin/aws-codebuild/help-sourceLocationOverride.html">
+      <f:textbox />
+    </f:entry>
+
     <f:radioBlock title="Use Project source" name="sourceControlType" help="/plugin/aws-codebuild/help-projectSourceHelp.html"
                   value="project" checked="${instance.sourceControlTypeEquals('project')}" inline="true">
-        <f:entry title="Source Type Override (optional)" field="sourceTypeOverride" help="/plugin/aws-codebuild/help-sourceTypeOverride.html">
-          <f:select />
-        </f:entry>
-
-        <f:entry title="Source Location Override (optional)" field="sourceLocationOverride" help="/plugin/aws-codebuild/help-sourceLocationOverride.html">
-          <f:textbox />
-        </f:entry>
 
         <f:entry title="Source Control Version (optional)" field="sourceVersion" help="/plugin/aws-codebuild/help-sourceVersionHelp.html">
           <f:textbox />
@@ -96,9 +97,7 @@
           <f:textbox />
         </f:entry>
 
-
     </f:radioBlock>
-
 
   </f:section>
 

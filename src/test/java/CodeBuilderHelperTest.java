@@ -267,4 +267,12 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         assert(result.contains(ev1));
     }
 
+    @Test
+    public void TestCheckJenkinsSourceOverrides() throws InvalidInputException {
+        assert(CodeBuilderValidation.checkJenkinsSourceOverrides("", ""));
+        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("type", ""));
+        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("", "location"));
+        assert(CodeBuilderValidation.checkJenkinsSourceOverrides("type", "location"));
+    }
+
 }
