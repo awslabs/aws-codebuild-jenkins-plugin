@@ -88,7 +88,16 @@ Additionally, this returns a result object which exposes the following methods w
 
 ### AWS Credentials in Jenkins
 
-It's recommended to use the Jenkins credentials store for your AWS credentials. Your Jenkins credentials must be of type `CodeBuild Credentials` to be compatible with the CodeBuild plugin. When creating new `CodeBuild Credentials`, the plugin will attempt to use the [default credentials provider chain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html) if AWS access and secret keys are not defined.
+It's recommended to use the Jenkins credentials store for your AWS credentials. Your Jenkins credentials must be of type `CodeBuild Credentials` to be compatible with the CodeBuild plugin. When creating new `CodeBuild Credentials`, the plugin will attempt to use the [default credentials provider chain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html) if AWS access and secret keys are not defined. You can also specify your AWS access and secret keys and session token in the CodeBuild configuration when using `credentialsType: 'keys'`. Example: 
 
-You can also specify your AWS access and secret keys in the CodeBuild configuration when using `credentialsType: 'keys'`. If the access and secret keys are not specified, the plugin will attempt to use the default credentials provider chain. When running a Jenkins pipeline build, the plugin will attempt to use credentials from the [pipeline-aws](https://plugins.jenkins.io/pipeline-aws) plugin before falling back to the default credentials provider chain. If you are running Jenkins on an EC2 instance, leave the access and secret key fields blank and specify `credentialsType: 'keys'`to use credentials from your EC2 instance profile, which is in the default credentials provider chain. 
+```
+awsCodeBuild projectName: 'project', 
+             credentialsType: 'keys',
+	     awsAccessKey: env.AWS_ACCESS_KEY_ID,
+	     awsSecretKey: env.AWS_SECRET_ACCESS_KEY,
+	     awsSessionToken: env.AWS_SESSION_TOKEN,
+	     ...
+```
+
+If the access/secret keys and session token are not specified, the plugin will attempt to use the default credentials provider chain. When running a Jenkins pipeline build, the plugin will attempt to use credentials from the [pipeline-aws](https://plugins.jenkins.io/pipeline-aws) plugin before falling back to the default credentials provider chain. If you are running Jenkins on an EC2 instance, leave the access and secret key fields blank and specify `credentialsType: 'keys'`to use credentials from your EC2 instance profile, which is in the default credentials provider chain. 
 
