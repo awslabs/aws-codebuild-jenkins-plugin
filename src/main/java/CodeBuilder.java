@@ -128,6 +128,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     public static final String notVersionsedS3BucketError = "A versioned S3 bucket is required.\n";
     public static final String invalidSecondarySourceArtifacts = "Invalid secondary source/artifacts";
 
+    public static final String httpTimeoutMessage = "Unable to execute HTTP request";
+
     private int batchGetBuildsCalls;
     private DescriptorImpl descriptor;
 
@@ -318,7 +320,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
-            failBuild(build, listener, "Error when constructing CodeBuild client: ", e.getMessage());
+            failBuild(build, listener, e.getMessage(), "");
             return;
         }
 
@@ -433,7 +435,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 }
                 LoggingHelper.log(listener, "S3 object version id for uploaded source is " + uploadedSourceVersion);
             } catch (Exception e) {
-                failBuild(build, listener, "Error when uploading source to S3: ", e.getMessage());
+                failBuild(build, listener, e.getMessage(), "");
                 return;
             }
 
@@ -465,7 +467,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         try {
             sbResult = cbClient.startBuild(startBuildRequest);
         } catch (Exception e) {
-            failBuild(build, listener, "Error when calling CodeBuild StartBuild: ", e.getMessage());
+            failBuild(build, listener, e.getMessage(), "");
             return;
         }
 
@@ -558,14 +560,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     this.codeBuildResult.setStopped();
                     build.setResult(Result.ABORTED);
                     return;
-                } else if(e.getMessage().contains(CodeBuildClientRetryCondition.HTTP_ERROR_MESSAGE)) {
+                } else if(e.getMessage().contains(httpTimeoutMessage)) {
                     Thread.sleep(getSleepTime(descriptor));
                     continue;
                 } else {
                     if (action != null) {
                         action.setJenkinsBuildSucceeds(false);
                     }
-                    failBuild(build, listener, "Error while polling build: ", e.getMessage());
+                    failBuild(build, listener, e.getMessage(), "");
                     return;
                 }
             }
@@ -594,7 +596,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             S3Downloader s3Downloader = new S3Downloader(s3Client);
             s3Downloader.downloadBuildArtifacts(listener, build, artifactRoot);
         } catch (Exception e) {
-            LoggingHelper.log(listener, "Error while downloading S3 build artifact: " + e.getMessage());
+            LoggingHelper.log(listener, e.getMessage());
         }
     }
 

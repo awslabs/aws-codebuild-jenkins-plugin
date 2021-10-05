@@ -76,13 +76,6 @@ public class AWSClientFactory {
     @Getter private final String awsSessionToken;
     @Getter private final String region;
 
-    private static final int CLIENT_CONFIG_CONNECTION_TIMEOUT = 60000;
-    private static final int CLIENT_CONFIG_SOCKET_TIMEOUT = 60000;
-    private static final int CLIENT_CONFIG_MAX_ERROR_RETRIES = 10;
-    private static final int CLIENT_CONFIG_MAX_CONNECTIONS = 100;
-    private static final int RETRY_BACKOFF_BASE_DELAY = 10000;
-    private static final int RETRY_BACKOFF_MAX_DELAY = 30000;
-
     private String credentialsDescriptor;
     private AWSCredentialsProvider awsCredentialsProvider;
     private final Properties properties;
@@ -193,13 +186,9 @@ public class AWSClientFactory {
         ClientConfiguration clientConfig = new ClientConfiguration()
                 .withUserAgentPrefix("CodeBuild-Jenkins-Plugin" + projectVersion)
                 .withProxyHost(proxyHost)
-                .withConnectionTimeout(CLIENT_CONFIG_CONNECTION_TIMEOUT)
-                .withSocketTimeout(CLIENT_CONFIG_SOCKET_TIMEOUT)
-                .withMaxErrorRetry(CLIENT_CONFIG_MAX_ERROR_RETRIES)
-                .withMaxConnections(CLIENT_CONFIG_MAX_CONNECTIONS)
                 .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
-                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(RETRY_BACKOFF_BASE_DELAY, RETRY_BACKOFF_MAX_DELAY),
-                        CLIENT_CONFIG_MAX_ERROR_RETRIES, true));
+                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(10000, 30000),
+                        10, true));
 
         if(proxyPort != null) {
             clientConfig.setProxyPort(proxyPort);
@@ -220,7 +209,7 @@ public class AWSClientFactory {
     }
 
     private String getAwsClientSuffix(String region) {
-        if(region.equals(Regions.CN_NORTH_1.getName()) || region.equals(Regions.CN_NORTHWEST_1.getName())) {
+        if(region.equals(Regions.CN_NORTH_1.getName().toString()) || region.equals(Regions.CN_NORTHWEST_1.getName().toString())) {
             return ".amazonaws.com.cn";
         } else {
             return ".amazonaws.com";
