@@ -56,7 +56,6 @@ public class S3DataManagerTest {
     private AmazonS3Client s3Client = mock(AmazonS3Client.class);
     private static final String mockWorkspaceDir = "/tmp/jenkins/workspace/proj";
     private FilePath testWorkSpace = new FilePath(new File(mockWorkspaceDir));
-    private FilePath testZipSourceWorkspace = new FilePath(new File("/"));
     Map<String, String> s3ARNs = new HashMap<>();
     private String s3InputBucketName = "Inputbucket";
     private String s3InputKeyName = "InputKey";
@@ -236,8 +235,8 @@ public class S3DataManagerTest {
 
     @Test
     public void testZipSourceEmptyDir() throws Exception {
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -256,8 +255,8 @@ public class S3DataManagerTest {
         String buildSpecContents = "yo\n";
         FileUtils.write(buildSpec, buildSpecContents);
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -282,8 +281,8 @@ public class S3DataManagerTest {
         File sourceDir = new File("/tmp/source/src");
         sourceDir.mkdir();
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -316,8 +315,8 @@ public class S3DataManagerTest {
         String srcFileContents = "int i = 1;";
         FileUtils.write(srcFile, srcFileContents);
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -367,8 +366,8 @@ public class S3DataManagerTest {
         FileUtils.write(srcFile, srcFileContents);
         FileUtils.write(srcFile2, srcFile2Contents);
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -430,8 +429,8 @@ public class S3DataManagerTest {
         FileUtils.write(srcFile, srcFileContents);
         FileUtils.write(srcFile2, srcFile2Contents.toString());
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -489,8 +488,8 @@ public class S3DataManagerTest {
         FileUtils.write(file4, nestedFile4Contents);
         FileUtils.write(file5, nestedFile5Contents);
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -534,8 +533,8 @@ public class S3DataManagerTest {
 
         FileUtils.write(buildSpec, contents.toString());
 
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream("/tmp/source.zip"));
-        ZipSourceCallable.zipSource(testZipSourceWorkspace, "/tmp/source/", out, "/tmp/source/");
+        FileOutputStream out = new FileOutputStream("/tmp/source.zip");
+        new ZipSourceCallable(new FilePath(new File("/tmp/source/"))).zipSourceWithArchiver(out);
         out.close();
 
         File zip = new File("/tmp/source.zip");
@@ -565,9 +564,9 @@ public class S3DataManagerTest {
         new FilePath(scriptFile).chmod(0755);
 
         File zipFile = tempFolder.newFile("source.zip");
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
+        FileOutputStream out = new FileOutputStream(zipFile);
         FilePath workspace = new FilePath(dir);
-        ZipSourceCallable.zipSource(workspace, workspace.getRemote(), out, workspace.getRemote());
+        new ZipSourceCallable(workspace).zipSourceWithArchiver(out);
         out.close();
 
         assertTrue(zipFile.exists());
