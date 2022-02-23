@@ -582,6 +582,29 @@ public class S3DataManagerTest {
     }
 
     @Test
+    public void testZipSourceIncludesExcludes() throws Exception {
+        File dir = tempFolder.newFolder();
+        FileUtils.write(new File(dir, "test1.txt"), "This will be included");
+        FileUtils.write(new File(dir, "test2.sh"), "This won't be included");
+        FileUtils.write(new File(dir, "test3.txt"), "This will be excluded");
+        FileUtils.write(new File(dir, "test4.txt"), "This will be included");
+
+        File zipFile = tempFolder.newFile("source.zip");
+        FileOutputStream out = new FileOutputStream(zipFile);
+        FilePath workspace = new FilePath(dir);
+        new ZipSourceCallable(workspace, "*.txt", "test3.txt").zipSourceWithArchiver(out);
+        out.close();
+
+        assertTrue(zipFile.exists());
+
+        File unzipFolder = tempFolder.newFolder();
+        new FilePath(zipFile).unzip(new FilePath(unzipFolder));
+        String[] files = unzipFolder.list();
+        Arrays.sort(files);
+        assertEquals(new String[]{"test1.txt", "test4.txt"}, files);
+    }
+
+    @Test
     public void testTrimPrefixBaseWithTrailingSlash() {
         String prefixWithSlash = FilenameUtils.separatorsToSystem("/tmp/dir/");  // "/tmp/dir/" in Linux, "\tmp\dir\" in Windows.
         String path = FilenameUtils.separatorsToSystem("/tmp/dir/folder/file.txt");
