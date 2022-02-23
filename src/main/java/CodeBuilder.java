@@ -39,6 +39,7 @@ import lombok.Setter;
 import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -68,6 +69,8 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String sourceControlType;
     @Getter private String localSourcePath;
     @Getter private String workspaceSubdir;
+    @DataBoundSetter public String workspaceIncludes;
+    @DataBoundSetter public String workspaceExcludes;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
@@ -419,7 +422,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, getParameterized(sseAlgorithm), getParameterized(localSourcePath), getParameterized(workspaceSubdir));
+            S3DataManager s3DataManager = new S3DataManager(awsClientFactory.getS3Client(), sourceS3Bucket, sourceS3Key, getParameterized(sseAlgorithm), getParameterized(localSourcePath), getParameterized(workspaceSubdir), getParameterized(workspaceIncludes), getParameterized(workspaceExcludes));
             String uploadedSourceVersion = "";
 
             try {

@@ -52,6 +52,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                            null, null, null, null, null, null, null, null, null, null, null, null,
                                            null, null, null, null, null, null, "", null, null, null,
                                            null, null, null, null, null, null, null);
+        test.workspaceIncludes = null;
+        test.workspaceExcludes = null;
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -69,6 +71,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         CodeBuilder test = new CodeBuilder("", "", "", "", "", null, "", "", "", "", "", "", "", "", "", "", "", "",
                                            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
                                            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
+        test.workspaceIncludes = "";
+        test.workspaceExcludes = "";
 
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);

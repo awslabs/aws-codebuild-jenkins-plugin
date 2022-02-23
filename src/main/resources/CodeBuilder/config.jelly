@@ -97,6 +97,14 @@
           <f:textbox />
         </f:entry>
 
+        <f:entry title="Inclusion pattern (optional)" field="workspaceIncludes" help="/plugin/aws-codebuild/help-workspaceIncludes.html">
+          <f:textbox />
+        </f:entry>
+
+        <f:entry title="Exclusion pattern (optional)" field="workspaceExcludes" help="/plugin/aws-codebuild/help-workspaceExcludes.html">
+          <f:textbox />
+        </f:entry>
+
     </f:radioBlock>
 
   </f:section>
