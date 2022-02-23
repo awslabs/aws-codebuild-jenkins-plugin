@@ -20,6 +20,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import enums.EncryptionAlgorithm;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -29,7 +30,9 @@ import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
 
 import java.io.*;
@@ -40,12 +43,15 @@ import java.util.Map;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class S3DataManagerTest {
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private AmazonS3Client s3Client = mock(AmazonS3Client.class);
     private static final String mockWorkspaceDir = "/tmp/jenkins/workspace/proj";
@@ -544,6 +550,36 @@ public class S3DataManagerTest {
 
         File extractedBuildSpec = new File(unzipFolder.getPath() + "/" + buildSpecName);
         assertTrue(FileUtils.readFileToString(extractedBuildSpec).equals(contents.toString()));
+    }
+
+    @Test
+    public void testZipSourcePermission() throws Exception {
+        // Can't test on Windows
+        assumeFalse(Functions.isWindows());
+
+        File dir = tempFolder.newFolder();
+        String scriptFileName = "script.sh";
+        String scriptFileContent = "#!/bin/bash\necho 'hello, world'\n";
+        File scriptFile = new File(dir, scriptFileName);
+        FileUtils.write(scriptFile, scriptFileContent);
+        new FilePath(scriptFile).chmod(0755);
+
+        File zipFile = tempFolder.newFile("source.zip");
+        ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
+        FilePath workspace = new FilePath(dir);
+        ZipSourceCallable.zipSource(workspace, workspace.getRemote(), out, workspace.getRemote());
+        out.close();
+
+        assertTrue(zipFile.exists());
+
+        File unzipFolder = tempFolder.newFolder();
+        new FilePath(zipFile).unzip(new FilePath(unzipFolder));
+        assertEquals(1, unzipFolder.list().length);
+        assertEquals(scriptFileName, unzipFolder.list()[0]);
+
+        File extractedScriptFile = new File(unzipFolder, scriptFileName);
+        assertEquals(scriptFileContent, FileUtils.readFileToString(extractedScriptFile));
+        assertEquals(0755, new FilePath(extractedScriptFile).mode() & 0777);
     }
 
     @Test
