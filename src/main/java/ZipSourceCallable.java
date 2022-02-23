@@ -22,6 +22,10 @@ import hudson.util.io.Archiver;
 import hudson.util.io.ArchiverFactory;
 import jenkins.MasterToSlaveFileCallable;
 import org.apache.commons.io.FileUtils;
+import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.DirectoryScanner;
+import org.apache.tools.ant.Project;
+import org.apache.tools.ant.types.FileSet;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -96,13 +100,27 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     private void zipSourceWithArchiverImpl(final Archiver archiver) throws InvalidInputException, IOException, InterruptedException {
         String sourceFilePath = workspace.getRemote();
 
-        // NOTE: This code is running on the agent and we can use File to access files and no need to use FilePath.
-        // Use FilePath here only for ant-compatible file scanning.
-        FilePath[] files = workspace.list(includes, excludes, false);    // disable defaultExcludes for backward compatibility.
-        for (FilePath f: files) {
-            String path = trimPrefix(f.getRemote(), sourceFilePath);
-            File remoteFile = new File(f.getRemote());
-            archiver.visit(remoteFile, path);
+        // NOTE: This code is running on the remote.
+        // FilePath.list() is really powerful, but cannot be used as it doesn't pick empty directories.
+        FileSet fs = Util.createFileSet(new File(sourceFilePath), includes, excludes);
+        fs.setDefaultexcludes(false);   // for backward compatibility
+        DirectoryScanner ds;
+        try {
+            ds = fs.getDirectoryScanner(new Project());
+        } catch (BuildException e) {
+            throw new IOException(e.getMessage());
+        }
+        // To include directories with no files
+        for (String dir: ds.getIncludedDirectories()) {
+            if ("".equals(dir)) {
+                // skip the top directory to make an invalid archive if no files.
+                // (backward compatibility)
+                continue;
+            }
+            archiver.visit(new File(sourceFilePath, dir), dir);
+        }
+        for (String file: ds.getIncludedFiles()) {
+            archiver.visit(new File(sourceFilePath, file), file);
         }
     }
 
@@ -178,6 +196,8 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     //     The given path is /tmp/dir/folder/file.txt
     //     The given prefixToTrim can be /tmp/dir/ or /tmp/dir
     //     Then the returned path string will be folder/file.txt.
+    // @deprecated no longer used. left for binary compatibility.
+    @Deprecated
     public static String trimPrefix(final String path, final String prefixToTrim) {
         return Paths.get(prefixToTrim).relativize(Paths.get(path)).toString();
     }
