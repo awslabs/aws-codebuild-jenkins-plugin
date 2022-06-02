@@ -240,7 +240,7 @@ public class S3DataManagerTest {
         File unzipFolder = new File("/tmp/folder/");
         unzipFolder.mkdir();
         ZipFile z = new ZipFile(zip.getPath());
-        assertFalse(z.isValidZipFile()); //checks that zipfile is empty
+        assertTrue(z.isValidZipFile());
     }
 
     @Test
