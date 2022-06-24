@@ -42,6 +42,12 @@ public class S3DataManager {
     private final String sseAlgorithm;
     private final String localSourcePath;
     private final String workspaceSubdir;
+    private final String workspaceIncludes;
+    private final String workspaceExcludes;
+
+    public S3DataManager(AmazonS3Client s3Client, String s3InputBucket, String s3InputKey, String sseAlgorithm, String localSourcePath, String workspaceSubdir) {
+        this(s3Client, s3InputBucket, s3InputKey, sseAlgorithm, localSourcePath, workspaceSubdir, null, null);
+    }
 
     // if localSourcePath is empty, clones, zips, and uploads the given workspace. Otherwise, uploads the file referred to by localSourcePath.
     // The upload bucket used is this.s3InputBucket and the name of the zip file is this.s3InputKey.
@@ -66,7 +72,7 @@ public class S3DataManager {
             LoggingHelper.log(listener, "Zipping directory to upload to S3: " + sourcePath);
 
             localFile = new FilePath(workspace, getTempFilePath(sourcePath));
-            zipFileMD5 = localFile.act(new ZipSourceCallable(workspace));
+            zipFileMD5 = localFile.act(new ZipSourceCallable(workspace, workspaceIncludes, workspaceExcludes));
         }
 
         // Add MD5 checksum as S3 Object metadata

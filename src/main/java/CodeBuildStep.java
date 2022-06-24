@@ -55,6 +55,8 @@ public class CodeBuildStep extends AbstractStepImpl {
     @Getter private String sourceControlType;
     @Getter private String localSourcePath;
     @Getter private String workspaceSubdir;
+    @DataBoundSetter public String workspaceIncludes;
+    @DataBoundSetter public String workspaceExcludes;
     @Getter private String sourceVersion;
     @Getter private String sseAlgorithm;
     @Getter private String gitCloneDepthOverride;
@@ -645,6 +647,8 @@ public class CodeBuildStep extends AbstractStepImpl {
                     step.getInsecureSslOverride(), step.getPrivilegedModeOverride(), step.getCwlStreamingDisabled(), step.getExceptionFailureMode(),
                     step.getDownloadArtifacts(), step.getDownloadArtifactsRelativePath()
             ).readResolve();
+            builder.workspaceIncludes = step.workspaceIncludes;
+            builder.workspaceExcludes = step.workspaceExcludes;
 
             try {
                 builder.perform(run, ws, launcher, listener, getContext());

@@ -47,6 +47,9 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * This is a base class for other test classes. Provides no tests.
+ */
 public class CodeBuilderTest {
 
     AWSClientFactory mockFactory = mock(AWSClientFactory.class);

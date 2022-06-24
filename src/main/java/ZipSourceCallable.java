@@ -16,9 +16,18 @@
 
 import com.amazonaws.services.codebuild.model.InvalidInputException;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.remoting.VirtualChannel;
+import hudson.util.io.Archiver;
+import hudson.util.io.ArchiverFactory;
 import jenkins.MasterToSlaveFileCallable;
 import org.apache.commons.io.FileUtils;
+import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.DirectoryScanner;
+import org.apache.tools.ant.Project;
+import org.apache.tools.ant.types.FileSet;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,23 +43,27 @@ import java.util.zip.ZipOutputStream;
 public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
 
     final FilePath workspace;
+    final String includes;  // never null
+    final String excludes;  // never null
 
     public static final String zipSourceError = "zipSource usage: prefixToTrim must be contained in the given directory.";
 
     public ZipSourceCallable(FilePath workspace) {
+        this(workspace, null, null);
+    }
+
+    public ZipSourceCallable(FilePath workspace, String includes, String excludes) {
         this.workspace = workspace;
+        this.includes = Util.fixNull(includes);
+        this.excludes = Util.fixNull(excludes);
     }
 
     @Override
     public String invoke(File f, VirtualChannel channel) throws IOException {
-        String sourceFilePath = workspace.getRemote();
-
         // Create a temp file to zip into so we do not zip ourselves
         File tempFile = File.createTempFile(f.getName(), null, null);
         try(OutputStream zipFileOutputStream = new FileOutputStream(tempFile)) {
-            try(ZipOutputStream out = new ZipOutputStream(zipFileOutputStream)) {
-                zipSource(workspace, sourceFilePath, out, sourceFilePath);
-            }
+            zipSourceWithArchiver(zipFileOutputStream);
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
@@ -71,6 +84,46 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
         return S3DataManager.getZipMD5(f);
     }
 
+    @Restricted(NoExternalUse.class)    // For testing purpose
+    protected void zipSourceWithArchiver(final OutputStream out) throws InvalidInputException, IOException, InterruptedException {
+        if (!workspace.exists() || !workspace.isDirectory()) {
+            throw new InvalidInputException("Empty or invalid source directory: " + workspace.getRemote());
+        }
+        Archiver archiver = ArchiverFactory.ZIP.create(out);
+        try {
+            this.zipSourceWithArchiverImpl(archiver);
+        } finally {
+            archiver.close();
+        }
+    }
+
+    private void zipSourceWithArchiverImpl(final Archiver archiver) throws InvalidInputException, IOException, InterruptedException {
+        String sourceFilePath = workspace.getRemote();
+
+        // NOTE: This code is running on the remote.
+        // FilePath.list() is really powerful, but cannot be used as it doesn't pick empty directories.
+        FileSet fs = Util.createFileSet(new File(sourceFilePath), includes, excludes);
+        fs.setDefaultexcludes(false);   // for backward compatibility
+        DirectoryScanner ds;
+        try {
+            ds = fs.getDirectoryScanner(new Project());
+        } catch (BuildException e) {
+            throw new IOException(e.getMessage());
+        }
+        // To include directories with no files
+        for (String dir: ds.getIncludedDirectories()) {
+            if ("".equals(dir)) {
+                // skip the top directory to make an invalid archive if no files.
+                // (backward compatibility)
+                continue;
+            }
+            archiver.visit(new File(sourceFilePath, dir), dir);
+        }
+        for (String file: ds.getIncludedFiles()) {
+            archiver.visit(new File(sourceFilePath, file), file);
+        }
+    }
+
     // Recursively zips everything in the given directory into a zip file using the given ZipOutputStream.
     // @param directory: whose contents will be zipped.
     // @param out: ZipOutputStream that will write data to its zip file.
@@ -83,6 +136,8 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     //     The given directory is /tmp/dir/folder/ which contains one file /tmp/dir/folder/file.txt
     //     The given prefixToTrim is /tmp/dir/folder
     //     Then the zip file created will expand into file.txt
+    // @deprecated no longer used. left for binary compatibility.
+    @Deprecated
     public static void zipSource(FilePath workspace, final String directory, final ZipOutputStream out, final String prefixToTrim) throws InvalidInputException, IOException, InterruptedException {
         if (!Paths.get(directory).startsWith(Paths.get(prefixToTrim))) {
             throw new InvalidInputException(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
@@ -141,6 +196,8 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     //     The given path is /tmp/dir/folder/file.txt
     //     The given prefixToTrim can be /tmp/dir/ or /tmp/dir
     //     Then the returned path string will be folder/file.txt.
+    // @deprecated no longer used. left for binary compatibility.
+    @Deprecated
     public static String trimPrefix(final String path, final String prefixToTrim) {
         return Paths.get(prefixToTrim).relativize(Paths.get(path)).toString();
     }
