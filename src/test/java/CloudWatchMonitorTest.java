@@ -20,10 +20,9 @@ import com.amazonaws.services.logs.AWSLogsClient;
 import com.amazonaws.services.logs.model.GetLogEventsRequest;
 import com.amazonaws.services.logs.model.GetLogEventsResult;
 import com.amazonaws.services.logs.model.OutputLogEvent;
-import hudson.model.TaskListener;
 import org.junit.Before;
 import org.junit.Test;
-
+import hudson.model.TaskListener;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.*;
