@@ -36,4 +36,13 @@ public class LoggingHelper {
             listener.getLogger().println(completeMessage);
         }
     }
+
+    public static void logError(final TaskListener listener, String message, Throwable t) {
+        log(listener, message);
+        if(listener == null) {
+            t.printStackTrace(System.out);
+        } else {
+            t.printStackTrace(listener.getLogger());
+        }
+    }
 }
