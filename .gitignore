@@ -3,3 +3,8 @@ target/
 *.iml
 out/*
 .DS_Store
+work/
+.vscode
+.metals
+.jtest
+.jtmp

@@ -11,27 +11,26 @@
   ~     See the License for the specific language governing permissions and limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.50</version>
+        <version>6.2221.va_045130417c9</version>
+        <relativePath/>
     </parent>
 
     <groupId>com.amazonaws</groupId>
     <artifactId>aws-codebuild</artifactId>
-    <version>1.1</version>
+    <version>0.60-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>AWS CodeBuild Plugin</name>
     <description>Adds a build step to integrate Jenkins with AWS CodeBuild.</description>
     <url>https://wiki.jenkins.io/display/JENKINS/AWS+CodeBuild+Plugin</url>
 
     <properties>
-        <jenkins.version>2.60.3</jenkins.version>
-        <java.level>8</java.level>
+        <jenkins.version>2.541.3</jenkins.version>
     </properties>
 
     <developers>
@@ -39,6 +38,11 @@
             <id>leobaran</id>
             <name>Leo Baran</name>
             <email>leobaran@amazon.com</email>
+        </developer>
+        <developer>
+            <id>subinataws</id>
+            <name>CodeBuild</name>
+            <email>subinm@amazon.com</email>
         </developer>
     </developers>
 
@@ -51,9 +55,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/awslabs/aws-codebuild-jenkins-plugin</url>
-        <connection>scm:git:ssh://github.com/awslabs/aws-codebuild-jenkins-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/awslabs/aws-codebuild-jenkins-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/aws-codebuild-plugin</url>
+        <connection>scm:git:ssh://github.com/jenkinsci/aws-codebuild-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codebuild-plugin.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
@@ -108,6 +112,7 @@
 
         <plugins>
             <plugin>
+                <!-- TODO: merge with Parent POM? -->
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
@@ -126,20 +131,6 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.4</version>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
-                <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>2.5.2</version>
-            </plugin>
         </plugins>
     </build>
 
@@ -150,36 +141,96 @@
         </repository>
     </distributionManagement>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Jenkins plugin BOM: manages versions of Jenkins plugin deps (credentials,
+                 script-security, workflow-*, cloudbees-folder, etc.) consistent with jenkins.version -->
+            <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.541.x</artifactId>
+                <version>6931.vea_a_b_c6fd017d</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- jaxb-impl 4.0.9 override removed: the v1 aws-java-sdk umbrella (which pulled
+                 jaxb-impl 2.3.9 and forced this override) is gone. Re-add if enforcer's
+                 RequireUpperBoundDeps complains. -->
+            <!-- RequireUpperBoundDeps: the direct software.amazon.awssdk:sts dep pulls
+                 software.amazon.awssdk:apache-client, which depends on httpclient 4.5.13, while the
+                 Jenkins apache-httpcomponents-client-4-api plugin brings httpclient 4.5.14. Force
+                 the higher (Jenkins) version. -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.5.14</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- AWS SDK for Java v2, delivered as Jenkins ecosystem plugins from the
+             jenkinsci/aws-java-sdk2-plugin repo (groupId io.jenkins.plugins.aws-java-sdk2).
+             These bundle software.amazon.awssdk 2.42.33. aws-java-sdk2-core is pulled
+             transitively by each service plugin. -->
         <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>aws-java-sdk</artifactId>
-            <version>1.12.80</version>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-codebuild</artifactId>
+            <version>2.42.33-70.vd69c0763fa_60</version>
         </dependency>
         <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-s3</artifactId>
+            <version>2.42.33-70.vd69c0763fa_60</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-cloudwatchlogs</artifactId>
+            <version>2.42.33-70.vd69c0763fa_60</version>
+        </dependency>
+        <!-- STS (assume-role) is not published as an up-to-date sdk2 plugin (the
+             aws-java-sdk2-sts plugin lags at 2.29.x and would break RequireUpperBoundDeps),
+             so depend on the raw SDK module pinned to the exact version the sdk2 plugins
+             ship (2.42.33). -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>2.42.33</version>
+        </dependency>
+        <dependency>
+            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>credentials</artifactId>
-            <version>2.6.1.1</version>
         </dependency>
         <dependency>
+            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>cloudbees-folder</artifactId>
-            <version>6.1.0</version>
         </dependency>
         <dependency>
+            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
-            <version>2.5</version>
         </dependency>
         <dependency>
+            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
-            <version>1229.v4880b_b_e905a_6</version>
         </dependency>
         <dependency>
+            <!-- Provides com.fasterxml.jackson (used by Utils.parseDataList). Previously came
+                 transitively from the v1 aws-java-sdk umbrella; the sdk2 plugins only expose a
+                 shaded jackson, so pull the Jenkins jackson2-api plugin explicitly. BOM-managed. -->
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>jackson2-api</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Mockito 5.x: inline mock-maker is the default, so mockStatic /
+                 mockConstruction / mocking of final classes work without powermock.
+                 Version pinned to latest 5.x (BOM/parent does not manage mockito-core here). -->
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>2.0.42-beta</version>
+            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -188,42 +239,15 @@
             <version>3.0.1</version>
         </dependency>
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-junit4</artifactId>
-            <version>1.6.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
-            <version>1.6.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>net.lingala.zip4j</groupId>
             <artifactId>zip4j</artifactId>
-            <version>2.11.3</version>
+            <version>2.11.6</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.10</version>
+            <version>1.18.42</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.13.4.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazon.ion</groupId>
-            <artifactId>ion-java</artifactId>
-            <version>1.5.0</version>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.10.4</version>
         </dependency>
     </dependencies>
 </project>
