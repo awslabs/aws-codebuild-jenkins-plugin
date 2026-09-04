@@ -143,8 +143,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Jenkins plugin BOM: manages versions of Jenkins plugin deps (credentials,
-                 script-security, workflow-*, cloudbees-folder, etc.) consistent with jenkins.version -->
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-2.541.x</artifactId>
@@ -152,13 +150,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- jaxb-impl 4.0.9 override removed: the v1 aws-java-sdk umbrella (which pulled
-                 jaxb-impl 2.3.9 and forced this override) is gone. Re-add if enforcer's
-                 RequireUpperBoundDeps complains. -->
-            <!-- RequireUpperBoundDeps: the direct software.amazon.awssdk:sts dep pulls
-                 software.amazon.awssdk:apache-client, which depends on httpclient 4.5.13, while the
-                 Jenkins apache-httpcomponents-client-4-api plugin brings httpclient 4.5.14. Force
-                 the higher (Jenkins) version. -->
+            <!-- sdk2's apache-client wants httpclient 4.5.13; force the Jenkins plugin's 4.5.14 for RequireUpperBoundDeps -->
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
@@ -169,10 +161,6 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- AWS SDK for Java v2, delivered as Jenkins ecosystem plugins from the
-             jenkinsci/aws-java-sdk2-plugin repo (groupId io.jenkins.plugins.aws-java-sdk2).
-             These bundle software.amazon.awssdk 2.42.33. aws-java-sdk2-core is pulled
-             transitively by each service plugin. -->
         <dependency>
             <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
             <artifactId>aws-java-sdk2-codebuild</artifactId>
@@ -188,46 +176,33 @@
             <artifactId>aws-java-sdk2-cloudwatchlogs</artifactId>
             <version>2.42.33-70.vd69c0763fa_60</version>
         </dependency>
-        <!-- STS (assume-role) is not published as an up-to-date sdk2 plugin (the
-             aws-java-sdk2-sts plugin lags at 2.29.x and would break RequireUpperBoundDeps),
-             so depend on the raw SDK module pinned to the exact version the sdk2 plugins
-             ship (2.42.33). -->
+        <!-- raw SDK module (no current sdk2-sts plugin); version must match the aws-java-sdk2-* plugins' SDK -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
             <version>2.42.33</version>
         </dependency>
         <dependency>
-            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>credentials</artifactId>
         </dependency>
         <dependency>
-            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>cloudbees-folder</artifactId>
         </dependency>
         <dependency>
-            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
         </dependency>
         <dependency>
-            <!-- version managed by Jenkins plugin BOM -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
         </dependency>
         <dependency>
-            <!-- Provides com.fasterxml.jackson (used by Utils.parseDataList). Previously came
-                 transitively from the v1 aws-java-sdk umbrella; the sdk2 plugins only expose a
-                 shaded jackson, so pull the Jenkins jackson2-api plugin explicitly. BOM-managed. -->
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jackson2-api</artifactId>
         </dependency>
         <dependency>
-            <!-- Mockito 5.x: inline mock-maker is the default, so mockStatic /
-                 mockConstruction / mocking of final classes work without powermock.
-                 Version pinned to latest 5.x (BOM/parent does not manage mockito-core here). -->
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.23.0</version>
