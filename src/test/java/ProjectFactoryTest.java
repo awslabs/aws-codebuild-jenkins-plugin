@@ -14,22 +14,22 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.*;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ProjectFactoryTest {
 
-    AWSCodeBuildClient mockCBClient = mock(AWSCodeBuildClient.class);
-    ListProjectsResult mockLPResult = mock(ListProjectsResult.class);
+    CodeBuildClient mockCBClient = mock(CodeBuildClient.class);
+    ListProjectsResponse mockLPResult = mock(ListProjectsResponse.class);
 
     @Test
     public void testCreateProjectUpdate() throws Exception {
@@ -37,12 +37,12 @@ public class ProjectFactoryTest {
         firstList.add("project1");
         firstList.add("project2");
 
-        when(mockLPResult.getProjects()).thenReturn(firstList);
-        when(mockCBClient.listProjects(new ListProjectsRequest())).thenReturn(mockLPResult);
+        when(mockLPResult.projects()).thenReturn(firstList);
+        when(mockCBClient.listProjects(ListProjectsRequest.builder().build())).thenReturn(mockLPResult);
 
-        doThrow(new InvalidInputException("bad")).when(mockCBClient).createProject(any(CreateProjectRequest.class));
+        doThrow(InvalidInputException.builder().message("bad").build()).when(mockCBClient).createProject(any(CreateProjectRequest.class));
         when(mockCBClient.updateProject(any(UpdateProjectRequest.class)))
-                .thenReturn(new UpdateProjectResult().withProject(new Project()));
+                .thenReturn(UpdateProjectResponse.builder().project(Project.builder().build()).build());
 
         ProjectFactory f = new ProjectFactory(mockCBClient);
         f.createProject("project1", "", null, null, null, "", "", "");
@@ -57,18 +57,18 @@ public class ProjectFactoryTest {
         secondList.add("project3");
         secondList.add("project4");
 
-        ListProjectsResult mockLPResult2 = mock(ListProjectsResult.class);
-        when(mockLPResult2.getProjects()).thenReturn(secondList);
+        ListProjectsResponse mockLPResult2 = mock(ListProjectsResponse.class);
+        when(mockLPResult2.projects()).thenReturn(secondList);
 
         String t = "token";
-        when(mockLPResult.getProjects()).thenReturn(firstList);
-        when(mockLPResult.getNextToken()).thenReturn(t);
-        when(mockCBClient.listProjects(new ListProjectsRequest())).thenReturn(mockLPResult);
-        when(mockCBClient.listProjects(new ListProjectsRequest().withNextToken(t))).thenReturn(mockLPResult2);
+        when(mockLPResult.projects()).thenReturn(firstList);
+        when(mockLPResult.nextToken()).thenReturn(t);
+        when(mockCBClient.listProjects(ListProjectsRequest.builder().build())).thenReturn(mockLPResult);
+        when(mockCBClient.listProjects(ListProjectsRequest.builder().nextToken(t).build())).thenReturn(mockLPResult2);
 
-        doThrow(new InvalidInputException("bad")).when(mockCBClient).createProject(any(CreateProjectRequest.class));
+        doThrow(InvalidInputException.builder().message("bad").build()).when(mockCBClient).createProject(any(CreateProjectRequest.class));
         when(mockCBClient.updateProject(any(UpdateProjectRequest.class)))
-                .thenReturn(new UpdateProjectResult().withProject(new Project()));
+                .thenReturn(UpdateProjectResponse.builder().project(Project.builder().build()).build());
 
         ProjectFactory f = new ProjectFactory(mockCBClient);
         f.createProject("project4", "", null, null, null, "", "", "");
@@ -80,12 +80,12 @@ public class ProjectFactoryTest {
         firstList.add("project1");
         firstList.add("project2");
 
-        when(mockLPResult.getProjects()).thenReturn(firstList);
-        when(mockCBClient.listProjects(new ListProjectsRequest())).thenReturn(mockLPResult);
+        when(mockLPResult.projects()).thenReturn(firstList);
+        when(mockCBClient.listProjects(ListProjectsRequest.builder().build())).thenReturn(mockLPResult);
 
-        doThrow(new InvalidInputException("bad")).when(mockCBClient).updateProject(any(UpdateProjectRequest.class));
+        doThrow(InvalidInputException.builder().message("bad").build()).when(mockCBClient).updateProject(any(UpdateProjectRequest.class));
         when(mockCBClient.createProject(any(CreateProjectRequest.class)))
-                .thenReturn(new CreateProjectResult().withProject(new Project()));
+                .thenReturn(CreateProjectResponse.builder().project(Project.builder().build()).build());
 
         ProjectFactory f = new ProjectFactory(mockCBClient);
         f.createProject("project3", "", null, null, null, "", "", "");

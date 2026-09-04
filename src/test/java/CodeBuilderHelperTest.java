@@ -14,23 +14,19 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.EnvironmentVariable;
-import com.amazonaws.services.codebuild.model.EnvironmentVariableType;
-import com.amazonaws.services.codebuild.model.InvalidInputException;
-import hudson.util.Secret;
+import software.amazon.awssdk.services.codebuild.model.EnvironmentVariable;
+import software.amazon.awssdk.services.codebuild.model.EnvironmentVariableType;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.codebuild.model.Build;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-@PowerMockIgnore("javax.management.*")
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({CodeBuilder.class, Secret.class})
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     EnvironmentVariableType evType = EnvironmentVariableType.PLAINTEXT;
@@ -116,8 +112,8 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}]", evType);
         assert(result.size() == 1);
         List<EnvironmentVariable> evs = new ArrayList<>(result);
-        assert(evs.get(0).getName().equals("name"));
-        assert(evs.get(0).getValue().equals("value"));
+        assert(evs.get(0).name().equals("name"));
+        assert(evs.get(0).value().equals("value"));
     }
 
     @Test
@@ -125,15 +121,15 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("  [{   name, value \n} \t] ", evType);
         assert(result.size() == 1);
         List<EnvironmentVariable> evs = new ArrayList<>(result);
-        assert(evs.get(0).getName().equals("name"));
-        assert(evs.get(0).getValue().equals("value"));
+        assert(evs.get(0).name().equals("name"));
+        assert(evs.get(0).value().equals("value"));
     }
 
     @Test
     public void TestMapEnvVarsTwo() throws InvalidInputException {
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}]", evType);
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name("name").value("value").type(evType).build();
+        EnvironmentVariable ev2 = EnvironmentVariable.builder().name("name2").value("value2").type(evType).build();
         assert(result.size() == 2);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -143,10 +139,10 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     public void TestMapEnvVarsMultiple() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
                 CodeBuilder.mapEnvVariables("[{name, value}, {name2, value2}, {key, val}, {k2, v2}]", evType);
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
-        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val").withType(evType);
-        EnvironmentVariable ev4 = new EnvironmentVariable().withName("k2").withValue("v2").withType(evType);
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name("name").value("value").type(evType).build();
+        EnvironmentVariable ev2 = EnvironmentVariable.builder().name("name2").value("value2").type(evType).build();
+        EnvironmentVariable ev3 = EnvironmentVariable.builder().name("key").value("val").type(evType).build();
+        EnvironmentVariable ev4 = EnvironmentVariable.builder().name("k2").value("v2").type(evType).build();
         assert(result.size() == 4);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -158,10 +154,10 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     public void TestMapEnvVarsMultipleWhitespace() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
                 CodeBuilder.mapEnvVariables("\n [{ name   , value}    , { name2\t, value2}  ,{  key, val ue},  {ke y, value }]", evType);
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("name").withValue("value").withType(evType);
-        EnvironmentVariable ev2 = new EnvironmentVariable().withName("name2").withValue("value2").withType(evType);
-        EnvironmentVariable ev3 = new EnvironmentVariable().withName("key").withValue("val ue").withType(evType);
-        EnvironmentVariable ev4 = new EnvironmentVariable().withName("ke y").withValue("value").withType(evType);
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name("name").value("value").type(evType).build();
+        EnvironmentVariable ev2 = EnvironmentVariable.builder().name("name2").value("value2").type(evType).build();
+        EnvironmentVariable ev3 = EnvironmentVariable.builder().name("key").value("val ue").type(evType).build();
+        EnvironmentVariable ev4 = EnvironmentVariable.builder().name("ke y").value("value").type(evType).build();
         assert(result.size() == 4);
         assert(result.contains(ev1));
         assert(result.contains(ev2));
@@ -173,7 +169,7 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
     public void TestMapEnvVarWithWhitespaceInKeyAndValue() throws InvalidInputException {
         Collection<EnvironmentVariable> result =
                 CodeBuilder.mapEnvVariables("[{ n a m e   , v a l u e }]", evType);
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("n a m e").withValue("v a l u e").withType(evType);
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name("n a m e").value("v a l u e").type(evType).build();
         assert(result.size() == 1);
         assert(result.contains(ev1));
     }
@@ -245,7 +241,8 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma1() throws InvalidInputException {
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("na\\,me").withValue("value").withType(evType);
+        // The parser unescapes "\," to a literal comma, so "na\,me" -> "na,me".
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name("na,me").value("value").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{na\\,me, value}]", evType);
         assert(result.size() == 1);
         assert(result.contains(ev1));
@@ -253,7 +250,8 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma2() throws InvalidInputException {
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("\\,").withValue("value").withType(evType);
+        // "\," unescapes to a literal comma.
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name(",").value("value").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, value}]", evType);
         assert(result.size() == 1);
         assert(result.contains(ev1));
@@ -261,7 +259,8 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma3() throws InvalidInputException {
-        EnvironmentVariable ev1 = new EnvironmentVariable().withName("\\,").withValue("\\,").withType(evType);
+        // Both key and value "\," unescape to literal commas.
+        EnvironmentVariable ev1 = EnvironmentVariable.builder().name(",").value(",").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, \\,}]", evType);
         assert(result.size() == 1);
         assert(result.contains(ev1));
@@ -269,10 +268,25 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestCheckJenkinsSourceOverrides() throws InvalidInputException {
-        assert(CodeBuilderValidation.checkJenkinsSourceOverrides("", ""));
-        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("type", ""));
+        // A valid Jenkins source override requires BOTH the type and location to be set and
+        // the type to be "S3" (Jenkins uploads its source to S3); everything else is invalid.
+        assert(CodeBuilderValidation.checkJenkinsSourceOverrides("S3", "location"));
+        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("type", "location"));
+        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("S3", ""));
         assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("", "location"));
-        assert(CodeBuilderValidation.checkJenkinsSourceOverrides("type", "location"));
+        assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("", ""));
+    }
+
+    @Test
+    public void TestUpdateDashboardNullArtifacts() throws Exception {
+        // Fix #2: while a build is IN_PROGRESS the v2 Build.artifacts() is null until the ARTIFACTS
+        // phase; updateDashboard must not NPE dereferencing artifacts().location().
+        CodeBuilder cb = createDefaultCodeBuilder();
+        CloudWatchMonitor monitor = mock(CloudWatchMonitor.class);
+        CodeBuildAction action = mock(CodeBuildAction.class);
+        when(action.getCloudWatchLogsURL()).thenReturn("");
+        Build b = Build.builder().build(); // null artifacts()
+        cb.updateDashboard(b, action, monitor, listener); // must not throw
     }
 
 }

@@ -14,32 +14,28 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.codebuild.model.*;
-
 import hudson.AbortException;
 import hudson.model.Result;
-import hudson.util.Secret;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentCaptor;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.codebuild.model.BatchGetBuildsRequest;
+import software.amazon.awssdk.services.codebuild.model.BatchGetBuildsResponse;
+import software.amazon.awssdk.services.codebuild.model.Build;
+import software.amazon.awssdk.services.codebuild.model.BuildArtifacts;
+import software.amazon.awssdk.services.codebuild.model.BuildPhaseType;
+import software.amazon.awssdk.services.codebuild.model.StatusType;
 
-import java.util.Date;
+import java.time.Instant;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@PowerMockIgnore("javax.management.*")
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Rule
@@ -64,12 +60,12 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenSuccess() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(1)).build();
+        Build succeeded = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).startTime(Instant.ofEpochMilli(2)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
-                new BatchGetBuildsResult().withBuilds(inProgress),
-                new BatchGetBuildsResult().withBuilds(inProgress),
-                new BatchGetBuildsResult().withBuilds(succeeded));
+                BatchGetBuildsResponse.builder().builds(inProgress).build(),
+                BatchGetBuildsResponse.builder().builds(inProgress).build(),
+                BatchGetBuildsResponse.builder().builds(succeeded).build());
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
@@ -84,7 +80,7 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
     @Test
     public void testBuildFails() throws Exception {
         CodeBuilder test = createDefaultCodeBuilder();
-        when(mockBuild.getBuildStatus()).thenReturn(StatusType.FAILED.toString().toUpperCase());
+        when(mockBuild.buildStatusAsString()).thenReturn(StatusType.FAILED.toString().toUpperCase());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -97,12 +93,12 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBuildThenWaitThenFails() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build failed = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.FAILED).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(1)).build();
+        Build failed = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.FAILED).startTime(Instant.ofEpochMilli(2)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(
-                new BatchGetBuildsResult().withBuilds(inProgress),
-                new BatchGetBuildsResult().withBuilds(inProgress),
-                new BatchGetBuildsResult().withBuilds(failed));
+                BatchGetBuildsResponse.builder().builds(inProgress).build(),
+                BatchGetBuildsResponse.builder().builds(inProgress).build(),
+                BatchGetBuildsResponse.builder().builds(failed).build());
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
@@ -116,14 +112,16 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsHttpTimeout() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(1)).build();
+        Build succeeded = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).startTime(Instant.ofEpochMilli(2)).build();
 
-        AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
+        // v1 AmazonClientException("Unable to execute HTTP request...") becomes v2 SdkClientException;
+        // perform() retries when the message contains CodeBuildClientRetryCondition.HTTP_ERROR_MESSAGE.
+        SdkClientException ex = SdkClientException.builder().message("Unable to execute HTTP request: connect timed out").build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
-                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
                 .thenThrow(ex)
-                .thenReturn(new BatchGetBuildsResult().withBuilds(succeeded));
+                .thenReturn(BatchGetBuildsResponse.builder().builds(succeeded).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -135,15 +133,15 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testBatchGetBuildsMultipleHttpTimeout() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withStartTime(new Date(1));
-        Build succeeded = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(1)).build();
+        Build succeeded = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).startTime(Instant.ofEpochMilli(2)).build();
 
-        AmazonClientException ex = new AmazonClientException("Unable to execute HTTP request: connect timed out");
+        SdkClientException ex = SdkClientException.builder().message("Unable to execute HTTP request: connect timed out").build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
                 .thenThrow(ex)
                 .thenThrow(ex)
-                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
-                .thenReturn(new BatchGetBuildsResult().withBuilds(succeeded));
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
+                .thenReturn(BatchGetBuildsResponse.builder().builds(succeeded).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -155,13 +153,13 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptedBuild() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
-        Build stopped = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.STOPPED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString()).startTime(Instant.ofEpochMilli(1)).build();
+        Build stopped = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.STOPPED).currentPhase(BuildPhaseType.COMPLETED.toString()).startTime(Instant.ofEpochMilli(2)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
-                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
                 .then(mockInterruptedException)
-                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
-                .thenReturn(new BatchGetBuildsResult().withBuilds(stopped));
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
+                .thenReturn(BatchGetBuildsResponse.builder().builds(stopped).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -173,12 +171,12 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptedCompletedBuild() throws Exception {
-        Build inProgress = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.IN_PROGRESS).withCurrentPhase(BuildPhaseType.BUILD.toString()).withStartTime(new Date(1));
-        Build completed = new Build().withArtifacts(new BuildArtifacts()).withBuildStatus(StatusType.SUCCEEDED).withCurrentPhase(BuildPhaseType.COMPLETED.toString()).withStartTime(new Date(2));
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString()).startTime(Instant.ofEpochMilli(1)).build();
+        Build completed = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.SUCCEEDED).currentPhase(BuildPhaseType.COMPLETED.toString()).startTime(Instant.ofEpochMilli(2)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
-                .thenReturn(new BatchGetBuildsResult().withBuilds(inProgress))
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
                 .then(mockInterruptedException)
-                .thenReturn(new BatchGetBuildsResult().withBuilds(completed));
+                .thenReturn(BatchGetBuildsResponse.builder().builds(completed).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -201,5 +199,54 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+    }
+
+    @Test
+    public void testInterruptBeforeFirstPoll() throws Exception {
+        // Fix #5(a): an interrupt arriving on the very first poll (before logMonitor/action are
+        // initialized) must still abort cleanly and not NPE on the null logMonitor in the stop-wait loop.
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build())
+                .buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString())
+                .startTime(Instant.ofEpochMilli(1)).build();
+        Build stopped = Build.builder().artifacts(BuildArtifacts.builder().build())
+                .buildStatus(StatusType.STOPPED).currentPhase(BuildPhaseType.COMPLETED.toString())
+                .startTime(Instant.ofEpochMilli(2)).build();
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .then(mockInterruptedException)                                            // poll #1 interrupts before init
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())    // re-fetch inside interrupt handler
+                .thenReturn(BatchGetBuildsResponse.builder().builds(stopped).build());      // stop-wait loop -> completed
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(Result.ABORTED, savedResult.getValue());
+    }
+
+    @Test
+    public void testInterruptWithNullCurrentPhase() throws Exception {
+        // Fix #5(b): a re-fetched build whose currentPhase() is null must not NPE; the comparison
+        // is constant-first so a null phase is treated as "not COMPLETED".
+        Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build())
+                .buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString())
+                .startTime(Instant.ofEpochMilli(1)).build();
+        Build nullPhase = Build.builder().artifacts(BuildArtifacts.builder().build())
+                .buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(2)).build(); // currentPhase() == null
+        Build completed = Build.builder().artifacts(BuildArtifacts.builder().build())
+                .buildStatus(StatusType.STOPPED).currentPhase(BuildPhaseType.COMPLETED.toString())
+                .startTime(Instant.ofEpochMilli(3)).build();
+        when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())     // poll #1 initializes logMonitor/action
+                .then(mockInterruptedException)                                             // poll #2 interrupts
+                .thenReturn(BatchGetBuildsResponse.builder().builds(nullPhase).build())      // re-fetch: null currentPhase
+                .thenReturn(BatchGetBuildsResponse.builder().builds(completed).build());     // stop-wait loop -> completed
+
+        CodeBuilder test = createDefaultCodeBuilder();
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(Result.ABORTED, savedResult.getValue());
     }
 }
