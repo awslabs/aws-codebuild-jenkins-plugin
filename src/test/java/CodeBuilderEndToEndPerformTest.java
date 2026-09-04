@@ -115,8 +115,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
         Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(1)).build();
         Build succeeded = Build.builder().artifacts(BuildArtifacts.builder().build()).buildStatus(StatusType.SUCCEEDED.toString().toUpperCase()).startTime(Instant.ofEpochMilli(2)).build();
 
-        // v1 AmazonClientException("Unable to execute HTTP request...") becomes v2 SdkClientException;
-        // perform() retries when the message contains CodeBuildClientRetryCondition.HTTP_ERROR_MESSAGE.
         SdkClientException ex = SdkClientException.builder().message("Unable to execute HTTP request: connect timed out").build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
                 .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
@@ -203,8 +201,6 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptBeforeFirstPoll() throws Exception {
-        // Fix #5(a): an interrupt arriving on the very first poll (before logMonitor/action are
-        // initialized) must still abort cleanly and not NPE on the null logMonitor in the stop-wait loop.
         Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build())
                 .buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString())
                 .startTime(Instant.ofEpochMilli(1)).build();
@@ -212,9 +208,9 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
                 .buildStatus(StatusType.STOPPED).currentPhase(BuildPhaseType.COMPLETED.toString())
                 .startTime(Instant.ofEpochMilli(2)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
-                .then(mockInterruptedException)                                            // poll #1 interrupts before init
-                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())    // re-fetch inside interrupt handler
-                .thenReturn(BatchGetBuildsResponse.builder().builds(stopped).build());      // stop-wait loop -> completed
+                .then(mockInterruptedException)
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
+                .thenReturn(BatchGetBuildsResponse.builder().builds(stopped).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
@@ -226,21 +222,19 @@ public class CodeBuilderEndToEndPerformTest extends CodeBuilderTest {
 
     @Test
     public void testInterruptWithNullCurrentPhase() throws Exception {
-        // Fix #5(b): a re-fetched build whose currentPhase() is null must not NPE; the comparison
-        // is constant-first so a null phase is treated as "not COMPLETED".
         Build inProgress = Build.builder().artifacts(BuildArtifacts.builder().build())
                 .buildStatus(StatusType.IN_PROGRESS).currentPhase(BuildPhaseType.BUILD.toString())
                 .startTime(Instant.ofEpochMilli(1)).build();
         Build nullPhase = Build.builder().artifacts(BuildArtifacts.builder().build())
-                .buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(2)).build(); // currentPhase() == null
+                .buildStatus(StatusType.IN_PROGRESS).startTime(Instant.ofEpochMilli(2)).build();
         Build completed = Build.builder().artifacts(BuildArtifacts.builder().build())
                 .buildStatus(StatusType.STOPPED).currentPhase(BuildPhaseType.COMPLETED.toString())
                 .startTime(Instant.ofEpochMilli(3)).build();
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class)))
-                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())     // poll #1 initializes logMonitor/action
-                .then(mockInterruptedException)                                             // poll #2 interrupts
-                .thenReturn(BatchGetBuildsResponse.builder().builds(nullPhase).build())      // re-fetch: null currentPhase
-                .thenReturn(BatchGetBuildsResponse.builder().builds(completed).build());     // stop-wait loop -> completed
+                .thenReturn(BatchGetBuildsResponse.builder().builds(inProgress).build())
+                .then(mockInterruptedException)
+                .thenReturn(BatchGetBuildsResponse.builder().builds(nullPhase).build())
+                .thenReturn(BatchGetBuildsResponse.builder().builds(completed).build());
 
         CodeBuilder test = createDefaultCodeBuilder();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);

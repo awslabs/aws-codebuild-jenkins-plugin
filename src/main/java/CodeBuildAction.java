@@ -33,10 +33,7 @@ public class CodeBuildAction implements Action {
     private List<String> logs;
     private String cloudWatchLogsURL;
     private String s3LogsURL;
-    // v1 -> v2: SDK v2 model types (software.amazon.awssdk.*) are refused by Jenkins' XStream
-    // security class filter, so BuildPhase can no longer be persisted to build.xml. Marking the
-    // field transient keeps all in-memory dashboard behavior identical; the only effect is that
-    // the phase list is not restored across a Jenkins restart.
+    // transient: Jenkins' XStream class filter refuses SDK v2 types, so phases can't persist to build.xml
     private transient List<BuildPhase> phases;
     private String phaseErrorMessage;
     private String startTime;
@@ -77,8 +74,6 @@ public class CodeBuildAction implements Action {
 
     // Sets the state of the latest phase to be in_progress (unless the latest phase is completed, in which
     // case the state is set to succeeded).
-    // v1 -> v2: BuildPhase is immutable in SDK v2, so instead of mutating the phase in place we rebuild
-    // it via toBuilder() and replace the last element in a fresh list.
     private void formatLatestPhase() {
         if(phases != null && !phases.isEmpty()) {
             BuildPhase latest = phases.get(phases.size() - 1);

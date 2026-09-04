@@ -390,26 +390,15 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
         assertEquals(envVars.get("foo2") + "-" + envVars.get("foo3"), cb.getParameterized(cb.getSourceVersion()));
     }
 
-    // Regression test for the NPE in failBuild() that masked the real error.
-    // Mirrors the live no-creds trigger: the AWSClientFactory constructor throws at the earliest
-    // point in perform() (eager DefaultCredentialsProvider resolution failing with no credentials),
-    // BEFORE any result object is used. Combined with a CodeBuilder deserialized from a saved job
-    // config -- readResolve() bypasses the constructor initializer, leaving codeBuildResult null --
-    // this previously threw NullPointerException in failBuild() and swallowed the underlying error.
-    // Asserts the build is FAILURE, the real credentials error reaches the console, and no NPE occurs.
     @Test
     public void testEarlyFactoryFailureWithUninitializedResultSurfacesRealError() throws Exception {
         String underlyingError = "Unable to load AWS credentials from any provider in the chain";
 
-        // Replace the default (non-throwing) construction mock from setUpBuildEnvironment() with one
-        // whose constructor throws, exactly like the real early credential-resolution failure.
         awsClientFactoryConstruction.close();
         awsClientFactoryConstruction = null;
 
         CodeBuilder test = createDefaultCodeBuilder();
 
-        // Simulate the deserialized-job state: XStream/readResolve() does not run the constructor,
-        // so codeBuildResult is null when perform() runs.
         java.lang.reflect.Field resultField = CodeBuilder.class.getDeclaredField("codeBuildResult");
         resultField.setAccessible(true);
         resultField.set(test, null);
@@ -424,15 +413,10 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         verify(build).setResult(savedResult.capture());
         assertEquals(Result.FAILURE, savedResult.getValue());
-        // The failure must surface cleanly: no NPE swallowing it.
         assertTrue("Unexpected NullPointerException in log: " + log.toString(),
                    !log.toString().contains("NullPointerException"));
-        // The authorization error and the underlying secondary detail (from the caught
-        // construction exception's message) must both reach the Jenkins console.
         assertTrue("Missing authorization error in log: " + log.toString(),
                    log.toString().contains(CodeBuilder.authorizationError));
-        // A result now exists and is marked FAILURE, with the underlying detail appended
-        // (setFailure ran instead of NPE'ing on a null result).
         CodeBuildResult result = test.getCodeBuildResult();
         assertEquals(CodeBuildResult.FAILURE, result.getStatus());
         assertTrue("Result error message missing authorization error: " + result.getErrorMessage(),
@@ -443,8 +427,6 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Test
     public void testPollExceptionWithNullMessage() throws Exception {
-        // Fix #3: a polling exception whose getMessage() is null must not NPE inside the catch
-        // block on e.getMessage().contains(...); the build should fail gracefully instead.
         CodeBuilder test = createDefaultCodeBuilder();
         doThrow(new RuntimeException((String) null)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);

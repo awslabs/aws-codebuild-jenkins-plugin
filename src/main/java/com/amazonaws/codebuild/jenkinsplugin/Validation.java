@@ -64,10 +64,6 @@ public class Validation {
     }
 
     public static AwsCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {
-        // v1 -> v2: AWSStaticCredentialsProvider(BasicSessionCredentials|BasicAWSCredentials) becomes
-        // StaticCredentialsProvider.create(AwsSessionCredentials|AwsBasicCredentials);
-        // DefaultAWSCredentialsProviderChain.getInstance() becomes DefaultCredentialsProvider.create();
-        // provider.getCredentials() becomes provider.resolveCredentials().
         AwsCredentialsProvider result;
         if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(awsSessionToken)) {
             result = StaticCredentialsProvider.create(AwsSessionCredentials.create(accessKey, secretKey, awsSessionToken));

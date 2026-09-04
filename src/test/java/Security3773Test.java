@@ -29,11 +29,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 
-/**
- * Regression tests for SECURITY-3773 / CVE-2026-70447: descriptor methods that
- * enumerate CodeBuildCredentials IDs must require permission, otherwise any
- * authenticated user can enumerate credentials IDs registered on the master.
- */
 public class Security3773Test {
 
     private static final String CRED_ID = "security-3773-cred-id";
@@ -109,7 +104,6 @@ public class Security3773Test {
         }
     }
 
-    // ---- Fix #10: folder-scoped enumeration branch (item != null) ----
 
     private static final String FOLDER_EXT_READER = "folderExtReader";
     private static final String FOLDER_PLAIN_READER = "folderPlainReader";
@@ -119,9 +113,7 @@ public class Security3773Test {
         Folder folder = j.jenkins.createProject(Folder.class, "test-folder");
         j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy()
                 .grant(Jenkins.READ).everywhere().to(FOLDER_EXT_READER, FOLDER_PLAIN_READER)
-                // EXTENDED_READ on the folder lets this user enumerate credentials in that scope
                 .grant(Item.EXTENDED_READ, Item.READ).onItems(folder).to(FOLDER_EXT_READER)
-                // plain reader has folder READ but NOT EXTENDED_READ / USE_ITEM
                 .grant(Item.READ).onItems(folder).to(FOLDER_PLAIN_READER));
 
         CodeBuildBaseCredentials cred = new CodeBuildBaseCredentials(
@@ -148,7 +140,6 @@ public class Security3773Test {
         Folder folder = setupFolder();
         CodeBuilder.DescriptorImpl d = j.jenkins.getDescriptorByType(CodeBuilder.DescriptorImpl.class);
         try (ACLContext ignored = ACL.as(User.getById(FOLDER_PLAIN_READER, true))) {
-            // Passing the current value: the descriptor may only echo it back, never enumerate the rest.
             ListBoxModel model = d.doFillCredentialsIdItems(folder, CRED_ID);
             assertEquals("without EXTENDED_READ the model must contain only the echoed current value",
                     1, model.size());
@@ -156,16 +147,14 @@ public class Security3773Test {
         }
     }
 
-    // ---- Fix #10: doCheck guard must short-circuit without any AWS/STS interaction ----
 
     @Test
     public void doCheckIamRoleArnDeniedReturnsOkAndMakesNoStsCall() throws IOException {
-        setup(); // ADMIN + READER realm; READER is not an administrator
+        setup();
         CodeBuildBaseCredentials.DescriptorImpl d =
                 j.jenkins.getDescriptorByType(CodeBuildBaseCredentials.DescriptorImpl.class);
         try (MockedStatic<StsClient> stsStatic = mockStatic(StsClient.class);
              ACLContext ignored = ACL.as(User.getById(READER, true))) {
-            // item == null with a non-admin user -> permission denied -> ok() before any client build
             FormValidation fv = d.doCheckIamRoleArn(null, "", "", "ak", "sk",
                     "arn:aws:iam::123456789012:role/role", "");
             assertEquals(FormValidation.Kind.OK, fv.kind);

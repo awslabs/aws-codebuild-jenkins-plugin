@@ -65,10 +65,6 @@ public class CodeBuilderValidation {
         return "";
     }
 
-    // Returns empty string if configuration valid.
-    // v1 -> v2: SDK v1 enum fromValue() threw IllegalArgumentException on an unknown value; SDK v2
-    // fromValue() instead returns X.UNKNOWN_TO_SDK_VERSION, so validity is checked against that
-    // sentinel rather than a try/catch. Behavior (known value ok, unknown value rejected) is unchanged.
     public static String checkStartBuildOverridesConfig(CodeBuilder cb) {
         String artifactTypeOverride = cb.getParameterized(cb.getArtifactTypeOverride());
         if(!artifactTypeOverride.isEmpty() && ArtifactsType.fromValue(artifactTypeOverride) == ArtifactsType.UNKNOWN_TO_SDK_VERSION) {

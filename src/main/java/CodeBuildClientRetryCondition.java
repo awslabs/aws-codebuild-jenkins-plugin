@@ -7,10 +7,6 @@ public class CodeBuildClientRetryCondition implements RetryCondition {
 
     public static final String HTTP_ERROR_MESSAGE = "Unable to execute HTTP request";
 
-    // v1 -> v2 mapping: the old RetryPolicy.RetryCondition#shouldRetry(AmazonWebServiceRequest,
-    // AmazonClientException, int) becomes RetryCondition#shouldRetry(RetryPolicyContext). Semantics
-    // are preserved: retry on a throttling error (RetryUtils.isThrottlingException) or when the
-    // request could not be executed against the service (HTTP transport error).
     @Override
     public boolean shouldRetry(RetryPolicyContext context) {
         SdkException e = context.exception();

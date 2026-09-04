@@ -241,7 +241,6 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma1() throws InvalidInputException {
-        // The parser unescapes "\," to a literal comma, so "na\,me" -> "na,me".
         EnvironmentVariable ev1 = EnvironmentVariable.builder().name("na,me").value("value").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{na\\,me, value}]", evType);
         assert(result.size() == 1);
@@ -250,7 +249,6 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma2() throws InvalidInputException {
-        // "\," unescapes to a literal comma.
         EnvironmentVariable ev1 = EnvironmentVariable.builder().name(",").value("value").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, value}]", evType);
         assert(result.size() == 1);
@@ -259,7 +257,6 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestMapEnvVarsComma3() throws InvalidInputException {
-        // Both key and value "\," unescape to literal commas.
         EnvironmentVariable ev1 = EnvironmentVariable.builder().name(",").value(",").type(evType).build();
         Collection<EnvironmentVariable> result = CodeBuilder.mapEnvVariables("[{\\,, \\,}]", evType);
         assert(result.size() == 1);
@@ -268,8 +265,6 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestCheckJenkinsSourceOverrides() throws InvalidInputException {
-        // A valid Jenkins source override requires BOTH the type and location to be set and
-        // the type to be "S3" (Jenkins uploads its source to S3); everything else is invalid.
         assert(CodeBuilderValidation.checkJenkinsSourceOverrides("S3", "location"));
         assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("type", "location"));
         assert(!CodeBuilderValidation.checkJenkinsSourceOverrides("S3", ""));
@@ -279,14 +274,12 @@ public class CodeBuilderHelperTest extends CodeBuilderTest {
 
     @Test
     public void TestUpdateDashboardNullArtifacts() throws Exception {
-        // Fix #2: while a build is IN_PROGRESS the v2 Build.artifacts() is null until the ARTIFACTS
-        // phase; updateDashboard must not NPE dereferencing artifacts().location().
         CodeBuilder cb = createDefaultCodeBuilder();
         CloudWatchMonitor monitor = mock(CloudWatchMonitor.class);
         CodeBuildAction action = mock(CodeBuildAction.class);
         when(action.getCloudWatchLogsURL()).thenReturn("");
-        Build b = Build.builder().build(); // null artifacts()
-        cb.updateDashboard(b, action, monitor, listener); // must not throw
+        Build b = Build.builder().build();
+        cb.updateDashboard(b, action, monitor, listener);
     }
 
 }

@@ -110,17 +110,12 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
         }
     }
 
-    // v1 -> v2: AWSCredentialsProvider#getCredentials() becomes AwsCredentialsProvider#resolveCredentials().
-    // The assume-role refresh logic and the session-expiry window (MIN_VALIDITY_ALLOWED) are preserved.
     @Override
     public synchronized AwsCredentials resolveCredentials() {
         AwsCredentialsProvider credentialsProvider = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
         AwsCredentials credentials = credentialsProvider.resolveCredentials();
 
         if (!iamRoleArn.isEmpty()) {
-            // Fix #7: this instance is shared across concurrent builds. Synchronize so the
-            // expiry-check, refresh and read of roleCredentials are one atomic unit, and build
-            // the session creds from a local snapshot so we never observe a half-updated field.
             if (haveCredentialsExpired()) {
                 refresh();
             }
@@ -150,7 +145,6 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
                     .roleSessionName(ROLE_SESSION_NAME)
                     .build();
 
-            // v1 used the global STS endpoint (sts.amazonaws.com) by default; Region.AWS_GLOBAL maps to it.
             AssumeRoleResponse assumeResult;
             try (StsClient stsClient = StsClient.builder()
                     .region(Region.AWS_GLOBAL)
@@ -177,9 +171,6 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
 
         private static final int ERROR_MESSAGE_MAX_LENGTH = 178;
 
-        // Caps an authorization error message for display in the form validation UI.
-        // Null-safe, and keeps the FIRST ERROR_MESSAGE_MAX_LENGTH characters (the previous
-        // substring(MAX) dropped the leading MAX chars and NPE'd on a null message).
         static String truncateErrorMessage(String errorMessage) {
             if (errorMessage == null) {
                 return "Unknown error";
@@ -191,7 +182,6 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
             return "CodeBuild Credentials (Groovy-compatible)";
         }
 
-        // SECURITY-3773: admin when contextless, else EXTENDED_READ or USE_ITEM on the item
         private boolean hasCredentialsValidationPermission(Item item) {
             if (item == null) {
                 return Jenkins.get().hasPermission(Jenkins.ADMINISTER);
@@ -205,7 +195,7 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
                                                @QueryParameter("accessKey") final String accessKey,
                                                @QueryParameter("secretKey") final String secretKey) {
 
-            // SECURITY-3773: only permitted users may trigger credential validation (makes AWS calls)
+            // SECURITY-3773: ok() (not an error) for unpermitted users, so the form leaks nothing
             if (!hasCredentialsValidationPermission(item)) {
                 return FormValidation.ok();
             }
@@ -233,7 +223,7 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
                                                 @QueryParameter("iamRoleArn") final String iamRoleArn,
                                                 @QueryParameter("externalId") final String externalId) {
 
-            // SECURITY-3773: only permitted users may trigger credential validation (makes AWS calls)
+            // SECURITY-3773: ok() (not an error) for unpermitted users, so the form leaks nothing
             if (!hasCredentialsValidationPermission(item)) {
                 return FormValidation.ok();
             }
@@ -276,8 +266,6 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
             return UUID.randomUUID().toString();
         }
 
-        // v1 -> v2: ClientConfiguration proxy settings become an ApacheHttpClient with a
-        // ProxyConfiguration endpoint built from the plugin's proxy host/port.
         private ApacheHttpClient.Builder getHttpClientBuilder(String proxyHost, String proxyPort) {
             ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder();
             if (proxyHost != null && !proxyHost.isEmpty()) {

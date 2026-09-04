@@ -84,8 +84,6 @@ public class CodeBuilderTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
 
-    // PowerMock replacement: kept open for the duration of each test that calls
-    // setUpBuildEnvironment() and closed in tearDownBuildEnvironment().
     protected MockedConstruction<AWSClientFactory> awsClientFactoryConstruction;
 
     //mock console log
@@ -109,10 +107,6 @@ public class CodeBuilderTest {
 
     //sets up a basic mock environment for calling perform()
     protected void setUpBuildEnvironment() throws Exception {
-        // Replaces PowerMockito.whenNew(AWSClientFactory.class): intercept the
-        // `new AWSClientFactory(...)` call inside CodeBuilder.perform() and delegate
-        // the three client getters to the shared mockFactory so per-test stubs
-        // (e.g. doThrow().when(mockFactory)...) still take effect at call time.
         awsClientFactoryConstruction = mockConstruction(AWSClientFactory.class,
                 (constructed, context) -> {
                     when(constructed.getCodeBuildClient()).thenAnswer(inv -> mockFactory.getCodeBuildClient());
@@ -151,17 +145,11 @@ public class CodeBuilderTest {
         when(mockGetBuildsResult.builds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
         when(build.getEnvironment(any(TaskListener.class))).thenReturn(envVars);
-        // PowerMock previously stubbed Thread.sleep to a no-op; Mockito 5 forbids mocking
-        // java.lang.Thread. Instead drive the descriptor's own polling interval down to its
-        // minimum so perform()'s wait loop runs fast without touching JDK internals.
         minimizePollingSleep();
         when(awsSecretKey.getPlainText()).thenReturn("secretKey");
         when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
     }
 
-    // Sets the CodeBuilder descriptor's sleep fields to their minimum so the polling loop in
-    // perform() doesn't block tests. getMin/MaxSleepTime()/getSleepJitter() floor positive
-    // values at 1s / 1 jitter, so this yields ~1s polls instead of the default 3-8s.
     private void minimizePollingSleep() throws Exception {
         CodeBuilder.DescriptorImpl descriptor = j.jenkins.getDescriptorByType(CodeBuilder.DescriptorImpl.class);
         for (String field : new String[]{"minSleepTime", "maxSleepTime", "sleepJitter"}) {
@@ -173,7 +161,6 @@ public class CodeBuilderTest {
 
     @After
     public void tearDownBuildEnvironment() {
-        // Close the thread-local construction mock opened in setUpBuildEnvironment().
         if (awsClientFactoryConstruction != null) {
             awsClientFactoryConstruction.close();
             awsClientFactoryConstruction = null;

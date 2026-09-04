@@ -87,8 +87,6 @@ public class AWSClientFactory {
     private static final int RETRY_BACKOFF_BASE_DELAY = 10000;
     private static final int RETRY_BACKOFF_MAX_DELAY = 30000;
 
-    // v1 -> v2: these were provided by com.amazonaws.auth.profile.internal.ProfileKeyConstants,
-    // which no longer exists in SDK v2. They are simply the standard AWS credential env var names.
     public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
     public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
     public static final String AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN";
@@ -203,8 +201,6 @@ public class AWSClientFactory {
         return null;
     }
 
-    // v1 -> v2: ClientConfiguration proxy settings map to an ApacheHttpClient with a
-    // ProxyConfiguration endpoint. Connection/socket timeouts and max connections are preserved.
     private ApacheHttpClient.Builder getHttpClientBuilder() {
         ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
                 .connectionTimeout(Duration.ofMillis(CLIENT_CONFIG_CONNECTION_TIMEOUT))
@@ -223,11 +219,6 @@ public class AWSClientFactory {
         return httpClientBuilder;
     }
 
-    // v1 -> v2: user-agent prefix, max error retries and the custom retry condition/backoff move
-    // from ClientConfiguration to ClientOverrideConfiguration. The retry semantics are preserved:
-    // up to CLIENT_CONFIG_MAX_ERROR_RETRIES attempts using CodeBuildClientRetryCondition. The old
-    // PredefinedBackoffStrategies.ExponentialBackoffStrategy(base, max) maps to the v2
-    // EqualJitterBackoffStrategy with the same base/max delays.
     private ClientOverrideConfiguration getOverrideConfiguration() {
         String projectVersion = getProjectVersion();
 
@@ -246,9 +237,6 @@ public class AWSClientFactory {
                 .build();
     }
 
-    // Reads the plugin version from the Maven-generated pom.properties to build the cosmetic
-    // SDK user-agent suffix. Split into a package-private, stream-taking overload so the
-    // absent/unreadable-resource path is unit-testable without the real classpath resource.
     static String getProjectVersion() {
         try (InputStream stream = AWSClientFactory.class.getResourceAsStream(POM_PROPERTIES)) {
             return getProjectVersion(stream);
@@ -259,8 +247,6 @@ public class AWSClientFactory {
 
     static String getProjectVersion(InputStream stream) {
         if (stream == null) {
-            // Resource absent (e.g. a clean build before Maven generates pom.properties). The
-            // user-agent version suffix is cosmetic, so never fail client construction over it.
             return "";
         }
         try {

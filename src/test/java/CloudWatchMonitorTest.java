@@ -132,16 +132,13 @@ public class CloudWatchMonitorTest {
 
     @Test
     public void testEarlyReturnConfigInitializesLastPollTime() {
-        // Fix #9(a): the failed-config early return must still leave lastPollTime initialized
-        // (not null), and a subsequent poll must not NPE.
-        CloudWatchMonitor c = new CloudWatchMonitor(null, false); // null client -> early return path
+        CloudWatchMonitor c = new CloudWatchMonitor(null, false);
         assertNotNull("lastPollTime must be initialized even on the early-return path", c.getLastPollTime());
-        c.pollForLogs(listener); // must not throw
+        c.pollForLogs(listener);
     }
 
     @Test
     public void testPollExceptionWithNullMessageYieldsNonNullLogLine() {
-        // Fix #9(b): an exception whose getMessage() is null must not store a null log line.
         CloudWatchMonitor c = getMockCloudWatchMonitor();
         when(mockClient.getLogEvents(any(GetLogEventsRequest.class))).thenThrow(new RuntimeException((String) null));
         c.pollForLogs(listener);

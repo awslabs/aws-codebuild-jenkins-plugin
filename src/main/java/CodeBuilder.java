@@ -114,9 +114,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String buildTimeoutOverride;
     @Getter private String cwlStreamingDisabled;
 
-    // Not final: XStream/readResolve() deserialization of a saved job config bypasses the
-    // constructor, leaving this null. perform() and failBuild() below defensively initialize it
-    // so an early failure (e.g. credential resolution) never NPEs while masking the real error.
     @Getter private CodeBuildResult codeBuildResult;
     @Getter private String exceptionFailureMode;
     @Getter private String downloadArtifacts;
@@ -139,8 +136,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     private int batchGetBuildsCalls;
     private DescriptorImpl descriptor;
 
-    // Fix #5(c): cap the post-interrupt stop-wait loop (~2 minutes at 5s per iteration) so a build
-    // that never reports COMPLETED after a StopBuild can't spin the polling thread forever.
     private static final int MAX_STOP_WAIT_ITERATIONS = 24;
 
 
@@ -278,10 +273,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      */
     @Override
     public void perform(@NonNull Run<?, ?> build, @NonNull FilePath ws, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
-        // Ensure a result holder exists before any code that can throw. On the deserialized-job
-        // path readResolve() does not run the constructor's initializer, so this may still be null
-        // here; without this, an early failure (e.g. credentials) would NPE in failBuild() and
-        // swallow the real error message.
         if (this.codeBuildResult == null) {
             this.codeBuildResult = new CodeBuildResult();
         }
@@ -341,9 +332,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        // v1 -> v2: StartBuildRequest is immutable in SDK v2, so the request is assembled with a
-        // builder (conditional withers/setters become conditional builder calls) and built once
-        // just before the StartBuild call.
         StartBuildRequest.Builder startBuildRequestBuilder = StartBuildRequest.builder().
                 projectName(getParameterized(projectName)).
                 environmentVariablesOverride(codeBuildEnvVars).buildspecOverride(getParameterized(buildSpecFile)).
@@ -564,16 +552,13 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     //Request to stop Jenkins build has been made. First make sure the build is stoppable
                     List<Build> buildsForId = cbClient.batchGetBuilds(BatchGetBuildsRequest.builder().ids(buildId).build()).builds();
                     currentBuild = buildsForId.get(0);
-                    // Constant-first, null-safe: currentPhase() can be null on a freshly re-fetched build.
                     if(!BuildPhaseType.COMPLETED.toString().equals(currentBuild.currentPhase())) {
                         cbClient.stopBuild(StopBuildRequest.builder().id(buildId).build());
-                        //Wait for the build to actually stop, bounded so a stuck StopBuild can't loop forever.
                         int stopWaitIterations = 0;
                         do {
                             buildsForId = cbClient.batchGetBuilds(BatchGetBuildsRequest.builder().ids(buildId).build()).builds();
                             currentBuild = buildsForId.get(0);
                             Thread.sleep(5000L);
-                            // logMonitor is null when the interrupt arrived before the first poll initialized it.
                             if (logMonitor != null) {
                                 logMonitor.pollForLogs(listener);
                             }
@@ -668,8 +653,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             action.updateLogs(logMonitor.getLatestLogs());
 
             action.setPhases(b.phases());
-            // v2: artifacts() is null until the ARTIFACTS phase while the build is IN_PROGRESS;
-            // mirror the null-guard used when reading the final artifacts location after the loop.
             String artifactLocation = b.artifacts() != null ? b.artifacts().location() : null;
             action.setS3ArtifactURL(generateS3ArtifactURL(artifactTypeOverride, artifactLocation));
             action.setS3BucketName(artifactLocation);
@@ -860,7 +843,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return Integer.parseInt(depth);
     }
 
-    // v1 -> v2: ProjectArtifacts is immutable; setters become builder calls.
     private ProjectArtifacts generateStartBuildArtifactOverride() {
         ProjectArtifacts.Builder artifacts = ProjectArtifacts.builder();
         boolean overridesSpecified = false;
@@ -900,9 +882,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return overridesSpecified ? artifacts.build() : null;
     }
 
-    // v1 -> v2: ProjectCache is immutable; setters become builder calls. The old
-    // cache.getType().equals("LOCAL") read-back is done off a local variable since the v2 builder
-    // is write-only (this also avoids the latent NPE when the type was never set).
     private ProjectCache generateStartBuildCacheOverride() {
         ProjectCache.Builder cache = ProjectCache.builder();
         boolean overridesSpecified = false;
@@ -933,7 +912,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return Arrays.asList(cacheModes.split("\\s*,\\s*"));
     }
 
-    // v1 -> v2: LogsConfig/CloudWatchLogsConfig/S3LogsConfig are immutable; setters become builder calls.
     private LogsConfig generateStartBuildLogsConfigOverride() {
         CloudWatchLogsConfig.Builder cloudWatchLogsConfig = CloudWatchLogsConfig.builder();
         S3LogsConfig.Builder s3LogsConfig = S3LogsConfig.builder();
@@ -986,7 +964,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return auth;
     }
 
-    // Given a String representing environment variables, returns a list of software.amazon.awssdk.services.codebuild.model.EnvironmentVariable
     // objects with the same data. The input string must be in the form [{Key, value}, {k2, v2}] or else null is returned
     public static Collection<EnvironmentVariable> mapEnvVariables(String envVars, EnvironmentVariableType envVarType) throws InvalidInputException {
         Collection<EnvironmentVariable> result = new HashSet<EnvironmentVariable>();
@@ -1036,9 +1013,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
-        // Defense in depth: if this instance was deserialized (readResolve() bypasses the
-        // constructor) and perform()'s early init was somehow skipped, initialize here so the
-        // underlying error below is recorded and logged instead of being masked by an NPE.
         if (this.codeBuildResult == null) {
             this.codeBuildResult = new CodeBuildResult();
         }
@@ -1311,7 +1285,6 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
-            // SECURITY-3773: require permission before enumerating credentials IDs
             if (item == null) {
                 if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
                     return new StandardListBoxModel().includeCurrentValue(credentialsId);

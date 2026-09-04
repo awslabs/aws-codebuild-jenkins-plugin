@@ -56,14 +56,6 @@ public class Utils {
         return s.substring(0, length) + "...";
     }
 
-    // Deserializes a JSON array of secondary sources / source versions / artifacts into the
-    // corresponding AWS SDK v2 model objects.
-    //
-    // v1 -> v2: SDK v1 model classes were mutable Jackson-friendly beans, so Jackson could bind
-    // JSON straight onto them. SDK v2 model classes are immutable (builder-only) and are not
-    // Jackson-deserializable. We therefore bind onto small mirror beans (which preserves Jackson's
-    // exact error semantics -- unknown field, malformed JSON, bad boolean/int coercion) and then
-    // convert each mirror to its immutable v2 model via the builder.
     public static List parseDataList(String json, Class dataType) {
         if(json == null || json.isEmpty()) {
             return Collections.emptyList();
@@ -117,10 +109,6 @@ public class Utils {
         }
     }
 
-    // ---- Jackson mirror beans (see parseDataList) ----
-    // Field names mirror the JSON keys exactly so Jackson's unknown-field / coercion errors are
-    // unchanged from the SDK v1 behavior. Each mirrors only the user-configurable fields the
-    // plugin has always accepted for secondary source / artifact overrides.
 
     private static final class ProjectSourceVersionMirror {
         public String sourceIdentifier;
@@ -135,9 +123,6 @@ public class Utils {
     }
 
     private static final class SourceAuthMirror {
-        // Bound via constructor (not field injection) because this mirror is only ever
-        // deserialized nested inside ProjectSourceMirror; constructor binding preserves Jackson's
-        // error semantics while making the fields definitely-assigned.
         public final String type;
         public final String resource;
 

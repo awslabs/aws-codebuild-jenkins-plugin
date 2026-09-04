@@ -75,8 +75,6 @@ public class S3DataManager {
             zipFileMD5 = localFile.act(new ZipSourceCallable(workspace, workspaceIncludes, workspaceExcludes));
         }
 
-        // v1 -> v2: ObjectMetadata (MD5 checksum, content length, SSE algorithm) is folded into the
-        // v2 PutObjectRequest builder; the payload moves from the request to a RequestBody argument.
         long contentLength = localFile.length();
         PutObjectRequest.Builder putObjectRequestBuilder = PutObjectRequest.builder()
                 .bucket(s3InputBucket)
@@ -93,14 +91,9 @@ public class S3DataManager {
             LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.bucket() + "/" + putObjectRequest.key() + ". MD5 checksum is " + zipFileMD5);
             putObjectResult = s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(zipFileInputStream, contentLength));
         } catch (SdkClientException e) {
-            // Fix #4: surface the real upload failure. Swallowing it here lets uploadSourceToS3
-            // return a null versionId, which the caller then misreports as a "versioned bucket
-            // required" error, hiding the true (e.g. network/permission) cause.
             LoggingHelper.log(listener, "Unexpected exception upon uploading source zip to S3: " + e.getMessage());
             throw e;
         } finally {
-            // Clean up the temp source zip whether the upload succeeded or the SdkClientException
-            // above rethrows, so a failed upload does not leak the temporary file on disk.
             try {
                 localFile.delete();
             } catch (IOException e) {

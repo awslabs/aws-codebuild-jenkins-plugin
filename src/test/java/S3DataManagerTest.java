@@ -148,8 +148,6 @@ public class S3DataManagerTest {
 
     @Test
     public void testUploadSourceRethrowsSdkClientException() throws Exception {
-        // Fix #4: a putObject failure must propagate its real message, not be swallowed and later
-        // misreported as a "versioned S3 bucket is required" error (null versionId).
         S3DataManager m = createDefaultSource("", "");
         SdkClientException putFailure = SdkClientException.builder().message("network fail").build();
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenThrow(putFailure);
@@ -164,14 +162,10 @@ public class S3DataManagerTest {
 
     @Test
     public void testUploadSourceDeletesTempZipWhenPutObjectFails() throws Exception {
-        // Nit: rethrowing the putObject failure must not skip cleanup of the temporary source
-        // zip. The exception still propagates, but the temp zip must not be leaked on disk.
         S3DataManager m = createDefaultSource("", "");
         SdkClientException putFailure = SdkClientException.builder().message("network fail").build();
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenThrow(putFailure);
 
-        // The temp zip is named "<uuid>-<s3InputKey>" and getTempFilePath() places it in the
-        // parent of the workspace dir. Clear any stale temp zips from previous runs first.
         File tempDir = new File(mockWorkspaceDir).getParentFile();
         FilenameFilter tempZipFilter = (dir, name) -> name.endsWith("-" + s3InputKeyName);
         File[] stale = tempDir.listFiles(tempZipFilter);

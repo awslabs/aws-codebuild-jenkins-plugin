@@ -32,8 +32,6 @@ public class CloudWatchMonitor {
     @Setter private CloudWatchLogsClient logsClient;
     @Setter @Getter private LogsLocation logsLocation;
     @Getter private List<String> latestLogs;
-    // Fix #9(a): initialized here so it is never null, even when the constructor takes an
-    // early-return path (e.g. failed CloudWatch configuration) before reaching the assignment below.
     @Getter private Long lastPollTime = 0L;
     private boolean cwlStreamingDisabled;
 
@@ -73,8 +71,6 @@ public class CloudWatchMonitor {
                 GetLogEventsResponse logsResult = logsClient.getLogEvents(logRequest);
                 getAndFormatLogs(logsResult.events(), listener);
             } catch (Exception e) {
-                // Fix #9(b): some exceptions carry a null message; fall back to the class name so
-                // the stored log line is never null.
                 String message = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
                 latestLogs = Arrays.asList(message);
                 return;

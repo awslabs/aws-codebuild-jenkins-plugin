@@ -71,11 +71,6 @@ public class S3Downloader {
                 Utils.ensureFileExists(file);
                 downloadObject(s3Bucket, keyPrefix, file);
             } else {
-                // Download entire directory content.
-                // v1 -> v2: TransferManager.downloadDirectory is replaced with a ListObjectsV2 +
-                // per-object GetObject loop so we avoid pulling in the s3-transfer-manager / CRT
-                // dependency. Each object is written under artifactRoot preserving its full S3 key,
-                // matching the v1 downloadDirectory layout.
                 File file = new File(artifactRoot);
                 LoggingHelper.log(listener, "Downloading artifact from location '" + buildArtifact.location() + "' to path:" + file.getAbsolutePath());
                 downloadDirectory(s3Bucket, keyPrefix, artifactRoot);
@@ -87,7 +82,6 @@ public class S3Downloader {
         }
     }
 
-    // Downloads all objects under keyPrefix into artifactRoot, preserving each object's full key.
     private void downloadDirectory(String s3Bucket, String keyPrefix, String artifactRoot) throws IOException {
         String continuationToken = null;
         do {
@@ -97,9 +91,6 @@ public class S3Downloader {
                     .continuationToken(continuationToken)
                     .build());
             for (S3Object object : listResponse.contents()) {
-                // v1 parity: TransferManager.downloadDirectory skipped S3 console "folder"
-                // placeholder keys (ending in '/'); creating one as a file would break a later
-                // object under that prefix.
                 if (object.key().endsWith("/")) {
                     continue;
                 }
@@ -111,9 +102,6 @@ public class S3Downloader {
         } while (continuationToken != null);
     }
 
-    // Fix #6: guards against path traversal (zip-slip). A crafted S3 key such as "../evil" must
-    // not let an artifact escape artifactRoot. Resolves the key against the root, then requires the
-    // canonical child path to be the root itself or a descendant of it.
     private static File resolveSafeChild(String artifactRoot, String key) throws IOException {
         File root = new File(artifactRoot);
         File child = new File(root, key);
@@ -127,9 +115,6 @@ public class S3Downloader {
     }
 
     private void downloadObject(String s3Bucket, String key, File file) throws IOException {
-        // ensureFileExists() pre-creates the (empty) destination so the parent directory tree
-        // exists; ResponseTransformer.toFile refuses to overwrite an existing file, so remove the
-        // placeholder first and let the transformer create it fresh.
         if (file.exists() && !file.delete()) {
             throw new IOException("Failed to delete existing placeholder file " + file.getAbsolutePath());
         }

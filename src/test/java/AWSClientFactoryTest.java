@@ -56,13 +56,10 @@ public class AWSClientFactoryTest {
     private final AwsSessionCredentials mockAWSCreds = mock(AwsSessionCredentials.class);
     private final DefaultCredentialsProvider cpChain = mock(DefaultCredentialsProvider.class);
     private final SystemCredentialsProvider mockSysCreds = mock(SystemCredentialsProvider.class);
-    // Secret is final; Mockito 5's inline mock-maker (default) mocks it without powermock.
     private final Secret awsSecretKey = mock(Secret.class);
     private final Run<?, ?> build = mock(Run.class);
     private final StepContext mockStepContext = mock(StepContext.class);
 
-    // Static mocks previously handled by @PrepareForTest + PowerMockito.mockStatic.
-    // Opened in setUp() and closed in tearDown() so they are scoped per-test.
     private MockedStatic<CredentialsMatchers> credentialsMatchersMock;
     private MockedStatic<SystemCredentialsProvider> systemCredentialsProviderMock;
     private MockedStatic<DefaultCredentialsProvider> defaultChainMock;
@@ -72,8 +69,6 @@ public class AWSClientFactoryTest {
         credentialsMatchersMock = mockStatic(CredentialsMatchers.class);
         systemCredentialsProviderMock = mockStatic(SystemCredentialsProvider.class);
         defaultChainMock = mockStatic(DefaultCredentialsProvider.class);
-        // CredentialsMatchers.allOf/withId are also static-mocked here, so they return null;
-        // use any() (not any(CredentialsMatcher.class)) so the null matcher argument matches.
         when(CredentialsMatchers.firstOrNull(any(), any())).thenReturn(mockCBCreds);
         when(mockCBCreds.resolveCredentials()).thenReturn(mockAWSCreds);
         when(mockCBCreds.getCredentialsDescriptor()).thenReturn(codeBuildDescriptor);
@@ -85,7 +80,6 @@ public class AWSClientFactoryTest {
         when(mockAWSCreds.sessionToken()).thenReturn("t");
         when(SystemCredentialsProvider.getInstance()).thenReturn(mockSysCreds);
 
-        // v1 -> v2: DefaultAWSCredentialsProviderChain.getInstance() becomes DefaultCredentialsProvider.create().
         when(DefaultCredentialsProvider.create()).thenReturn(cpChain);
         when(awsSecretKey.getPlainText()).thenReturn("s");
     }
@@ -212,8 +206,6 @@ public class AWSClientFactoryTest {
             when(CredentialsMatchers.firstOrNull(eq(mockFolderCredsList), any())).thenReturn(mockCBCreds);
 
             AbstractProject mockProject = mock(AbstractProject.class);
-            // AbstractItem.getParent() covariantly returns Jenkins in this Jenkins version,
-            // so the parent mock must be a Jenkins (Mockito 5 enforces the return type).
             Jenkins mockFolderItem = mock(Jenkins.class);
 
             when(build.getParent()).thenReturn(mockProject);
@@ -244,7 +236,6 @@ public class AWSClientFactoryTest {
             when(mockInstance.getItemByFullName(credentialsId)).thenReturn(mockFolder);
 
             AbstractProject mockProject = mock(AbstractProject.class);
-            // AbstractItem.getParent() covariantly returns Jenkins here (see testJenkinsFolderCreds).
             Jenkins mockFolderItem = mock(Jenkins.class);
 
             when(build.getParent()).thenReturn(mockProject);
@@ -307,8 +298,6 @@ public class AWSClientFactoryTest {
         assert(awsClientFactory.getCredentialsDescriptor().contains(CodeBuildBaseCredentials.BASIC_AWS_CREDS));
     }
 
-    // Fix #1: a missing pom.properties resource (getResourceAsStream returns null during a clean
-    // build) must not blow up client construction over a cosmetic user-agent version.
     @Test
     public void testGetProjectVersionNullStreamDoesNotThrow() {
         assertEquals("", AWSClientFactory.getProjectVersion((InputStream) null));

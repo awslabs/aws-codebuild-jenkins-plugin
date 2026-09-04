@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 public class CodeBuildBaseCredentialsTest {
 
-    // -------- Fix #8: error message truncation --------
 
     @Test
     public void truncateKeepsFirst178Characters() {
@@ -38,7 +37,6 @@ public class CodeBuildBaseCredentialsTest {
         assertNotNull(CodeBuildBaseCredentials.DescriptorImpl.truncateErrorMessage(null));
     }
 
-    // -------- Fix #7: thread-safe resolveCredentials --------
 
     @Test(timeout = 5000)
     public void resolveCredentialsIsThreadSafe() throws Exception {
@@ -46,9 +44,6 @@ public class CodeBuildBaseCredentialsTest {
                 CredentialsScope.GLOBAL, "id", "desc", "AKIAEXAMPLE", "secretExample",
                 "", "", "arn:aws:iam::123456789012:role/role", "");
 
-        // Prime roleCredentials with a far-future expiry so resolveCredentials() takes the
-        // read/return path without hitting STS. The expiry-check + read must be atomic under
-        // concurrent access; this exercises that path from many threads at once.
         Field roleCredentialsField = CodeBuildBaseCredentials.class.getDeclaredField("roleCredentials");
         roleCredentialsField.setAccessible(true);
         roleCredentialsField.set(creds, Credentials.builder()

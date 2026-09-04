@@ -556,7 +556,6 @@ public class CodeBuildStep extends AbstractStepImpl {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
-            // SECURITY-3773: require permission before enumerating credentials IDs
             if (item == null) {
                 if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
                     return new StandardListBoxModel().includeCurrentValue(credentialsId);

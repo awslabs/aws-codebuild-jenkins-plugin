@@ -63,8 +63,6 @@ public class S3DownloaderTest {
         log = new ByteArrayOutputStream();
         PrintStream p = new PrintStream(log);
         when(listener.getLogger()).thenReturn(p);
-        // v1 -> v2: TransferManager.downloadDirectory is replaced by a ListObjectsV2 + GetObject
-        // loop, so stub ListObjectsV2 to return a single object for the directory-download paths.
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
                 ListObjectsV2Response.builder()
                         .contents(S3Object.builder().key("A/log.txt").build())
@@ -147,7 +145,6 @@ public class S3DownloaderTest {
         build = Build.builder().artifacts(buildArtifacts).build();
         s3Downloader().downloadBuildArtifacts(listener, build, testWorkSpace.getRemote());
 
-        // Directory download: one ListObjectsV2 followed by one GetObject for the single listed object.
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         verify(s3Client, times(1)).getObject(any(GetObjectRequest.class), any(ResponseTransformer.class));
     }
@@ -166,7 +163,6 @@ public class S3DownloaderTest {
         build = Build.builder().artifacts(zippedBuildArtifacts).build();
         s3Downloader().downloadBuildArtifacts(listener, build, testWorkSpace.getRemote());
 
-        // Single-file download (sha256sum present): one GetObject, no directory listing.
         verify(s3Client, times(1)).getObject(any(GetObjectRequest.class), any(ResponseTransformer.class));
         verify(s3Client, never()).listObjectsV2(any(ListObjectsV2Request.class));
 
@@ -198,14 +194,12 @@ public class S3DownloaderTest {
 
     @Test
     public void testZipSlipKeyRejected() throws Exception {
-        // Fix #6: a crafted object key that escapes the destination directory must be rejected
-        // and never downloaded (path traversal / zip-slip).
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
                 ListObjectsV2Response.builder()
                         .contents(S3Object.builder().key("../evil.txt").build())
                         .isTruncated(false)
                         .build());
-        build = Build.builder().artifacts(buildArtifacts).build(); // directory-download path
+        build = Build.builder().artifacts(buildArtifacts).build();
         File escaped = new File(tmpWorkspaceFile.getParentFile(), "evil.txt");
         if (escaped.exists()) {
             FileUtils.deleteQuietly(escaped);
@@ -221,7 +215,6 @@ public class S3DownloaderTest {
 
     @Test
     public void testNormalNestedKeyLandsUnderRoot() throws Exception {
-        // Fix #6 (happy-path guard): a normal nested key still downloads under the root.
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
                 ListObjectsV2Response.builder()
                         .contents(S3Object.builder().key("sub/dir/ok.txt").build())
@@ -238,9 +231,6 @@ public class S3DownloaderTest {
 
     @Test
     public void testDirectoryDownloadSkipsFolderPlaceholderKeys() throws Exception {
-        // v1 parity: TransferManager.downloadDirectory skipped S3 console "folder" placeholder
-        // keys (ending in '/', size 0). If not skipped, such a key is created as a FILE and a
-        // later object under that prefix (e.g. "dir/file.txt") fails mkdirs, aborting downloads.
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(
                 ListObjectsV2Response.builder()
                         .contents(
@@ -248,26 +238,22 @@ public class S3DownloaderTest {
                                 S3Object.builder().key("dir/file.txt").size(4L).build())
                         .isTruncated(false)
                         .build());
-        // Materialize downloaded objects on disk so we can assert the resulting layout.
         when(s3Client.getObject(any(GetObjectRequest.class), any(ResponseTransformer.class)))
                 .thenAnswer(invocation -> {
                     GetObjectRequest req = invocation.getArgument(0);
                     FileUtils.write(new File(tmpWorkspaceFile, req.key()), "data");
                     return null;
                 });
-        build = Build.builder().artifacts(buildArtifacts).build(); // directory-download path
+        build = Build.builder().artifacts(buildArtifacts).build();
 
         s3Downloader().downloadBuildArtifacts(listener, build, testWorkSpace.getRemote());
 
-        // The placeholder "folder" key must never be fetched...
         verify(s3Client, never()).getObject(
                 argThat((GetObjectRequest r) -> r != null && "dir/".equals(r.key())),
                 any(ResponseTransformer.class));
-        // ...and the real object under it must still be downloaded.
         verify(s3Client, times(1)).getObject(
                 argThat((GetObjectRequest r) -> r != null && "dir/file.txt".equals(r.key())),
                 any(ResponseTransformer.class));
-        // root/dir must be a DIRECTORY containing file.txt, not a placeholder file.
         File dir = new File(tmpWorkspaceFile, "dir");
         assertTrue("root/dir must be a directory", dir.isDirectory());
         assertTrue("file.txt must exist under root/dir", new File(dir, "file.txt").exists());
