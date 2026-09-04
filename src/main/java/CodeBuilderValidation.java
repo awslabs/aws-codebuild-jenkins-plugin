@@ -13,11 +13,13 @@
  *  Portions copyright Copyright 2004-2011 Oracle Corporation.
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
-import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.logs.AWSLogsClient;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
 import hudson.FilePath;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
+import software.amazon.awssdk.services.codebuild.model.*;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.BucketVersioningStatus;
+import software.amazon.awssdk.services.s3.model.GetBucketVersioningRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketVersioningResponse;
 
 import java.util.Collection;
 
@@ -63,97 +65,62 @@ public class CodeBuilderValidation {
         return "";
     }
 
-    // Returns empty string if configuration valid
+    // Returns empty string if configuration valid.
+    // v1 -> v2: SDK v1 enum fromValue() threw IllegalArgumentException on an unknown value; SDK v2
+    // fromValue() instead returns X.UNKNOWN_TO_SDK_VERSION, so validity is checked against that
+    // sentinel rather than a try/catch. Behavior (known value ok, unknown value rejected) is unchanged.
     public static String checkStartBuildOverridesConfig(CodeBuilder cb) {
         String artifactTypeOverride = cb.getParameterized(cb.getArtifactTypeOverride());
-        if(!artifactTypeOverride.isEmpty()) {
-            try {
-                ArtifactsType.fromValue(artifactTypeOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidArtifactTypeError;
-            }
+        if(!artifactTypeOverride.isEmpty() && ArtifactsType.fromValue(artifactTypeOverride) == ArtifactsType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidArtifactTypeError;
         }
         String artifactPackagingOverride = cb.getParameterized(cb.getArtifactPackagingOverride());
-        if(!artifactPackagingOverride.isEmpty()) {
-            try {
-                ArtifactPackaging.fromValue(artifactPackagingOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidArtifactsPackagingError;
-            }
+        if(!artifactPackagingOverride.isEmpty() && ArtifactPackaging.fromValue(artifactPackagingOverride) == ArtifactPackaging.UNKNOWN_TO_SDK_VERSION) {
+            return invalidArtifactsPackagingError;
         }
 
         String artifactNamespaceOverride = cb.getParameterized(cb.getArtifactNamespaceOverride());
-        if(!artifactNamespaceOverride.isEmpty()) {
-            try {
-                ArtifactNamespace.fromValue(artifactNamespaceOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidArtifactNamespaceTypeError;
-            }
+        if(!artifactNamespaceOverride.isEmpty() && ArtifactNamespace.fromValue(artifactNamespaceOverride) == ArtifactNamespace.UNKNOWN_TO_SDK_VERSION) {
+            return invalidArtifactNamespaceTypeError;
         }
 
         String sourceTypeOverride = cb.getParameterized(cb.getSourceTypeOverride());
-        if(!sourceTypeOverride.isEmpty()) {
-            try {
-                SourceType.fromValue(sourceTypeOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidSourceTypeError;
-            }
+        if(!sourceTypeOverride.isEmpty() && SourceType.fromValue(sourceTypeOverride) == SourceType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidSourceTypeError;
         }
 
         String computeTypeOverride = cb.getParameterized(cb.getComputeTypeOverride());
-        if(!computeTypeOverride.isEmpty()) {
-            try {
-                ComputeType.fromValue(computeTypeOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidComputeTypeError;
-            }
+        if(!computeTypeOverride.isEmpty() && ComputeType.fromValue(computeTypeOverride) == ComputeType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidComputeTypeError;
         }
 
         String environmentTypeOverride = cb.getParameterized(cb.getEnvironmentTypeOverride());
-        if(!environmentTypeOverride.isEmpty()) {
-            try {
-                EnvironmentType.fromValue(environmentTypeOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidEnvironmentTypeError;
-            }
+        if(!environmentTypeOverride.isEmpty() && EnvironmentType.fromValue(environmentTypeOverride) == EnvironmentType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidEnvironmentTypeError;
         }
 
         String cacheTypeOverride = cb.getParameterized(cb.getCacheTypeOverride());
-        if(!cacheTypeOverride.isEmpty()) {
-            try {
-                CacheType.fromValue(cacheTypeOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidCacheTypeError;
-            }
+        if(!cacheTypeOverride.isEmpty() && CacheType.fromValue(cacheTypeOverride) == CacheType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidCacheTypeError;
         }
 
         String cacheModesOverride = cb.getParameterized(cb.getCacheModesOverride());
         if (!cacheModesOverride.isEmpty()) {
-            try {
-                for (String mode : cb.listCacheModes(cacheModesOverride)) {
-                    CacheMode.fromValue(mode);
+            for (String mode : cb.listCacheModes(cacheModesOverride)) {
+                if (CacheMode.fromValue(mode) == CacheMode.UNKNOWN_TO_SDK_VERSION) {
+                    return invalidCacheModesError;
                 }
-            } catch (IllegalArgumentException e) {
-                return invalidCacheModesError;
             }
         }
 
         String cloudWatchLogsStatusOverride = cb.getParameterized(cb.getCloudWatchLogsStatusOverride());
-        if(!cloudWatchLogsStatusOverride.isEmpty()) {
-            try {
-                LogsConfigStatusType.fromValue(cloudWatchLogsStatusOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidCloudWatchLogsStatusError;
-            }
+        if(!cloudWatchLogsStatusOverride.isEmpty() && LogsConfigStatusType.fromValue(cloudWatchLogsStatusOverride) == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidCloudWatchLogsStatusError;
         }
 
         String s3LogsStatusOverride = cb.getParameterized(cb.getS3LogsStatusOverride());
-        if(!s3LogsStatusOverride.isEmpty()) {
-            try {
-                LogsConfigStatusType.fromValue(s3LogsStatusOverride);
-            } catch(IllegalArgumentException e) {
-                return invalidS3LogsStatusError;
-            }
+        if(!s3LogsStatusOverride.isEmpty() && LogsConfigStatusType.fromValue(s3LogsStatusOverride) == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) {
+            return invalidS3LogsStatusError;
         }
 
         String timeout = cb.getParameterized(cb.getBuildTimeoutOverride());
@@ -174,7 +141,7 @@ public class CodeBuilderValidation {
 
     public static boolean envVariablesHaveRestrictedPrefix(Collection<EnvironmentVariable> envVariables) {
         for(EnvironmentVariable e: envVariables) {
-            if(e.getName().startsWith("CODEBUILD_")) {
+            if(e.name().startsWith("CODEBUILD_")) {
                 return true;
             }
         }
@@ -182,7 +149,7 @@ public class CodeBuilderValidation {
     }
 
     //CloudWatchMonitor
-    public static boolean checkCloudWatchMonitorConfig(AWSLogsClient client) {
+    public static boolean checkCloudWatchMonitorConfig(CloudWatchLogsClient client) {
         if(client == null) {
             return false;
         }
@@ -190,17 +157,17 @@ public class CodeBuilderValidation {
     }
 
     //S3DataManager
-    public static void checkS3SourceUploaderConfig(FilePath workspace, AmazonS3Client s3Client, String localSourcePath, String workspaceSubdir) throws InvalidInputException {
+    public static void checkS3SourceUploaderConfig(FilePath workspace, S3Client s3Client, String localSourcePath, String workspaceSubdir) throws InvalidInputException {
         if(workspace == null) {
-            throw new InvalidInputException(invalidSourceUploaderNullWorkspaceError);
+            throw InvalidInputException.builder().message(invalidSourceUploaderNullWorkspaceError).build();
         }
 
         if(s3Client == null) {
-            throw new InvalidInputException(invalidSourceUploaderNullS3ClientError);
+            throw InvalidInputException.builder().message(invalidSourceUploaderNullS3ClientError).build();
         }
 
         if((localSourcePath != null && !localSourcePath.isEmpty()) && (workspaceSubdir != null && !workspaceSubdir.isEmpty())) {
-            throw new InvalidInputException(invalidSourceUploaderConfigError);
+            throw InvalidInputException.builder().message(invalidSourceUploaderConfigError).build();
         }
     }
 
@@ -221,20 +188,21 @@ public class CodeBuilderValidation {
 
 
     public static boolean checkBucketIsVersioned(String bucketName, AWSClientFactory awsClientFactory) {
-        final BucketVersioningConfiguration bucketVersioningConfig = awsClientFactory.getS3Client().getBucketVersioningConfiguration(bucketName);
-        return bucketVersioningConfig.getStatus().equals(BucketVersioningConfiguration.ENABLED);
+        final GetBucketVersioningResponse bucketVersioningConfig = awsClientFactory.getS3Client()
+                .getBucketVersioning(GetBucketVersioningRequest.builder().bucket(bucketName).build());
+        return BucketVersioningStatus.ENABLED.toString().equals(bucketVersioningConfig.statusAsString());
     }
 
     //AWSClientFactory
     public static void checkAWSClientFactoryJenkinsCredentialsConfig(String credentialsId) throws InvalidInputException {
         if(credentialsId == null || credentialsId.isEmpty()) {
-            throw new InvalidInputException(invalidCredentialsIdError);
+            throw InvalidInputException.builder().message(invalidCredentialsIdError).build();
         }
     }
 
     public static void checkAWSClientFactoryRegionConfig(String region) throws InvalidInputException {
         if (region.isEmpty()) {
-            throw new InvalidInputException(invalidRegionError);
+            throw InvalidInputException.builder().message(invalidRegionError).build();
         }
     }
 }

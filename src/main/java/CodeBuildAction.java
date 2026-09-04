@@ -14,8 +14,8 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.BuildPhase;
-import com.amazonaws.services.codebuild.model.StatusType;
+import software.amazon.awssdk.services.codebuild.model.BuildPhase;
+import software.amazon.awssdk.services.codebuild.model.StatusType;
 import hudson.model.Action;
 import hudson.model.Run;
 import lombok.Data;
@@ -33,7 +33,11 @@ public class CodeBuildAction implements Action {
     private List<String> logs;
     private String cloudWatchLogsURL;
     private String s3LogsURL;
-    private List<BuildPhase> phases;
+    // v1 -> v2: SDK v2 model types (software.amazon.awssdk.*) are refused by Jenkins' XStream
+    // security class filter, so BuildPhase can no longer be persisted to build.xml. Marking the
+    // field transient keeps all in-memory dashboard behavior identical; the only effect is that
+    // the phase list is not restored across a Jenkins restart.
+    private transient List<BuildPhase> phases;
     private String phaseErrorMessage;
     private String startTime;
     private String currentPhase;
@@ -73,17 +77,23 @@ public class CodeBuildAction implements Action {
 
     // Sets the state of the latest phase to be in_progress (unless the latest phase is completed, in which
     // case the state is set to succeeded).
+    // v1 -> v2: BuildPhase is immutable in SDK v2, so instead of mutating the phase in place we rebuild
+    // it via toBuilder() and replace the last element in a fresh list.
     private void formatLatestPhase() {
         if(phases != null && !phases.isEmpty()) {
             BuildPhase latest = phases.get(phases.size() - 1);
-            if(latest.getPhaseStatus() == null) {
-                if(latest.getPhaseType().equals("COMPLETED")) {
-                    latest.setPhaseStatus(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH));
+            BuildPhase.Builder builder = latest.toBuilder();
+            if(latest.phaseStatusAsString() == null) {
+                if("COMPLETED".equals(latest.phaseTypeAsString())) {
+                    builder.phaseStatus(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH));
                 } else {
-                    latest.setPhaseStatus("IN PROGRESS");
+                    builder.phaseStatus("IN PROGRESS");
                 }
             }
-            latest.setDurationInSeconds(0L);
+            builder.durationInSeconds(0L);
+            List<BuildPhase> updated = new ArrayList<>(phases);
+            updated.set(updated.size() - 1, builder.build());
+            phases = updated;
         }
     }
 
@@ -101,20 +111,20 @@ public class CodeBuildAction implements Action {
 
     //return the finish time of the build.
     public String getFinishTime() {
-        if(getCurrentBuildPhase().getPhaseType().equals("COMPLETED")) {
-            return getCurrentBuildPhase().getStartTime().toString();
+        if(getCurrentBuildPhase().phaseTypeAsString().equals("COMPLETED")) {
+            return getCurrentBuildPhase().startTime().toString();
         } else {
             return "-";
         }
     }
 
     public String getCurrentPhase() {
-        return getCurrentBuildPhase().getPhaseType();
+        return getCurrentBuildPhase().phaseTypeAsString();
     }
 
     private BuildPhase getCurrentBuildPhase() {
         if(phases == null || phases.isEmpty()) {
-            return new BuildPhase().withPhaseType("-");
+            return BuildPhase.builder().phaseType("-").build();
         }
         return phases.get(phases.size()-1);
     }
@@ -124,9 +134,9 @@ public class CodeBuildAction implements Action {
         if(errorPhase == null) {
             return "";
         } else {
-            if (!errorPhase.getContexts().isEmpty()) {
-                return errorPhase.getContexts().get(0).getMessage().replace("'", "").replace("\n", "") + " (status code: " +
-                        errorPhase.getContexts().get(0).getStatusCode() + ")";
+            if (!errorPhase.contexts().isEmpty()) {
+                return errorPhase.contexts().get(0).message().replace("'", "").replace("\n", "") + " (status code: " +
+                        errorPhase.contexts().get(0).statusCode() + ")";
             } else {
                 return "";
             }
@@ -138,14 +148,14 @@ public class CodeBuildAction implements Action {
         if(errorPhase == null) {
             return "";
         } else {
-            return errorPhase.getPhaseType();
+            return errorPhase.phaseTypeAsString();
         }
     }
 
     private BuildPhase getErrorPhase() {
         if(phases != null) {
             for(BuildPhase p: phases) {
-                String status = p.getPhaseStatus();
+                String status = p.phaseStatusAsString();
                 if(status != null) {
                     if(status.equals(StatusType.FAULT.toString().toUpperCase(Locale.ENGLISH)) ||
                         status.equals("CLIENT_ERROR") ||

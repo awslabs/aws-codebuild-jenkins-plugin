@@ -11,8 +11,8 @@
  *     See the License for the specific language governing permissions and limitations under the License.
  */
 
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +21,9 @@ import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
 public class ProjectFactory {
 
-    private AWSCodeBuildClient cbClient;
+    private CodeBuildClient cbClient;
 
-    public ProjectFactory(AWSCodeBuildClient cbClient) {
+    public ProjectFactory(CodeBuildClient cbClient) {
         this.cbClient = cbClient;
     }
 
@@ -34,41 +34,43 @@ public class ProjectFactory {
                                 String encryptionKey) throws Exception {
 
         ListProjectsRequest lpRequest;
-        ListProjectsResult lpResult;
+        ListProjectsResponse lpResult;
 
         List<String> projects = new ArrayList<String>();
         String nextToken = null;
         do {
-            lpRequest = new ListProjectsRequest().withNextToken(nextToken);
+            lpRequest = ListProjectsRequest.builder().nextToken(nextToken).build();
             lpResult = cbClient.listProjects(lpRequest);
-            nextToken = lpResult.getNextToken();
-            projects.addAll(lpResult.getProjects());
+            nextToken = lpResult.nextToken();
+            projects.addAll(lpResult.projects());
         } while(nextToken != null);
 
         if(projects.contains(projectName)) {
-            UpdateProjectResult upResult = cbClient.updateProject(new UpdateProjectRequest()
-                    .withName(projectName)
-                    .withDescription(description)
-                    .withSource(source)
-                    .withArtifacts(artifacts)
-                    .withEnvironment(environment)
-                    .withServiceRole(serviceIAMRole)
-                    .withTimeoutInMinutes(parseInt(timeout))
-                    .withEncryptionKey(encryptionKey));
+            UpdateProjectResponse upResult = cbClient.updateProject(UpdateProjectRequest.builder()
+                    .name(projectName)
+                    .description(description)
+                    .source(source)
+                    .artifacts(artifacts)
+                    .environment(environment)
+                    .serviceRole(serviceIAMRole)
+                    .timeoutInMinutes(parseInt(timeout))
+                    .encryptionKey(encryptionKey)
+                    .build());
 
-            return upResult.getProject().getName();
+            return upResult.project().name();
         } else {
-            CreateProjectResult cpResult = cbClient.createProject(new CreateProjectRequest()
-                    .withName(projectName)
-                    .withDescription(description)
-                    .withSource(source)
-                    .withArtifacts(artifacts)
-                    .withEnvironment(environment)
-                    .withServiceRole(serviceIAMRole)
-                    .withTimeoutInMinutes(parseInt(timeout))
-                    .withEncryptionKey(encryptionKey));
+            CreateProjectResponse cpResult = cbClient.createProject(CreateProjectRequest.builder()
+                    .name(projectName)
+                    .description(description)
+                    .source(source)
+                    .artifacts(artifacts)
+                    .environment(environment)
+                    .serviceRole(serviceIAMRole)
+                    .timeoutInMinutes(parseInt(timeout))
+                    .encryptionKey(encryptionKey)
+                    .build());
 
-            return cpResult.getProject().getName();
+            return cpResult.project().name();
         }
     }
 

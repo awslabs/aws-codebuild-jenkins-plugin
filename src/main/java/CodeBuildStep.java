@@ -15,11 +15,12 @@
  */
 
 import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
-import com.amazonaws.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.model.*;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.inject.Inject;
 import enums.*;
 import hudson.*;
@@ -36,6 +37,8 @@ import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepEx
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.AncestorInPath;
 
 import java.util.HashSet;
 import java.util.List;
@@ -427,6 +430,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for(ArtifactsType t: ArtifactsType.values()) {
+                if(t == ArtifactsType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -437,6 +441,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for(ArtifactNamespace t: ArtifactNamespace.values()) {
+                if(t == ArtifactNamespace.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -447,6 +452,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ArtifactPackaging t : ArtifactPackaging.values()) {
+                if(t == ArtifactPackaging.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -477,7 +483,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (SourceType t : SourceType.values()) {
-                if(!t.equals(SourceType.CODEPIPELINE)) {
+                if(t != SourceType.UNKNOWN_TO_SDK_VERSION && !t.equals(SourceType.CODEPIPELINE)) {
                     selections.add(t.toString());
                 }
             }
@@ -489,6 +495,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ComputeType t : ComputeType.values()) {
+                if(t == ComputeType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -499,6 +506,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (CacheType t : CacheType.values()) {
+                if(t == CacheType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -509,6 +517,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -519,6 +528,7 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -538,13 +548,23 @@ public class CodeBuildStep extends AbstractStepImpl {
             final ListBoxModel selections = new ListBoxModel();
 
             for (EnvironmentType t : EnvironmentType.values()) {
+                if(t == EnvironmentType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
             return selections;
         }
 
-        public ListBoxModel doFillCredentialsIdItems() {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
+            // SECURITY-3773: require permission before enumerating credentials IDs
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return new StandardListBoxModel().includeCurrentValue(credentialsId);
+                }
+            } else if (!item.hasPermission(Item.EXTENDED_READ) && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                return new StandardListBoxModel().includeCurrentValue(credentialsId);
+            }
+
             final ListBoxModel selections = new ListBoxModel();
 
             SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
@@ -602,6 +622,7 @@ public class CodeBuildStep extends AbstractStepImpl {
 
             // ENABLED/DISABLED
             for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");

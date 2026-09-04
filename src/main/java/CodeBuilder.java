@@ -16,14 +16,15 @@
 
 import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
 import com.amazonaws.codebuild.jenkinsplugin.Validation;
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.codebuild.model.Build;
-import com.amazonaws.services.s3.AmazonS3Client;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.model.Build;
+import software.amazon.awssdk.services.s3.S3Client;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import enums.*;
 import hudson.*;
 import hudson.model.*;
@@ -41,9 +42,10 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -112,7 +114,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     @Getter private String buildTimeoutOverride;
     @Getter private String cwlStreamingDisabled;
 
-    @Getter private final CodeBuildResult codeBuildResult;
+    // Not final: XStream/readResolve() deserialization of a saved job config bypasses the
+    // constructor, leaving this null. perform() and failBuild() below defensively initialize it
+    // so an early failure (e.g. credential resolution) never NPEs while masking the real error.
+    @Getter private CodeBuildResult codeBuildResult;
     @Getter private String exceptionFailureMode;
     @Getter private String downloadArtifacts;
     @Getter private String downloadArtifactsRelativePath;
@@ -133,6 +138,10 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     private int batchGetBuildsCalls;
     private DescriptorImpl descriptor;
+
+    // Fix #5(c): cap the post-interrupt stop-wait loop (~2 minutes at 5s per iteration) so a build
+    // that never reports COMPLETED after a StopBuild can't spin the polling thread forever.
+    private static final int MAX_STOP_WAIT_ITERATIONS = 24;
 
 
     @DataBoundConstructor
@@ -259,7 +268,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return this;
     }
 
-    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener, StepContext stepContext) throws InterruptedException, IOException {
+    public void perform(@NonNull Run<?, ?> build, @NonNull FilePath ws, @NonNull Launcher launcher, @NonNull TaskListener listener, StepContext stepContext) throws InterruptedException, IOException {
         this.stepContext = stepContext;
         perform(build, ws, launcher, listener);
     }
@@ -268,7 +277,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
      * This is the Jenkins method that executes the actual build.
      */
     @Override
-    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath ws, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+    public void perform(@NonNull Run<?, ?> build, @NonNull FilePath ws, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
+        // Ensure a result holder exists before any code that can throw. On the deserialized-job
+        // path readResolve() does not run the constructor's initializer, so this may still be null
+        // here; without this, an early failure (e.g. credentials) would NPE in failBuild() and
+        // swallow the real error message.
+        if (this.codeBuildResult == null) {
+            this.codeBuildResult = new CodeBuildResult();
+        }
         descriptor = getDescriptor();
         envVars = build.getEnvironment(listener);
 
@@ -317,7 +333,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
         LoggingHelper.log(listener, awsClientFactory.getCredentialsDescriptor());
 
-        final AWSCodeBuildClient cbClient;
+        final CodeBuildClient cbClient;
         try {
             cbClient = awsClientFactory.getCodeBuildClient();
         } catch (Exception e) {
@@ -325,51 +341,55 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             return;
         }
 
-        StartBuildRequest startBuildRequest = new StartBuildRequest().withProjectName(getParameterized(projectName)).
-                withEnvironmentVariablesOverride(codeBuildEnvVars).withBuildspecOverride(getParameterized(buildSpecFile)).
-                withTimeoutInMinutesOverride(parseInt(getParameterized(buildTimeoutOverride)));
+        // v1 -> v2: StartBuildRequest is immutable in SDK v2, so the request is assembled with a
+        // builder (conditional withers/setters become conditional builder calls) and built once
+        // just before the StartBuild call.
+        StartBuildRequest.Builder startBuildRequestBuilder = StartBuildRequest.builder().
+                projectName(getParameterized(projectName)).
+                environmentVariablesOverride(codeBuildEnvVars).buildspecOverride(getParameterized(buildSpecFile)).
+                timeoutInMinutesOverride(parseInt(getParameterized(buildTimeoutOverride)));
 
         ProjectArtifacts artifactsOverride = generateStartBuildArtifactOverride();
         if(artifactsOverride != null) {
-            startBuildRequest.setArtifactsOverride(artifactsOverride);
+            startBuildRequestBuilder.artifactsOverride(artifactsOverride);
         }
 
         ProjectCache cacheOverride = generateStartBuildCacheOverride();
         if(cacheOverride != null) {
-            startBuildRequest.setCacheOverride(cacheOverride);
+            startBuildRequestBuilder.cacheOverride(cacheOverride);
         }
 
         LogsConfig logsConfigOverride = generateStartBuildLogsConfigOverride();
         if(logsConfigOverride != null) {
-            startBuildRequest.setLogsConfigOverride(logsConfigOverride);
+            startBuildRequestBuilder.logsConfigOverride(logsConfigOverride);
         }
 
         if(!getParameterized(environmentTypeOverride).isEmpty()) {
-            startBuildRequest.setEnvironmentTypeOverride(getParameterized(environmentTypeOverride));
+            startBuildRequestBuilder.environmentTypeOverride(getParameterized(environmentTypeOverride));
         }
 
         if(!getParameterized(imageOverride).isEmpty()) {
-            startBuildRequest.setImageOverride(getParameterized(imageOverride));
+            startBuildRequestBuilder.imageOverride(getParameterized(imageOverride));
         }
 
         if(!getParameterized(computeTypeOverride).isEmpty()) {
-            startBuildRequest.setComputeTypeOverride(getParameterized(computeTypeOverride));
+            startBuildRequestBuilder.computeTypeOverride(getParameterized(computeTypeOverride));
         }
 
         if(!getParameterized(certificateOverride).isEmpty()) {
-            startBuildRequest.setCertificateOverride(getParameterized(certificateOverride));
+            startBuildRequestBuilder.certificateOverride(getParameterized(certificateOverride));
         }
 
         if(!getParameterized(serviceRoleOverride).isEmpty()) {
-            startBuildRequest.setServiceRoleOverride(getParameterized(serviceRoleOverride));
+            startBuildRequestBuilder.serviceRoleOverride(getParameterized(serviceRoleOverride));
         }
 
         if(!getParameterized(insecureSslOverride).isEmpty()) {
-            startBuildRequest.setInsecureSslOverride(Boolean.parseBoolean(getParameterized(insecureSslOverride)));
+            startBuildRequestBuilder.insecureSslOverride(Boolean.parseBoolean(getParameterized(insecureSslOverride)));
         }
 
         if(!getParameterized(privilegedModeOverride).isEmpty()) {
-            startBuildRequest.setPrivilegedModeOverride(Boolean.parseBoolean(getParameterized(privilegedModeOverride)));
+            startBuildRequestBuilder.privilegedModeOverride(Boolean.parseBoolean(getParameterized(privilegedModeOverride)));
         }
 
         List<ProjectSource> secondarySources;
@@ -386,15 +406,15 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
 
         if(secondarySources != null && !secondarySources.isEmpty()) {
-            startBuildRequest.setSecondarySourcesOverride(secondarySources);
+            startBuildRequestBuilder.secondarySourcesOverride(secondarySources);
         }
 
         if(secondarySourceVersions != null && !secondarySourceVersions.isEmpty()) {
-            startBuildRequest.setSecondarySourcesVersionOverride(secondarySourceVersions);
+            startBuildRequestBuilder.secondarySourcesVersionOverride(secondarySourceVersions);
         }
 
         if(secondaryArtifacts != null && !secondaryArtifacts.isEmpty()) {
-            startBuildRequest.setSecondaryArtifactsOverride(secondaryArtifacts);
+            startBuildRequestBuilder.secondaryArtifactsOverride(secondaryArtifacts);
         }
 
         if(SourceControlType.JenkinsSource.toString().equals(getParameterized(sourceControlType))) {
@@ -440,40 +460,40 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                 return;
             }
 
-            startBuildRequest.setSourceVersion(uploadedSourceVersion);
+            startBuildRequestBuilder.sourceVersion(uploadedSourceVersion);
             logStartBuildMessage(listener, uploadedSourceVersion);
 
         } else {
-            startBuildRequest.setSourceVersion(getParameterized(sourceVersion));
-            startBuildRequest.setGitCloneDepthOverride(generateStartBuildGitCloneDepthOverride());
+            startBuildRequestBuilder.sourceVersion(getParameterized(sourceVersion));
+            startBuildRequestBuilder.gitCloneDepthOverride(generateStartBuildGitCloneDepthOverride());
             if(!getParameterized(reportBuildStatusOverride).isEmpty()) {
-                startBuildRequest.setReportBuildStatusOverride(Boolean.parseBoolean(getParameterized(reportBuildStatusOverride)));
+                startBuildRequestBuilder.reportBuildStatusOverride(Boolean.parseBoolean(getParameterized(reportBuildStatusOverride)));
             }
 
             logStartBuildMessage(listener, getParameterized(sourceVersion));
         }
 
         if(!getParameterized(sourceTypeOverride).isEmpty()) {
-            startBuildRequest.setSourceTypeOverride(getParameterized(sourceTypeOverride));
+            startBuildRequestBuilder.sourceTypeOverride(getParameterized(sourceTypeOverride));
             SourceAuth auth = generateStartBuildSourceAuthOverride(getParameterized(sourceTypeOverride));
             if(auth != null) {
-                startBuildRequest.setSourceAuthOverride(auth);
+                startBuildRequestBuilder.sourceAuthOverride(auth);
             }
         }
         if(!getParameterized(sourceLocationOverride).isEmpty()) {
-            startBuildRequest.setSourceLocationOverride(getParameterized(sourceLocationOverride));
+            startBuildRequestBuilder.sourceLocationOverride(getParameterized(sourceLocationOverride));
         }
 
-        final StartBuildResult sbResult;
+        final StartBuildResponse sbResult;
         try {
-            sbResult = cbClient.startBuild(startBuildRequest);
+            sbResult = cbClient.startBuild(startBuildRequestBuilder.build());
         } catch (Exception e) {
             failBuild(build, listener, "Error when calling CodeBuild StartBuild: ", e.getMessage());
             return;
         }
 
-        Build currentBuild = new Build().withBuildStatus(StatusType.IN_PROGRESS);
-        String buildId = sbResult.getBuild().getId();
+        Build currentBuild = Build.builder().buildStatus(StatusType.IN_PROGRESS).build();
+        String buildId = sbResult.build().id();
         LoggingHelper.log(listener, "Build id: " + buildId);
         LoggingHelper.log(listener, "CodeBuild dashboard: " + generateDashboardURL(buildId));
 
@@ -484,7 +504,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         //poll buildResult for build status until it's complete.
         do {
             try {
-                List<Build> buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
+                List<Build> buildsForId = cbClient.batchGetBuilds(BatchGetBuildsRequest.builder().ids(buildId).build()).builds();
 
                 if(buildsForId.size() != 1) {
                     throw new Exception("Multiple builds mapped to this build id.");
@@ -496,32 +516,32 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     action = new CodeBuildAction(build);
 
                     //only need to set these once, the others will need to be updated below as the build progresses.
-                    String buildARN = currentBuild.getArn();
-                    codeBuildResult.setBuildInformation(currentBuild.getId(), buildARN);
+                    String buildARN = currentBuild.arn();
+                    codeBuildResult.setBuildInformation(currentBuild.id(), buildARN);
 
                     action.setBuildId(buildId);
                     action.setBuildARN(buildARN);
-                    action.setStartTime(currentBuild.getStartTime().toString());
+                    action.setStartTime(currentBuild.startTime().toString());
 
-                    ProjectSource source = currentBuild.getSource();
+                    ProjectSource source = currentBuild.source();
                     if(source != null) {
-                        action.setSourceType(source.getType());
-                        action.setSourceLocation(source.getLocation());
+                        action.setSourceType(source.typeAsString());
+                        action.setSourceLocation(source.location());
 
-                        if(currentBuild.getSourceVersion() == null) {
+                        if(currentBuild.sourceVersion() == null) {
                             action.setSourceVersion("");
                         } else {
-                            action.setSourceVersion(currentBuild.getSourceVersion());
+                            action.setSourceVersion(currentBuild.sourceVersion());
                         }
 
-                        Integer depth = source.getGitCloneDepth();
+                        Integer depth = source.gitCloneDepth();
                         if(depth == null || depth == 0) {
                             action.setGitCloneDepth("Full");
                         } else {
                             action.setGitCloneDepth(String.valueOf(depth));
                         }
 
-                        Boolean status = source.getReportBuildStatus();
+                        Boolean status = source.reportBuildStatus();
                         if(status != null) {
                             action.setReportBuildStatus(String.valueOf(status));
                         }
@@ -542,18 +562,24 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             } catch(Exception e) {
                 if(e.getClass().equals(InterruptedException.class)) {
                     //Request to stop Jenkins build has been made. First make sure the build is stoppable
-                    List<Build> buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
+                    List<Build> buildsForId = cbClient.batchGetBuilds(BatchGetBuildsRequest.builder().ids(buildId).build()).builds();
                     currentBuild = buildsForId.get(0);
-                    if(!currentBuild.getCurrentPhase().equals(BuildPhaseType.COMPLETED.toString())) {
-                        cbClient.stopBuild(new StopBuildRequest().withId(buildId));
-                        //Wait for the build to actually stop
+                    // Constant-first, null-safe: currentPhase() can be null on a freshly re-fetched build.
+                    if(!BuildPhaseType.COMPLETED.toString().equals(currentBuild.currentPhase())) {
+                        cbClient.stopBuild(StopBuildRequest.builder().id(buildId).build());
+                        //Wait for the build to actually stop, bounded so a stuck StopBuild can't loop forever.
+                        int stopWaitIterations = 0;
                         do {
-                            buildsForId = cbClient.batchGetBuilds(new BatchGetBuildsRequest().withIds(buildId)).getBuilds();
+                            buildsForId = cbClient.batchGetBuilds(BatchGetBuildsRequest.builder().ids(buildId).build()).builds();
                             currentBuild = buildsForId.get(0);
                             Thread.sleep(5000L);
-                            logMonitor.pollForLogs(listener);
+                            // logMonitor is null when the interrupt arrived before the first poll initialized it.
+                            if (logMonitor != null) {
+                                logMonitor.pollForLogs(listener);
+                            }
                             updateDashboard(currentBuild, action, logMonitor, listener);
-                        } while (!currentBuild.getCurrentPhase().equals(BuildPhaseType.COMPLETED.toString()));
+                        } while (!BuildPhaseType.COMPLETED.toString().equals(currentBuild.currentPhase())
+                                && ++stopWaitIterations < MAX_STOP_WAIT_ITERATIONS);
                     }
                     if (action != null) {
                         action.setJenkinsBuildSucceeds(false);
@@ -561,7 +587,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     this.codeBuildResult.setStopped();
                     build.setResult(Result.ABORTED);
                     return;
-                } else if(e.getMessage().contains(CodeBuildClientRetryCondition.HTTP_ERROR_MESSAGE)) {
+                } else if(e.getMessage() != null && e.getMessage().contains(CodeBuildClientRetryCondition.HTTP_ERROR_MESSAGE)) {
                     Thread.sleep(getSleepTime(descriptor));
                     continue;
                 } else {
@@ -572,27 +598,27 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
                     return;
                 }
             }
-        } while(currentBuild.getBuildStatus().equals(StatusType.IN_PROGRESS.toString()));
+        } while(currentBuild.buildStatusAsString().equals(StatusType.IN_PROGRESS.toString()));
 
         // Read artifacts location once the build is complete and artifact name finalized
-        codeBuildResult.setArtifactsLocation(currentBuild.getArtifacts() != null ? currentBuild.getArtifacts().getLocation() : null);
+        codeBuildResult.setArtifactsLocation(currentBuild.artifacts() != null ? currentBuild.artifacts().location() : null);
 
         // Download build artifacts
         if(downloadArtifacts.equalsIgnoreCase(Boolean.TRUE.toString())) {
             downloadArtifactsFromS3(listener, awsClientFactory.getS3Client(), currentBuild, this.getArtifactRoot(ws));
         }
-        if(currentBuild.getBuildStatus().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
+        if(currentBuild.buildStatusAsString().equals(StatusType.SUCCEEDED.toString().toUpperCase(Locale.ENGLISH))) {
             action.setJenkinsBuildSucceeds(true);
             this.codeBuildResult.setSuccess();
             build.setResult(Result.SUCCESS);
         } else {
             action.setJenkinsBuildSucceeds(false);
-            failBuild(build, listener, "Build " + currentBuild.getId() + " failed", action.getPhaseErrorMessage());
+            failBuild(build, listener, "Build " + currentBuild.id() + " failed", action.getPhaseErrorMessage());
         }
         return;
     }
 
-    private void downloadArtifactsFromS3(@Nonnull TaskListener listener, AmazonS3Client s3Client, Build build, String artifactRoot) {
+    private void downloadArtifactsFromS3(@NonNull TaskListener listener, S3Client s3Client, Build build, String artifactRoot) {
         try {
             S3Downloader s3Downloader = new S3Downloader(s3Client);
             s3Downloader.downloadBuildArtifacts(listener, build, artifactRoot);
@@ -616,16 +642,16 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     // Calls BatchGetProjects to get the source metadata for the configured project.
     // Validates that the project source type is S3 and returns the source location.
     // @param cbClient: the CodeBuild client used by this build.
-    private String retrieveProjectSourceInfo(AWSCodeBuildClient cbClient) throws RuntimeException, InvalidInputException {
-        BatchGetProjectsResult bgpResult = cbClient.batchGetProjects(
-                new BatchGetProjectsRequest().withNames(getParameterized(projectName)));
-        if(bgpResult.getProjects().isEmpty()) {
+    private String retrieveProjectSourceInfo(CodeBuildClient cbClient) throws RuntimeException, InvalidInputException {
+        BatchGetProjectsResponse bgpResult = cbClient.batchGetProjects(
+                BatchGetProjectsRequest.builder().names(getParameterized(projectName)).build());
+        if(bgpResult.projects().isEmpty()) {
             throw new RuntimeException("Project " + getParameterized(projectName) + " does not exist.");
         } else {
-            String projectSourceLocation = bgpResult.getProjects().get(0).getSource().getLocation();
-            String projectSourceType = bgpResult.getProjects().get(0).getSource().getType();
+            String projectSourceLocation = bgpResult.projects().get(0).source().location();
+            String projectSourceType = bgpResult.projects().get(0).source().typeAsString();
             if(!CodeBuilderValidation.checkSourceTypeS3(projectSourceType)) {
-                throw new InvalidInputException(jenkinsSourceProjectSourceTypeError);
+                throw InvalidInputException.builder().message(jenkinsSourceProjectSourceTypeError).build();
             }
 
             return projectSourceLocation;
@@ -634,34 +660,37 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
     // Performs an update of build data to the codebuild dashboard.
     // @param action: the entity representing the dashboard.
-    private void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor, TaskListener listener) {
+    void updateDashboard(Build b, CodeBuildAction action, CloudWatchMonitor logMonitor, TaskListener listener) {
         if(action != null) {
-            action.setCurrentStatus(b.getBuildStatus());
-            logMonitor.setLogsLocation(b.getLogs());
+            action.setCurrentStatus(b.buildStatusAsString());
+            logMonitor.setLogsLocation(b.logs());
             logMonitor.pollForLogs(listener);
             action.updateLogs(logMonitor.getLatestLogs());
 
-            action.setPhases(b.getPhases());
-            action.setS3ArtifactURL(generateS3ArtifactURL(artifactTypeOverride, b.getArtifacts().getLocation()));
-            action.setS3BucketName(b.getArtifacts().getLocation());
+            action.setPhases(b.phases());
+            // v2: artifacts() is null until the ARTIFACTS phase while the build is IN_PROGRESS;
+            // mirror the null-guard used when reading the final artifacts location after the loop.
+            String artifactLocation = b.artifacts() != null ? b.artifacts().location() : null;
+            action.setS3ArtifactURL(generateS3ArtifactURL(artifactTypeOverride, artifactLocation));
+            action.setS3BucketName(artifactLocation);
 
             if(logMonitor.getLogsLocation() != null) {
                 LogsLocation logsLocation = logMonitor.getLogsLocation();
 
-                if(logsLocation.getGroupName() != null && logsLocation.getStreamName() != null && logsLocation.getDeepLink() != null
+                if(logsLocation.groupName() != null && logsLocation.streamName() != null && logsLocation.deepLink() != null
                     && action.getCloudWatchLogsURL().equals("")) {
-                    String cloudWatchLogsURL = logsLocation.getDeepLink();
+                    String cloudWatchLogsURL = logsLocation.deepLink();
                     action.setCloudWatchLogsURL(cloudWatchLogsURL);
                     LoggingHelper.log(listener, "CloudWatch dashboard: " + cloudWatchLogsURL);
                 }
 
-                if(logsLocation.getS3DeepLink() != null && b.getPhases() != null && action.getS3LogsURL().equals("")) {
-                    List<BuildPhase> phases = b.getPhases();
+                if(logsLocation.s3DeepLink() != null && b.phases() != null && action.getS3LogsURL().equals("")) {
+                    List<BuildPhase> phases = b.phases();
                     for(BuildPhase phase : phases) {
-                        if(phase.getPhaseType() != null && phase.getPhaseType().equals(BuildPhaseType.UPLOAD_ARTIFACTS.toString())) {
-                            if(phase.getContexts() != null && phase.getContexts().get(0) != null && phase.getContexts().get(0).getMessage() != null
-                                && !phase.getContexts().get(0).getMessage().contains("Error uploading logs:")) {
-                                String s3LogsURL = logsLocation.getS3DeepLink();
+                        if(phase.phaseTypeAsString() != null && phase.phaseTypeAsString().equals(BuildPhaseType.UPLOAD_ARTIFACTS.toString())) {
+                            if(phase.contexts() != null && phase.contexts().get(0) != null && phase.contexts().get(0).message() != null
+                                && !phase.contexts().get(0).message().contains("Error uploading logs:")) {
+                                String s3LogsURL = logsLocation.s3DeepLink();
                                 action.setS3LogsURL(s3LogsURL);
                                 LoggingHelper.log(listener, "S3 logs location: " + s3LogsURL);
                             }
@@ -831,62 +860,67 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return Integer.parseInt(depth);
     }
 
+    // v1 -> v2: ProjectArtifacts is immutable; setters become builder calls.
     private ProjectArtifacts generateStartBuildArtifactOverride() {
-        ProjectArtifacts artifacts = new ProjectArtifacts();
+        ProjectArtifacts.Builder artifacts = ProjectArtifacts.builder();
         boolean overridesSpecified = false;
         if(!getParameterized(artifactTypeOverride).isEmpty()) {
-            artifacts.setType(getParameterized(artifactTypeOverride));
+            artifacts.type(getParameterized(artifactTypeOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactLocationOverride).isEmpty()) {
-            artifacts.setLocation(getParameterized(artifactLocationOverride));
+            artifacts.location(getParameterized(artifactLocationOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactNameOverride).isEmpty()) {
-            artifacts.setName(getParameterized(artifactNameOverride));
+            artifacts.name(getParameterized(artifactNameOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactNamespaceOverride).isEmpty()) {
-            artifacts.setNamespaceType(getParameterized(artifactNamespaceOverride));
+            artifacts.namespaceType(getParameterized(artifactNamespaceOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactPackagingOverride).isEmpty()) {
-            artifacts.setPackaging(getParameterized(artifactPackagingOverride));
+            artifacts.packaging(getParameterized(artifactPackagingOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactPathOverride).isEmpty()) {
-            artifacts.setPath(getParameterized(artifactPathOverride));
+            artifacts.path(getParameterized(artifactPathOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(artifactEncryptionDisabledOverride).isEmpty()) {
-            artifacts.setEncryptionDisabled(Boolean.parseBoolean(artifactEncryptionDisabledOverride));
+            artifacts.encryptionDisabled(Boolean.parseBoolean(artifactEncryptionDisabledOverride));
             overridesSpecified = true;
         }
         if(!getParameterized(overrideArtifactName).isEmpty()) {
-            artifacts.setOverrideArtifactName(Boolean.parseBoolean(overrideArtifactName));
+            artifacts.overrideArtifactName(Boolean.parseBoolean(overrideArtifactName));
             overridesSpecified = true;
         }
 
-        return overridesSpecified ? artifacts : null;
+        return overridesSpecified ? artifacts.build() : null;
     }
 
+    // v1 -> v2: ProjectCache is immutable; setters become builder calls. The old
+    // cache.getType().equals("LOCAL") read-back is done off a local variable since the v2 builder
+    // is write-only (this also avoids the latent NPE when the type was never set).
     private ProjectCache generateStartBuildCacheOverride() {
-        ProjectCache cache = new ProjectCache();
+        ProjectCache.Builder cache = ProjectCache.builder();
         boolean overridesSpecified = false;
-        if(!getParameterized(cacheTypeOverride).isEmpty()) {
-            cache.setType(getParameterized(cacheTypeOverride));
+        String cacheType = getParameterized(cacheTypeOverride);
+        if(!cacheType.isEmpty()) {
+            cache.type(cacheType);
             overridesSpecified = true;
         }
         List<String> cacheModes = listCacheModes(getParameterized(cacheModesOverride));
-        if(!cacheModes.isEmpty() && cache.getType().equals("LOCAL")) {
-            cache.setModes(cacheModes);
+        if(!cacheModes.isEmpty() && cacheType.equals("LOCAL")) {
+            cache.modesWithStrings(cacheModes);
             overridesSpecified = true;
         }
         if(!getParameterized(cacheLocationOverride).isEmpty()) {
-            cache.setLocation(getParameterized(cacheLocationOverride));
+            cache.location(getParameterized(cacheLocationOverride));
             overridesSpecified = true;
         }
-        return overridesSpecified ? cache : null;
+        return overridesSpecified ? cache.build() : null;
     }
 
     // Given a String representing cache modes, returns a list of String
@@ -899,59 +933,60 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         return Arrays.asList(cacheModes.split("\\s*,\\s*"));
     }
 
+    // v1 -> v2: LogsConfig/CloudWatchLogsConfig/S3LogsConfig are immutable; setters become builder calls.
     private LogsConfig generateStartBuildLogsConfigOverride() {
-        LogsConfig logsConfig = new LogsConfig();
-        CloudWatchLogsConfig cloudWatchLogsConfig = new CloudWatchLogsConfig();
-        S3LogsConfig s3LogsConfig = new S3LogsConfig();
+        CloudWatchLogsConfig.Builder cloudWatchLogsConfig = CloudWatchLogsConfig.builder();
+        S3LogsConfig.Builder s3LogsConfig = S3LogsConfig.builder();
 
         boolean overridesCloudWatchLogsSpecified = false;
         boolean overridesS3LogsSpecified = false;
 
         if(!getParameterized(cloudWatchLogsStatusOverride).isEmpty()) {
-            cloudWatchLogsConfig.setStatus(getParameterized(cloudWatchLogsStatusOverride));
+            cloudWatchLogsConfig.status(getParameterized(cloudWatchLogsStatusOverride));
             overridesCloudWatchLogsSpecified = true;
         }
         if(!getParameterized(cloudWatchLogsGroupNameOverride).isEmpty()) {
-            cloudWatchLogsConfig.setGroupName(getParameterized(cloudWatchLogsGroupNameOverride));
+            cloudWatchLogsConfig.groupName(getParameterized(cloudWatchLogsGroupNameOverride));
             overridesCloudWatchLogsSpecified = true;
         }
         if(!getParameterized(cloudWatchLogsStreamNameOverride).isEmpty()) {
-            cloudWatchLogsConfig.setStreamName(getParameterized(cloudWatchLogsStreamNameOverride));
+            cloudWatchLogsConfig.streamName(getParameterized(cloudWatchLogsStreamNameOverride));
             overridesCloudWatchLogsSpecified = true;
         }
 
         if(!getParameterized(s3LogsStatusOverride).isEmpty()) {
-            s3LogsConfig.setStatus(getParameterized(s3LogsStatusOverride));
+            s3LogsConfig.status(getParameterized(s3LogsStatusOverride));
             overridesS3LogsSpecified = true;
         }
         if(!getParameterized(s3LogsEncryptionDisabledOverride).isEmpty()) {
-            s3LogsConfig.setEncryptionDisabled(Boolean.parseBoolean(getParameterized(s3LogsEncryptionDisabledOverride)));
+            s3LogsConfig.encryptionDisabled(Boolean.parseBoolean(getParameterized(s3LogsEncryptionDisabledOverride)));
             overridesS3LogsSpecified = true;
         }
         if(!getParameterized(s3LogsLocationOverride).isEmpty()) {
-            s3LogsConfig.setLocation(getParameterized(s3LogsLocationOverride));
+            s3LogsConfig.location(getParameterized(s3LogsLocationOverride));
             overridesS3LogsSpecified = true;
         }
 
+        LogsConfig.Builder logsConfig = LogsConfig.builder();
         if(overridesCloudWatchLogsSpecified) {
-            logsConfig.setCloudWatchLogs(cloudWatchLogsConfig);
+            logsConfig.cloudWatchLogs(cloudWatchLogsConfig.build());
         }
         if(overridesS3LogsSpecified) {
-            logsConfig.setS3Logs(s3LogsConfig);
+            logsConfig.s3Logs(s3LogsConfig.build());
         }
 
-        return overridesCloudWatchLogsSpecified || overridesS3LogsSpecified ? logsConfig : null;
+        return overridesCloudWatchLogsSpecified || overridesS3LogsSpecified ? logsConfig.build() : null;
     }
 
     private SourceAuth generateStartBuildSourceAuthOverride(String sourceType) {
         SourceAuth auth = null;
         if(sourceType.equals(SourceType.GITHUB.toString()) || sourceType.equals(SourceType.BITBUCKET.toString())) {
-            auth = new SourceAuth().withType(SourceAuthType.OAUTH.toString());
+            auth = SourceAuth.builder().type(SourceAuthType.OAUTH.toString()).build();
         }
         return auth;
     }
 
-    // Given a String representing environment variables, returns a list of com.amazonaws.services.codebuild.model.EnvironmentVariable
+    // Given a String representing environment variables, returns a list of software.amazon.awssdk.services.codebuild.model.EnvironmentVariable
     // objects with the same data. The input string must be in the form [{Key, value}, {k2, v2}] or else null is returned
     public static Collection<EnvironmentVariable> mapEnvVariables(String envVars, EnvironmentVariableType envVarType) throws InvalidInputException {
         Collection<EnvironmentVariable> result = new HashSet<EnvironmentVariable>();
@@ -965,14 +1000,14 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         envVars = envVars.replaceAll("[\\n|\\t]", "").trim();
         if(envVars.length() < 4 || envVars.charAt(0) != '[' || envVars.charAt(envVars.length()-1) != ']' ||
            envVars.charAt(1) != '{' || envVars.charAt(envVars.length()-2) != '}') {
-            throw new InvalidInputException(envVariableSyntaxError);
+            throw InvalidInputException.builder().message(envVariableSyntaxError).build();
         } else {
             envVars = envVars.substring(2, envVars.length()-2);
         }
 
         int numCommas = envVars.replaceAll("[^,]", "").length();
         if(numCommas == 0) {
-            throw new InvalidInputException(envVariableSyntaxError);
+            throw InvalidInputException.builder().message(envVariableSyntaxError).build();
         }
         //single environment variable case vs multiple
         if(numCommas == 1) {
@@ -990,17 +1025,23 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
     // Throws an InvalidInputException when the input string doesn't match the form described in mapEnvVariables
     private static EnvironmentVariable deserializeCodeBuildEnvVar(String ev, EnvironmentVariableType envVarType) throws InvalidInputException {
         if(ev.replaceAll("\\\\,", "").replaceAll("[^,]", "").length() != 1) {
-            throw new InvalidInputException(envVariableSyntaxError);
+            throw InvalidInputException.builder().message(envVariableSyntaxError).build();
         }
 
         String[] keyAndValue = ev.split("(?<!\\\\),");
         if(keyAndValue.length != 2 || keyAndValue[0].isEmpty() || keyAndValue[1].isEmpty()) {
-            throw new InvalidInputException(envVariableSyntaxError);
+            throw InvalidInputException.builder().message(envVariableSyntaxError).build();
         }
-        return new EnvironmentVariable().withName(keyAndValue[0].trim().replaceAll("\\\\,", ",")).withValue(keyAndValue[1].trim().replaceAll("\\\\,", ",")).withType(envVarType);
+        return EnvironmentVariable.builder().name(keyAndValue[0].trim().replaceAll("\\\\,", ",")).value(keyAndValue[1].trim().replaceAll("\\\\,", ",")).type(envVarType).build();
     }
 
     private void failBuild(Run<?, ?> build, TaskListener listener, String errorMessage, String secondaryError) throws AbortException {
+        // Defense in depth: if this instance was deserialized (readResolve() bypasses the
+        // constructor) and perform()'s early init was somehow skipped, initialize here so the
+        // underlying error below is recorded and logged instead of being masked by an NPE.
+        if (this.codeBuildResult == null) {
+            this.codeBuildResult = new CodeBuildResult();
+        }
         this.codeBuildResult.setFailure(errorMessage, secondaryError);
         LoggingHelper.log(listener, errorMessage, secondaryError);
 
@@ -1144,6 +1185,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for(ArtifactsType t: ArtifactsType.values()) {
+                if(t == ArtifactsType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1154,6 +1196,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for(ArtifactNamespace t: ArtifactNamespace.values()) {
+                if(t == ArtifactNamespace.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1164,6 +1207,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ArtifactPackaging t : ArtifactPackaging.values()) {
+                if(t == ArtifactPackaging.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1194,7 +1238,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (SourceType t : SourceType.values()) {
-                if(!t.equals(SourceType.CODEPIPELINE)) {
+                if(t != SourceType.UNKNOWN_TO_SDK_VERSION && !t.equals(SourceType.CODEPIPELINE)) {
                     selections.add(t.toString());
                 }
             }
@@ -1206,6 +1250,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (ComputeType t : ComputeType.values()) {
+                if(t == ComputeType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1216,6 +1261,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (CacheType t : CacheType.values()) {
+                if(t == CacheType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1226,6 +1272,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1236,6 +1283,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for(LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1255,13 +1303,23 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
             final ListBoxModel selections = new ListBoxModel();
 
             for (EnvironmentType t : EnvironmentType.values()) {
+                if(t == EnvironmentType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
             return selections;
         }
 
-        public ListBoxModel doFillCredentialsIdItems() {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
+            // SECURITY-3773: require permission before enumerating credentials IDs
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return new StandardListBoxModel().includeCurrentValue(credentialsId);
+                }
+            } else if (!item.hasPermission(Item.EXTENDED_READ) && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                return new StandardListBoxModel().includeCurrentValue(credentialsId);
+            }
+
             final ListBoxModel selections = new ListBoxModel();
 
             SystemCredentialsProvider s = SystemCredentialsProvider.getInstance();
@@ -1319,6 +1377,7 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
 
             // ENABLED/DISABLED
             for (LogsConfigStatusType t : LogsConfigStatusType.values()) {
+                if(t == LogsConfigStatusType.UNKNOWN_TO_SDK_VERSION) continue;
                 selections.add(t.toString());
             }
             selections.add("");
@@ -1403,4 +1462,3 @@ public class CodeBuilder extends Builder implements SimpleBuildStep {
         }
     }
 }
-

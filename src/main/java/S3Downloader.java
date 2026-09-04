@@ -14,47 +14,40 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.codebuild.model.Build;
-import com.amazonaws.services.codebuild.model.BuildArtifacts;
-import com.amazonaws.services.codebuild.model.InvalidInputException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.transfer.Transfer;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.google.common.annotations.VisibleForTesting;
 import hudson.model.TaskListener;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.codebuild.model.Build;
+import software.amazon.awssdk.services.codebuild.model.BuildArtifacts;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
 
 public class S3Downloader {
 
-    private final AmazonS3Client s3Client;
-    private TransferManager transferManager;
+    private final S3Client s3Client;
 
-    public S3Downloader(AmazonS3Client s3Client) {
+    public S3Downloader(S3Client s3Client) {
         this.s3Client = s3Client;
-        transferManager = TransferManagerBuilder.standard().withS3Client(s3Client).build();
-    }
-
-    @VisibleForTesting
-    public S3Downloader(AmazonS3Client s3Client, TransferManager transferManager) {
-        this.s3Client = s3Client;
-        this.transferManager = transferManager;
     }
 
     public void downloadBuildArtifacts(TaskListener listener, Build build, String artifactRoot) {
         if (build == null) {
-            throw new InvalidInputException(CodeBuilderValidation.buildInstanceRequiredError);
+            throw InvalidInputException.builder().message(CodeBuilderValidation.buildInstanceRequiredError).build();
         }
 
         // Download primary artifacts
-        download(listener, build.getArtifacts(), artifactRoot);
+        download(listener, build.artifacts(), artifactRoot);
 
         // Download secondary artifacts
-        if (build.getSecondaryArtifacts() != null) {
-            for (BuildArtifacts buildArtifact : build.getSecondaryArtifacts()) {
+        if (build.secondaryArtifacts() != null) {
+            for (BuildArtifacts buildArtifact : build.secondaryArtifacts()) {
                 download(listener, buildArtifact, artifactRoot);
             }
         }
@@ -62,35 +55,85 @@ public class S3Downloader {
 
     private void download(TaskListener listener, BuildArtifacts buildArtifact, String artifactRoot) {
         if (buildArtifact == null
-                || buildArtifact.getLocation() == null
-                || buildArtifact.getLocation().isEmpty()
+                || buildArtifact.location() == null
+                || buildArtifact.location().isEmpty()
                 || artifactRoot == null) {
             return;
         }
 
-        String s3Bucket = Utils.getS3BucketFromObjectArn(buildArtifact.getLocation());
-        String keyPrefix = Utils.getS3KeyFromObjectArn(buildArtifact.getLocation());
-        Transfer transfer;
+        String s3Bucket = Utils.getS3BucketFromObjectArn(buildArtifact.location());
+        String keyPrefix = Utils.getS3KeyFromObjectArn(buildArtifact.location());
         try {
-            if (buildArtifact.getSha256sum() != null && !buildArtifact.getSha256sum().isEmpty()) {
+            if (buildArtifact.sha256sum() != null && !buildArtifact.sha256sum().isEmpty()) {
                 // Download single zip file
-                File file = new File(artifactRoot + File.separatorChar + keyPrefix);
-                LoggingHelper.log(listener, "Downloading artifact from location '" + buildArtifact.getLocation() + "' to path:" + file.getAbsolutePath());
+                File file = resolveSafeChild(artifactRoot, keyPrefix);
+                LoggingHelper.log(listener, "Downloading artifact from location '" + buildArtifact.location() + "' to path:" + file.getAbsolutePath());
                 Utils.ensureFileExists(file);
-                transfer = transferManager.download(s3Bucket, keyPrefix, file);
+                downloadObject(s3Bucket, keyPrefix, file);
             } else {
-                // Download entire directory content
+                // Download entire directory content.
+                // v1 -> v2: TransferManager.downloadDirectory is replaced with a ListObjectsV2 +
+                // per-object GetObject loop so we avoid pulling in the s3-transfer-manager / CRT
+                // dependency. Each object is written under artifactRoot preserving its full S3 key,
+                // matching the v1 downloadDirectory layout.
                 File file = new File(artifactRoot);
-                LoggingHelper.log(listener, "Downloading artifact from location '" + buildArtifact.getLocation() + "' to path:" + file.getAbsolutePath());
-                transfer = transferManager.downloadDirectory(s3Bucket, keyPrefix, file);
+                LoggingHelper.log(listener, "Downloading artifact from location '" + buildArtifact.location() + "' to path:" + file.getAbsolutePath());
+                downloadDirectory(s3Bucket, keyPrefix, artifactRoot);
             }
-            transfer.waitForCompletion();
-        } catch (AmazonServiceException e) {
-            LoggingHelper.log(listener, "Download failed:" + e.getMessage());
-        } catch (InterruptedException e) {
+        } catch (SdkException e) {
             LoggingHelper.log(listener, "Download failed:" + e.getMessage());
         } catch (IOException e) {
             LoggingHelper.log(listener, e.getMessage());
         }
+    }
+
+    // Downloads all objects under keyPrefix into artifactRoot, preserving each object's full key.
+    private void downloadDirectory(String s3Bucket, String keyPrefix, String artifactRoot) throws IOException {
+        String continuationToken = null;
+        do {
+            ListObjectsV2Response listResponse = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                    .bucket(s3Bucket)
+                    .prefix(keyPrefix)
+                    .continuationToken(continuationToken)
+                    .build());
+            for (S3Object object : listResponse.contents()) {
+                // v1 parity: TransferManager.downloadDirectory skipped S3 console "folder"
+                // placeholder keys (ending in '/'); creating one as a file would break a later
+                // object under that prefix.
+                if (object.key().endsWith("/")) {
+                    continue;
+                }
+                File objectFile = resolveSafeChild(artifactRoot, object.key());
+                Utils.ensureFileExists(objectFile);
+                downloadObject(s3Bucket, object.key(), objectFile);
+            }
+            continuationToken = Boolean.TRUE.equals(listResponse.isTruncated()) ? listResponse.nextContinuationToken() : null;
+        } while (continuationToken != null);
+    }
+
+    // Fix #6: guards against path traversal (zip-slip). A crafted S3 key such as "../evil" must
+    // not let an artifact escape artifactRoot. Resolves the key against the root, then requires the
+    // canonical child path to be the root itself or a descendant of it.
+    private static File resolveSafeChild(String artifactRoot, String key) throws IOException {
+        File root = new File(artifactRoot);
+        File child = new File(root, key);
+        String rootCanonical = root.getCanonicalPath();
+        String childCanonical = child.getCanonicalPath();
+        if (!childCanonical.equals(rootCanonical)
+                && !childCanonical.startsWith(rootCanonical + File.separator)) {
+            throw new IOException("artifact key escapes destination directory: " + key);
+        }
+        return child;
+    }
+
+    private void downloadObject(String s3Bucket, String key, File file) throws IOException {
+        // ensureFileExists() pre-creates the (empty) destination so the parent directory tree
+        // exists; ResponseTransformer.toFile refuses to overwrite an existing file, so remove the
+        // placeholder first and let the transformer create it fresh.
+        if (file.exists() && !file.delete()) {
+            throw new IOException("Failed to delete existing placeholder file " + file.getAbsolutePath());
+        }
+        s3Client.getObject(GetObjectRequest.builder().bucket(s3Bucket).key(key).build(),
+                ResponseTransformer.toFile(file.toPath()));
     }
 }

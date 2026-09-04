@@ -33,19 +33,7 @@
  *     SOFTWARE.
  */
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.retry.PredefinedBackoffStrategies;
-import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.InvalidInputException;
-import com.amazonaws.services.logs.AWSLogsClient;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -58,12 +46,28 @@ import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import lombok.Getter;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.core.retry.backoff.EqualJitterBackoffStrategy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.time.Duration;
 import java.util.Properties;
 
-import static com.amazonaws.auth.profile.internal.ProfileKeyConstants.*;
 import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
 
@@ -83,9 +87,14 @@ public class AWSClientFactory {
     private static final int RETRY_BACKOFF_BASE_DELAY = 10000;
     private static final int RETRY_BACKOFF_MAX_DELAY = 30000;
 
+    // v1 -> v2: these were provided by com.amazonaws.auth.profile.internal.ProfileKeyConstants,
+    // which no longer exists in SDK v2. They are simply the standard AWS credential env var names.
+    public static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
+    public static final String AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY";
+    public static final String AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN";
+
     private String credentialsDescriptor;
-    private AWSCredentialsProvider awsCredentialsProvider;
-    private final Properties properties;
+    private AwsCredentialsProvider awsCredentialsProvider;
     private static final String POM_PROPERTIES = "/META-INF/maven/com.amazonaws/aws-codebuild/pom.properties";
 
     public AWSClientFactory(String credentialsType, String credentialsId, String proxyHost, String proxyPort, String awsAccessKey, Secret awsSecretKey, String awsSessionToken,
@@ -95,7 +104,6 @@ public class AWSClientFactory {
         this.awsSecretKey = awsSecretKey;
         this.awsSessionToken = sanitize(awsSessionToken);
         this.region = sanitize(region);
-        this.properties = new Properties();
 
         CodeBuilderValidation.checkAWSClientFactoryRegionConfig(this.region);
         this.credentialsDescriptor = "";
@@ -124,11 +132,11 @@ public class AWSClientFactory {
                 this.proxyPort = parseInt(codeBuildCredentials.getProxyPort());
                 this.credentialsDescriptor = codeBuildCredentials.getCredentialsDescriptor() + " (provided from Jenkins credentials " + credentialsId + ")";
             } else {
-                throw new InvalidInputException(CodeBuilderValidation.invalidCredentialsIdError);
+                throw InvalidInputException.builder().message(CodeBuilderValidation.invalidCredentialsIdError).build();
             }
         } else if(credentialsType.equals(CredentialsType.Keys.toString())) {
             if(this.awsSecretKey == null) {
-                throw new InvalidInputException(invalidSecretKeyError);
+                throw InvalidInputException.builder().message(invalidSecretKeyError).build();
             }
 
             if(stepContext != null && awsAccessKey.isEmpty() && awsSecretKey.getPlainText().isEmpty()) {
@@ -144,29 +152,41 @@ public class AWSClientFactory {
             this.proxyHost = sanitize(proxyHost);
             this.proxyPort = parseInt(proxyPort);
         } else {
-            throw new InvalidInputException(invalidCredTypeError);
+            throw InvalidInputException.builder().message(invalidCredTypeError).build();
         }
     }
 
-    public AWSCodeBuildClient getCodeBuildClient() throws InvalidInputException, IllegalArgumentException {
-        AWSCodeBuildClient client = new AWSCodeBuildClient(awsCredentialsProvider, getClientConfiguration());
-        client.setEndpoint("https://codebuild." + region + getAwsClientSuffix(region));
-        return client;
+    public CodeBuildClient getCodeBuildClient() throws InvalidInputException, IllegalArgumentException {
+        return CodeBuildClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(awsCredentialsProvider)
+                .httpClientBuilder(getHttpClientBuilder())
+                .overrideConfiguration(getOverrideConfiguration())
+                .endpointOverride(URI.create("https://codebuild." + region + getAwsClientSuffix(region)))
+                .build();
     }
 
-    public AmazonS3Client getS3Client() throws InvalidInputException {
-        AmazonS3Client client = new AmazonS3Client(awsCredentialsProvider, getClientConfiguration());
-        client.setEndpoint("https://s3." + region + getAwsClientSuffix(region));
-        return client;
+    public S3Client getS3Client() throws InvalidInputException {
+        return S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(awsCredentialsProvider)
+                .httpClientBuilder(getHttpClientBuilder())
+                .overrideConfiguration(getOverrideConfiguration())
+                .endpointOverride(URI.create("https://s3." + region + getAwsClientSuffix(region)))
+                .build();
     }
 
-    public AWSLogsClient getCloudWatchLogsClient() throws InvalidInputException {
-        AWSLogsClient client = new AWSLogsClient(awsCredentialsProvider, getClientConfiguration());
-        client.setEndpoint("https://logs." + region + getAwsClientSuffix(region));
-        return client;
+    public CloudWatchLogsClient getCloudWatchLogsClient() throws InvalidInputException {
+        return CloudWatchLogsClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(awsCredentialsProvider)
+                .httpClientBuilder(getHttpClientBuilder())
+                .overrideConfiguration(getOverrideConfiguration())
+                .endpointOverride(URI.create("https://logs." + region + getAwsClientSuffix(region)))
+                .build();
     }
 
-    private AWSCredentialsProvider getStepCreds(EnvVars stepEnvVars) {
+    private AwsCredentialsProvider getStepCreds(EnvVars stepEnvVars) {
         String stepAccessKey = stepEnvVars.get(AWS_ACCESS_KEY_ID);
         String stepSecretKey = stepEnvVars.get(AWS_SECRET_ACCESS_KEY);
         String stepSessionToken = stepEnvVars.get(AWS_SESSION_TOKEN);
@@ -174,37 +194,83 @@ public class AWSClientFactory {
         if(stepAccessKey != null && !stepAccessKey.isEmpty() && stepSecretKey != null && !stepSecretKey.isEmpty()) {
             this.credentialsDescriptor = stepCredentials;
             if(stepSessionToken != null && !stepSessionToken.isEmpty()) {
-                return new AWSStaticCredentialsProvider(new BasicSessionCredentials(stepAccessKey, stepSecretKey, stepSessionToken));
+                return StaticCredentialsProvider.create(AwsSessionCredentials.create(stepAccessKey, stepSecretKey, stepSessionToken));
             } else {
-                return new AWSStaticCredentialsProvider(new BasicAWSCredentials(stepAccessKey, stepSecretKey));
+                return StaticCredentialsProvider.create(AwsBasicCredentials.create(stepAccessKey, stepSecretKey));
             }
         }
 
         return null;
     }
 
-    private ClientConfiguration getClientConfiguration() {
-        String projectVersion = "";
-        try(InputStream stream = this.getClass().getResourceAsStream(POM_PROPERTIES)) {
-            properties.load(stream);
-            projectVersion =  "/" + properties.getProperty("version");
-        } catch (IOException e) {}
+    // v1 -> v2: ClientConfiguration proxy settings map to an ApacheHttpClient with a
+    // ProxyConfiguration endpoint. Connection/socket timeouts and max connections are preserved.
+    private ApacheHttpClient.Builder getHttpClientBuilder() {
+        ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
+                .connectionTimeout(Duration.ofMillis(CLIENT_CONFIG_CONNECTION_TIMEOUT))
+                .socketTimeout(Duration.ofMillis(CLIENT_CONFIG_SOCKET_TIMEOUT))
+                .maxConnections(CLIENT_CONFIG_MAX_CONNECTIONS);
 
-        ClientConfiguration clientConfig = new ClientConfiguration()
-                .withUserAgentPrefix("CodeBuild-Jenkins-Plugin" + projectVersion)
-                .withProxyHost(proxyHost)
-                .withConnectionTimeout(CLIENT_CONFIG_CONNECTION_TIMEOUT)
-                .withSocketTimeout(CLIENT_CONFIG_SOCKET_TIMEOUT)
-                .withMaxErrorRetry(CLIENT_CONFIG_MAX_ERROR_RETRIES)
-                .withMaxConnections(CLIENT_CONFIG_MAX_CONNECTIONS)
-                .withRetryPolicy(new RetryPolicy(new CodeBuildClientRetryCondition(),
-                        new PredefinedBackoffStrategies.ExponentialBackoffStrategy(RETRY_BACKOFF_BASE_DELAY, RETRY_BACKOFF_MAX_DELAY),
-                        CLIENT_CONFIG_MAX_ERROR_RETRIES, true));
-
-        if(proxyPort != null) {
-            clientConfig.setProxyPort(proxyPort);
+        if(proxyHost != null && !proxyHost.isEmpty()) {
+            StringBuilder endpoint = new StringBuilder("http://").append(proxyHost);
+            if(proxyPort != null) {
+                endpoint.append(":").append(proxyPort);
+            }
+            httpClientBuilder.proxyConfiguration(ProxyConfiguration.builder()
+                    .endpoint(URI.create(endpoint.toString()))
+                    .build());
         }
-        return clientConfig;
+        return httpClientBuilder;
+    }
+
+    // v1 -> v2: user-agent prefix, max error retries and the custom retry condition/backoff move
+    // from ClientConfiguration to ClientOverrideConfiguration. The retry semantics are preserved:
+    // up to CLIENT_CONFIG_MAX_ERROR_RETRIES attempts using CodeBuildClientRetryCondition. The old
+    // PredefinedBackoffStrategies.ExponentialBackoffStrategy(base, max) maps to the v2
+    // EqualJitterBackoffStrategy with the same base/max delays.
+    private ClientOverrideConfiguration getOverrideConfiguration() {
+        String projectVersion = getProjectVersion();
+
+        RetryPolicy retryPolicy = RetryPolicy.builder()
+                .numRetries(CLIENT_CONFIG_MAX_ERROR_RETRIES)
+                .retryCondition(new CodeBuildClientRetryCondition())
+                .backoffStrategy(EqualJitterBackoffStrategy.builder()
+                        .baseDelay(Duration.ofMillis(RETRY_BACKOFF_BASE_DELAY))
+                        .maxBackoffTime(Duration.ofMillis(RETRY_BACKOFF_MAX_DELAY))
+                        .build())
+                .build();
+
+        return ClientOverrideConfiguration.builder()
+                .putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, "CodeBuild-Jenkins-Plugin" + projectVersion)
+                .retryPolicy(retryPolicy)
+                .build();
+    }
+
+    // Reads the plugin version from the Maven-generated pom.properties to build the cosmetic
+    // SDK user-agent suffix. Split into a package-private, stream-taking overload so the
+    // absent/unreadable-resource path is unit-testable without the real classpath resource.
+    static String getProjectVersion() {
+        try (InputStream stream = AWSClientFactory.class.getResourceAsStream(POM_PROPERTIES)) {
+            return getProjectVersion(stream);
+        } catch (IOException | RuntimeException e) {
+            return "";
+        }
+    }
+
+    static String getProjectVersion(InputStream stream) {
+        if (stream == null) {
+            // Resource absent (e.g. a clean build before Maven generates pom.properties). The
+            // user-agent version suffix is cosmetic, so never fail client construction over it.
+            return "";
+        }
+        try {
+            Properties properties = new Properties();
+            properties.load(stream);
+            String version = properties.getProperty("version");
+            return version == null ? "" : "/" + version;
+        } catch (IOException | RuntimeException e) {
+            return "";
+        }
     }
 
     public String getCredentialsDescriptor() {
@@ -220,7 +286,7 @@ public class AWSClientFactory {
     }
 
     private String getAwsClientSuffix(String region) {
-        if(region.equals(Regions.CN_NORTH_1.getName()) || region.equals(Regions.CN_NORTHWEST_1.getName())) {
+        if(region.equals(Region.CN_NORTH_1.id()) || region.equals(Region.CN_NORTHWEST_1.id())) {
             return ".amazonaws.com.cn";
         } else {
             return ".amazonaws.com";
