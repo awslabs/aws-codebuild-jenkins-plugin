@@ -14,16 +14,17 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.codec.digest.DigestUtils;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,7 +37,7 @@ import static org.apache.commons.codec.binary.Base64.encodeBase64;
 @RequiredArgsConstructor
 public class S3DataManager {
 
-    private final AmazonS3Client s3Client;
+    private final S3Client s3Client;
     private final String s3InputBucket;
     private final String s3InputKey;
     private final String sseAlgorithm;
@@ -45,7 +46,7 @@ public class S3DataManager {
     private final String workspaceIncludes;
     private final String workspaceExcludes;
 
-    public S3DataManager(AmazonS3Client s3Client, String s3InputBucket, String s3InputKey, String sseAlgorithm, String localSourcePath, String workspaceSubdir) {
+    public S3DataManager(S3Client s3Client, String s3InputBucket, String s3InputKey, String sseAlgorithm, String localSourcePath, String workspaceSubdir) {
         this(s3Client, s3InputBucket, s3InputKey, sseAlgorithm, localSourcePath, workspaceSubdir, null, null);
     }
 
@@ -56,7 +57,6 @@ public class S3DataManager {
 
         FilePath localFile;
         String zipFileMD5;
-        ObjectMetadata objectMetadata = new ObjectMetadata();
 
         if(localSourcePath != null && !localSourcePath.isEmpty()) {
             String sourcePath = workspace.child(localSourcePath).getRemote();
@@ -75,31 +75,33 @@ public class S3DataManager {
             zipFileMD5 = localFile.act(new ZipSourceCallable(workspace, workspaceIncludes, workspaceExcludes));
         }
 
-        // Add MD5 checksum as S3 Object metadata
-        objectMetadata.setContentMD5(zipFileMD5);
-        objectMetadata.setContentLength(localFile.length());
+        long contentLength = localFile.length();
+        PutObjectRequest.Builder putObjectRequestBuilder = PutObjectRequest.builder()
+                .bucket(s3InputBucket)
+                .key(s3InputKey)
+                .contentMD5(zipFileMD5)
+                .contentLength(contentLength);
         if(sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-            objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
+            putObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AES256);
         }
-
-        PutObjectRequest putObjectRequest;
-        PutObjectResult putObjectResult = new PutObjectResult();
+        PutObjectRequest putObjectRequest = putObjectRequestBuilder.build();
+        PutObjectResponse putObjectResult = PutObjectResponse.builder().build();
 
         try(InputStream zipFileInputStream = localFile.read()) {
-            putObjectRequest = new PutObjectRequest(s3InputBucket, s3InputKey, zipFileInputStream, objectMetadata);
-            LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.getBucketName() + "/" + putObjectRequest.getKey() + ". MD5 checksum is " + zipFileMD5);
-            putObjectResult = s3Client.putObject(putObjectRequest);
+            LoggingHelper.log(listener, "Uploading to S3 at location " + putObjectRequest.bucket() + "/" + putObjectRequest.key() + ". MD5 checksum is " + zipFileMD5);
+            putObjectResult = s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(zipFileInputStream, contentLength));
         } catch (SdkClientException e) {
             LoggingHelper.log(listener, "Unexpected exception upon uploading source zip to S3: " + e.getMessage());
+            throw e;
+        } finally {
+            try {
+                localFile.delete();
+            } catch (IOException e) {
+                LoggingHelper.log(listener, "Unexpected exception upon deleting source file: " + e.getMessage());
+            }
         }
 
-        try {
-            localFile.delete();
-        } catch (IOException e) {
-            LoggingHelper.log(listener, "Unexpected exception upon deleting source file: " + e.getMessage());
-        }
-
-        return new UploadToS3Output(s3InputBucket + "/" + s3InputKey, putObjectResult.getVersionId());
+        return new UploadToS3Output(s3InputBucket + "/" + s3InputKey, putObjectResult.versionId());
     }
 
     private String getTempFilePath(String filePath) {

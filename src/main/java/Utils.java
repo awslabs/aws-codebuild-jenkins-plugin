@@ -14,11 +14,18 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.InvalidInputException;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.codebuild.model.ProjectArtifacts;
+import software.amazon.awssdk.services.codebuild.model.ProjectSource;
+import software.amazon.awssdk.services.codebuild.model.ProjectSourceVersion;
+import software.amazon.awssdk.services.codebuild.model.SourceAuth;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -55,15 +62,37 @@ public class Utils {
         }
 
         ObjectMapper mapper = new ObjectMapper();
-        List data;
-
         try {
-            data = mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, dataType));
+            if (dataType == ProjectSourceVersion.class) {
+                List<ProjectSourceVersionMirror> mirrors = mapper.readValue(json,
+                        mapper.getTypeFactory().constructCollectionType(List.class, ProjectSourceVersionMirror.class));
+                List<ProjectSourceVersion> result = new ArrayList<>();
+                for (ProjectSourceVersionMirror m : mirrors) {
+                    result.add(m.toModel());
+                }
+                return result;
+            } else if (dataType == ProjectSource.class) {
+                List<ProjectSourceMirror> mirrors = mapper.readValue(json,
+                        mapper.getTypeFactory().constructCollectionType(List.class, ProjectSourceMirror.class));
+                List<ProjectSource> result = new ArrayList<>();
+                for (ProjectSourceMirror m : mirrors) {
+                    result.add(m.toModel());
+                }
+                return result;
+            } else if (dataType == ProjectArtifacts.class) {
+                List<ProjectArtifactsMirror> mirrors = mapper.readValue(json,
+                        mapper.getTypeFactory().constructCollectionType(List.class, ProjectArtifactsMirror.class));
+                List<ProjectArtifacts> result = new ArrayList<>();
+                for (ProjectArtifactsMirror m : mirrors) {
+                    result.add(m.toModel());
+                }
+                return result;
+            } else {
+                return mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, dataType));
+            }
         } catch (IOException e) {
-            throw new InvalidInputException(e.getMessage());
+            throw InvalidInputException.builder().message(e.getMessage()).build();
         }
-
-        return data;
     }
 
     public static void ensureFileExists(File file) throws IOException {
@@ -77,6 +106,85 @@ public class Utils {
             if (!file.createNewFile()) {
                 throw new IOException("Failed to create file " + file.getAbsolutePath());
             }
+        }
+    }
+
+
+    private static final class ProjectSourceVersionMirror {
+        public String sourceIdentifier;
+        public String sourceVersion;
+
+        ProjectSourceVersion toModel() {
+            return ProjectSourceVersion.builder()
+                    .sourceIdentifier(sourceIdentifier)
+                    .sourceVersion(sourceVersion)
+                    .build();
+        }
+    }
+
+    private static final class SourceAuthMirror {
+        public final String type;
+        public final String resource;
+
+        @JsonCreator
+        SourceAuthMirror(@JsonProperty("type") String type,
+                         @JsonProperty("resource") String resource) {
+            this.type = type;
+            this.resource = resource;
+        }
+
+        SourceAuth toModel() {
+            return SourceAuth.builder().type(type).resource(resource).build();
+        }
+    }
+
+    private static final class ProjectSourceMirror {
+        public String type;
+        public String location;
+        public Integer gitCloneDepth;
+        public String buildspec;
+        public Boolean reportBuildStatus;
+        public Boolean insecureSsl;
+        public String sourceIdentifier;
+        public SourceAuthMirror auth;
+
+        ProjectSource toModel() {
+            return ProjectSource.builder()
+                    .type(type)
+                    .location(location)
+                    .gitCloneDepth(gitCloneDepth)
+                    .buildspec(buildspec)
+                    .reportBuildStatus(reportBuildStatus)
+                    .insecureSsl(insecureSsl)
+                    .sourceIdentifier(sourceIdentifier)
+                    .auth(auth == null ? null : auth.toModel())
+                    .build();
+        }
+    }
+
+    private static final class ProjectArtifactsMirror {
+        public String type;
+        public String location;
+        public String path;
+        public String namespaceType;
+        public String name;
+        public String packaging;
+        public Boolean overrideArtifactName;
+        public Boolean encryptionDisabled;
+        public String artifactIdentifier;
+
+        ProjectArtifacts toModel() {
+            return ProjectArtifacts.builder()
+                    .type(type)
+                    .location(location)
+                    .path(path)
+                    .namespaceType(namespaceType)
+                    .name(name)
+                    .packaging(packaging)
+                    .overrideArtifactName(overrideArtifactName)
+                    .encryptionDisabled(encryptionDisabled)
+                    .artifactIdentifier(artifactIdentifier)
+                    .build();
         }
     }
 }

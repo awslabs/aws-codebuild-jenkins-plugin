@@ -33,14 +33,14 @@
  */
 
 import com.amazonaws.codebuild.jenkinsplugin.CodeBuildBaseCredentials;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import hudson.Extension;
 import org.kohsuke.stapler.DataBoundConstructor;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 // Legacy credentials class, kept around for backward compatibility.
-public class CodeBuildCredentials extends CodeBuildBaseCredentials implements AWSCredentialsProvider {
+public class CodeBuildCredentials extends CodeBuildBaseCredentials implements AwsCredentialsProvider {
 
     @DataBoundConstructor
     public CodeBuildCredentials(CredentialsScope scope, String id, String description, String accessKey, String secretKey,
@@ -49,8 +49,8 @@ public class CodeBuildCredentials extends CodeBuildBaseCredentials implements AW
     }
 
     @Override
-    public AWSCredentials getCredentials() {
-        return super.getCredentials();
+    public AwsCredentials resolveCredentials() {
+        return super.resolveCredentials();
     }
 
     @Override

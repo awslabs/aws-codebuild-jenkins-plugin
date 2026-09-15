@@ -14,14 +14,20 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.BuildPhase;
+import software.amazon.awssdk.services.codebuild.model.BuildPhase;
 import hudson.model.AbstractBuild;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
 import hudson.model.Run;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.WithoutJenkins;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
@@ -31,65 +37,90 @@ public class CodeBuildActionTest {
     private Run<?, ?> build = mock(AbstractBuild.class);
     CodeBuildAction action;
 
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
+
     @Before
     public void SetUp() {
         action = new CodeBuildAction(build);
     }
 
     @Test
+    @WithoutJenkins
     public void testFormatPhaseHistoryOneTransition() {
         List<BuildPhase> l = new ArrayList<BuildPhase>();
-        l.add(new BuildPhase().withPhaseType("p")
-            .withStartTime(new Date(0)));
+        l.add(BuildPhase.builder().phaseType("p")
+            .startTime(Instant.ofEpochMilli(0)).build());
 
         action.setPhases(l);
         List<BuildPhase> r = action.getPhases();
         assert(r.size() == 1);
-        assert(r.get(0).getPhaseType().equals("p"));
-        assert(r.get(0).getPhaseStatus().equals("IN PROGRESS"));
-        assert(r.get(0).getDurationInSeconds().equals(0L));
+        assert(r.get(0).phaseTypeAsString().equals("p"));
+        assert(r.get(0).phaseStatusAsString().equals("IN PROGRESS"));
+        assert(r.get(0).durationInSeconds().equals(0L));
     }
 
     @Test
+    @WithoutJenkins
     public void testFormatPhaseHistoryMultipleTransition() {
         List<BuildPhase> l = new ArrayList<BuildPhase>();
-        l.add(new BuildPhase().withPhaseType("p").withPhaseStatus("s")
-                .withStartTime(new Date(0)).withDurationInSeconds(2L));
-        l.add(new BuildPhase().withPhaseType("b")
-                .withStartTime(new Date(2)));
+        l.add(BuildPhase.builder().phaseType("p").phaseStatus("s")
+                .startTime(Instant.ofEpochMilli(0)).durationInSeconds(2L).build());
+        l.add(BuildPhase.builder().phaseType("b")
+                .startTime(Instant.ofEpochMilli(2)).build());
 
         action.setPhases(l);
         List<BuildPhase> r = action.getPhases();
         assert(r.size() == 2);
-        assert(r.get(0).getPhaseType().equals("p"));
-        assert(r.get(0).getPhaseStatus().equals("s"));
-        assert(r.get(0).getDurationInSeconds().equals(2L));
-        assert(r.get(1).getPhaseType().equals("b"));
-        assert(r.get(1).getPhaseStatus().equals("IN PROGRESS"));
-        assert(r.get(1).getDurationInSeconds().equals(0L));
+        assert(r.get(0).phaseTypeAsString().equals("p"));
+        assert(r.get(0).phaseStatusAsString().equals("s"));
+        assert(r.get(0).durationInSeconds().equals(2L));
+        assert(r.get(1).phaseTypeAsString().equals("b"));
+        assert(r.get(1).phaseStatusAsString().equals("IN PROGRESS"));
+        assert(r.get(1).durationInSeconds().equals(0L));
     }
 
     @Test
+    @WithoutJenkins
     public void testFormatPhaseHistoryFinalTransition() {
         List<BuildPhase> l = new ArrayList<BuildPhase>();
-        l.add(new BuildPhase().withPhaseType("p").withPhaseStatus("s")
-                .withStartTime(new Date(0)).withDurationInSeconds(2L));
-        l.add(new BuildPhase().withPhaseType("b").withPhaseStatus("s")
-                .withStartTime(new Date(2)).withDurationInSeconds(2L));
-        l.add(new BuildPhase().withPhaseType("COMPLETED")
-                .withStartTime(new Date(4)));
+        l.add(BuildPhase.builder().phaseType("p").phaseStatus("s")
+                .startTime(Instant.ofEpochMilli(0)).durationInSeconds(2L).build());
+        l.add(BuildPhase.builder().phaseType("b").phaseStatus("s")
+                .startTime(Instant.ofEpochMilli(2)).durationInSeconds(2L).build());
+        l.add(BuildPhase.builder().phaseType("COMPLETED")
+                .startTime(Instant.ofEpochMilli(4)).build());
 
         action.setPhases(l);
         List<BuildPhase> r = action.getPhases();
         assert(r.size() == 3);
-        assert(r.get(0).getPhaseType().equals("p"));
-        assert(r.get(0).getPhaseStatus().equals("s"));
-        assert(r.get(0).getDurationInSeconds().equals(2L));
-        assert(r.get(1).getPhaseType().equals("b"));
-        assert(r.get(1).getPhaseStatus().equals("s"));
-        assert(r.get(1).getDurationInSeconds().equals(2L));
-        assert(r.get(2).getPhaseType().equals("COMPLETED"));
-        assert(r.get(2).getPhaseStatus().equals("SUCCEEDED"));
-        assert(r.get(2).getDurationInSeconds().equals(0L));
+        assert(r.get(0).phaseTypeAsString().equals("p"));
+        assert(r.get(0).phaseStatusAsString().equals("s"));
+        assert(r.get(0).durationInSeconds().equals(2L));
+        assert(r.get(1).phaseTypeAsString().equals("b"));
+        assert(r.get(1).phaseStatusAsString().equals("s"));
+        assert(r.get(1).durationInSeconds().equals(2L));
+        assert(r.get(2).phaseTypeAsString().equals("COMPLETED"));
+        assert(r.get(2).phaseStatusAsString().equals("SUCCEEDED"));
+        assert(r.get(2).durationInSeconds().equals(0L));
+    }
+
+    /**
+     * Ensures that the action with build phases can be serialized to the disk.
+     */
+    @Test
+    @Issue("JENKINS-50264")
+    public void shouldBeAbleToPersistTheAction() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        FreeStyleBuild build = j.buildAndAssertSuccess(p);
+
+        List<BuildPhase> l = new ArrayList<BuildPhase>();
+        l.add(BuildPhase.builder().phaseType("p").phaseStatus("s")
+                .startTime(Instant.ofEpochMilli(0)).durationInSeconds(2L).build());
+        CodeBuildAction a = new CodeBuildAction(build);
+        a.setPhases(l);
+
+        build.addAction(a);
+        build.save();
     }
 }

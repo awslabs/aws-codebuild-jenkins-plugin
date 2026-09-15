@@ -14,10 +14,10 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.logs.AWSLogsClient;
-import com.amazonaws.services.s3.AmazonS3Client;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.*;
+import software.amazon.awssdk.services.s3.S3Client;
 import enums.*;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -26,25 +26,26 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.Secret;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.powermock.api.mockito.PowerMockito;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
 
 /**
@@ -54,10 +55,10 @@ public class CodeBuilderTest {
 
     AWSClientFactory mockFactory = mock(AWSClientFactory.class);
     ProjectFactory mockProjectFactory = mock(ProjectFactory.class);
-    AWSCodeBuildClient mockClient = mock(AWSCodeBuildClient.class);
-    AmazonS3Client mockS3Client = mock(AmazonS3Client.class);
+    CodeBuildClient mockClient = mock(CodeBuildClient.class);
+    S3Client mockS3Client = mock(S3Client.class);
     S3DataManager mockDataManager = mock(S3DataManager.class);
-    AWSLogsClient mockLogsClient = mock(AWSLogsClient.class);
+    CloudWatchLogsClient mockLogsClient = mock(CloudWatchLogsClient.class);
     CloudWatchMonitor mockMonitor = mock(CloudWatchMonitor.class);
     CodeBuildAction mockAction = mock(CodeBuildAction.class);
     Answer<Object> mockInterruptedException = new Answer<Object>() {
@@ -68,20 +69,22 @@ public class CodeBuilderTest {
     StepContext mockStepContext = mock(StepContext.class);
     EnvVars mockEnvVars = mock(EnvVars.class);
 
-    BatchGetProjectsResult mockBGPResult = mock(BatchGetProjectsResult.class);
-    StartBuildResult mockStartBuildResult = mock(StartBuildResult.class);
-    BatchGetBuildsResult mockGetBuildsResult = mock(BatchGetBuildsResult.class);
+    BatchGetProjectsResponse mockBGPResult = mock(BatchGetProjectsResponse.class);
+    StartBuildResponse mockStartBuildResult = mock(StartBuildResponse.class);
+    BatchGetBuildsResponse mockGetBuildsResult = mock(BatchGetBuildsResponse.class);
     Build mockBuild = mock(Build.class);
 
     Run build = mock(Run.class);
     FilePath ws = new FilePath(new File("/path/to"));
     Launcher launcher = mock(Launcher.class);
     TaskListener listener = mock(TaskListener.class);
-    Secret awsSecretKey = PowerMockito.mock(Secret.class);
+    Secret awsSecretKey = mock(Secret.class);
     EnvVars envVars = new EnvVars();
 
     @Rule
     public JenkinsRule j = new JenkinsRule();
+
+    protected MockedConstruction<AWSClientFactory> awsClientFactoryConstruction;
 
     //mock console log
     protected ByteArrayOutputStream log;
@@ -104,40 +107,64 @@ public class CodeBuilderTest {
 
     //sets up a basic mock environment for calling perform()
     protected void setUpBuildEnvironment() throws Exception {
-        PowerMockito.whenNew(AWSClientFactory.class).withAnyArguments().thenReturn(mockFactory);
+        awsClientFactoryConstruction = mockConstruction(AWSClientFactory.class,
+                (constructed, context) -> {
+                    when(constructed.getCodeBuildClient()).thenAnswer(inv -> mockFactory.getCodeBuildClient());
+                    when(constructed.getS3Client()).thenAnswer(inv -> mockFactory.getS3Client());
+                    when(constructed.getCloudWatchLogsClient()).thenAnswer(inv -> mockFactory.getCloudWatchLogsClient());
+                });
         when(awsSecretKey.getPlainText()).thenReturn("s");
 
-        ProjectArtifacts artifacts = new ProjectArtifacts();
-        artifacts.setLocation("artifactBucket");
-        artifacts.setType(ArtifactsType.S3.toString());
-        ProjectSource source = new ProjectSource();
-        source.setLocation("arn:aws:s3:::my_corporate_bucket/exampleobject.png");
-        source.setType(SourceType.S3.toString());
-        Project project = new Project();
-        project.setArtifacts(artifacts);
-        project.setSource(source);
+        ProjectArtifacts artifacts = ProjectArtifacts.builder()
+                .location("artifactBucket")
+                .type(ArtifactsType.S3.toString())
+                .build();
+        ProjectSource source = ProjectSource.builder()
+                .location("arn:aws:s3:::my_corporate_bucket/exampleobject.png")
+                .type(SourceType.S3.toString())
+                .build();
+        Project project = Project.builder()
+                .artifacts(artifacts)
+                .source(source)
+                .build();
 
         ArrayList<Project> projects = new ArrayList<Project>();
         projects.add(project);
 
-        when(mockBuild.getBuildStatus()).thenReturn(StatusType.SUCCEEDED.toString().toUpperCase());
-        when(mockBuild.getStartTime()).thenReturn(new Date(0));
-        when(mockBuild.getArtifacts()).thenReturn(new BuildArtifacts().withLocation("arn:aws:s3:::my_corporate_bucket/artifact"));
-        when(mockBGPResult.getProjects()).thenReturn(projects);
+        when(mockBuild.buildStatusAsString()).thenReturn(StatusType.SUCCEEDED.toString().toUpperCase());
+        when(mockBuild.startTime()).thenReturn(Instant.ofEpochMilli(0));
+        when(mockBuild.artifacts()).thenReturn(BuildArtifacts.builder().location("arn:aws:s3:::my_corporate_bucket/artifact").build());
+        when(mockBGPResult.projects()).thenReturn(projects);
         when(mockFactory.getCodeBuildClient()).thenReturn(mockClient);
         when(mockFactory.getS3Client()).thenReturn(mockS3Client);
         when(mockFactory.getCloudWatchLogsClient()).thenReturn(mockLogsClient);
         when(mockClient.startBuild(any(StartBuildRequest.class))).thenReturn(mockStartBuildResult);
-        when(mockStartBuildResult.getBuild()).thenReturn(new Build());
+        when(mockStartBuildResult.build()).thenReturn(Build.builder().build());
         when(mockClient.batchGetProjects(any(BatchGetProjectsRequest.class))).thenReturn(mockBGPResult);
         when(mockClient.batchGetBuilds(any(BatchGetBuildsRequest.class))).thenReturn(mockGetBuildsResult);
-        when(mockGetBuildsResult.getBuilds()).thenReturn(Arrays.asList(mockBuild));
+        when(mockGetBuildsResult.builds()).thenReturn(Arrays.asList(mockBuild));
         when(build.getFullDisplayName()).thenReturn("job #1234");
         when(build.getEnvironment(any(TaskListener.class))).thenReturn(envVars);
-        PowerMockito.mockStatic(Thread.class);
-        Thread.sleep(anyLong());
+        minimizePollingSleep();
         when(awsSecretKey.getPlainText()).thenReturn("secretKey");
         when(mockStepContext.get(EnvVars.class)).thenReturn(mockEnvVars);
+    }
+
+    private void minimizePollingSleep() throws Exception {
+        CodeBuilder.DescriptorImpl descriptor = j.jenkins.getDescriptorByType(CodeBuilder.DescriptorImpl.class);
+        for (String field : new String[]{"minSleepTime", "maxSleepTime", "sleepJitter"}) {
+            java.lang.reflect.Field f = CodeBuilder.DescriptorImpl.class.getDeclaredField(field);
+            f.setAccessible(true);
+            f.setInt(descriptor, 1);
+        }
+    }
+
+    @After
+    public void tearDownBuildEnvironment() {
+        if (awsClientFactoryConstruction != null) {
+            awsClientFactoryConstruction.close();
+            awsClientFactoryConstruction = null;
+        }
     }
 
     @Before

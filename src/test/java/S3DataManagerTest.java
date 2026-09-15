@@ -14,10 +14,6 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.InvalidInputException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import enums.EncryptionAlgorithm;
 import hudson.FilePath;
 import hudson.Functions;
@@ -34,6 +30,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentCaptor;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.*;
 import java.util.Arrays;
@@ -44,7 +46,7 @@ import java.util.zip.ZipOutputStream;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,7 +55,7 @@ public class S3DataManagerTest {
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
-    private AmazonS3Client s3Client = mock(AmazonS3Client.class);
+    private S3Client s3Client = mock(S3Client.class);
     private static final String mockWorkspaceDir = "/tmp/jenkins/workspace/proj";
     private FilePath testWorkSpace = new FilePath(new File(mockWorkspaceDir));
     Map<String, String> s3ARNs = new HashMap<>();
@@ -89,9 +91,8 @@ public class S3DataManagerTest {
     private S3DataManager createDefaultSource(String localSourcePath, String workspaceSubdir) {
         this.s3ARNs.put("main", "ARN1/bucket/thing.zip"); //put one item in s3ARNs so exception doesn't happen.
 
-        PutObjectResult mockedResponse = new PutObjectResult();
-        mockedResponse.setVersionId("some-version-id");
-        when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
+        PutObjectResponse mockedResponse = PutObjectResponse.builder().versionId("some-version-id").build();
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(mockedResponse);
         return new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, sseAlgorithm, localSourcePath, workspaceSubdir);
     }
 
@@ -127,7 +128,7 @@ public class S3DataManagerTest {
         try {
             new S3DataManager(null, null, null, null, null, null).uploadSourceToS3(listener, testWorkSpace);
         } catch (InvalidInputException e) {
-            assertEquals(e.getErrorMessage(), CodeBuilderValidation.invalidSourceUploaderNullS3ClientError);
+            assertEquals(e.getMessage(), CodeBuilderValidation.invalidSourceUploaderNullS3ClientError);
         } catch(Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -139,10 +140,52 @@ public class S3DataManagerTest {
         UploadToS3Output result = createDefaultSource("", "").uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
 
-        verify(s3Client).putObject(savedPutObjectRequest.capture());
-        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
-        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
+        verify(s3Client).putObject(savedPutObjectRequest.capture(), any(RequestBody.class));
+        assertEquals(savedPutObjectRequest.getValue().bucket(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().key(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().serverSideEncryptionAsString(), sseAlgorithm);
+    }
+
+    @Test
+    public void testUploadSourceRethrowsSdkClientException() throws Exception {
+        S3DataManager m = createDefaultSource("", "");
+        SdkClientException putFailure = SdkClientException.builder().message("network fail").build();
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenThrow(putFailure);
+        try {
+            m.uploadSourceToS3(listener, testWorkSpace);
+            fail("expected the SdkClientException from putObject to propagate");
+        } catch (SdkClientException e) {
+            assertEquals("network fail", e.getMessage());
+            assertFalse("must not surface the versioning error", String.valueOf(e.getMessage()).contains("versioned"));
+        }
+    }
+
+    @Test
+    public void testUploadSourceDeletesTempZipWhenPutObjectFails() throws Exception {
+        S3DataManager m = createDefaultSource("", "");
+        SdkClientException putFailure = SdkClientException.builder().message("network fail").build();
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenThrow(putFailure);
+
+        File tempDir = new File(mockWorkspaceDir).getParentFile();
+        FilenameFilter tempZipFilter = (dir, name) -> name.endsWith("-" + s3InputKeyName);
+        File[] stale = tempDir.listFiles(tempZipFilter);
+        if (stale != null) {
+            for (File f : stale) {
+                FileUtils.deleteQuietly(f);
+            }
+        }
+
+        try {
+            m.uploadSourceToS3(listener, testWorkSpace);
+            fail("expected the SdkClientException from putObject to propagate");
+        } catch (SdkClientException e) {
+            assertEquals("network fail", e.getMessage());
+        }
+
+        File[] leftovers = tempDir.listFiles(tempZipFilter);
+        assertNotNull(leftovers);
+        assertEquals("temp source zip must be deleted even after a failed upload",
+                0, leftovers.length);
     }
 
     @Test
@@ -154,10 +197,10 @@ public class S3DataManagerTest {
         UploadToS3Output result = createDefaultSource("", "subdir").uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
 
-        verify(s3Client).putObject(savedPutObjectRequest.capture());
-        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
-        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
+        verify(s3Client).putObject(savedPutObjectRequest.capture(), any(RequestBody.class));
+        assertEquals(savedPutObjectRequest.getValue().bucket(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().key(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().serverSideEncryptionAsString(), sseAlgorithm);
     }
 
     @Test
@@ -176,7 +219,7 @@ public class S3DataManagerTest {
         try {
             createDefaultSource("source.zip", "subdir").uploadSourceToS3(listener, testWorkSpace);
         } catch (InvalidInputException e) {
-            assertEquals(e.getErrorMessage(), CodeBuilderValidation.invalidSourceUploaderConfigError);
+            assertEquals(e.getMessage(), CodeBuilderValidation.invalidSourceUploaderConfigError);
         } catch(Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -202,12 +245,12 @@ public class S3DataManagerTest {
         UploadToS3Output result = createDefaultSource(file.getPath(), "").uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
 
-        verify(s3Client).putObject(savedPutObjectRequest.capture());
-        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
-        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), S3DataManager.getZipMD5(file));
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm(), sseAlgorithm);
+        verify(s3Client).putObject(savedPutObjectRequest.capture(), any(RequestBody.class));
+        assertEquals(savedPutObjectRequest.getValue().bucket(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().key(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().contentMD5(), S3DataManager.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().contentLength(), Long.valueOf(file.length()));
+        assertEquals(savedPutObjectRequest.getValue().serverSideEncryptionAsString(), sseAlgorithm);
     }
 
     @Test
@@ -215,21 +258,20 @@ public class S3DataManagerTest {
         File file = new File(mockWorkspaceDir + "/source-file");
         FileUtils.write(file, "contents");
 
-        PutObjectResult mockedResponse = new PutObjectResult();
-        mockedResponse.setVersionId("some-version-id");
-        when(s3Client.putObject(any(PutObjectRequest.class))).thenReturn(mockedResponse);
+        PutObjectResponse mockedResponse = PutObjectResponse.builder().versionId("some-version-id").build();
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class))).thenReturn(mockedResponse);
         S3DataManager d = new S3DataManager(s3Client, s3InputBucketName, s3InputKeyName, "", file.getPath(), "");
 
         ArgumentCaptor<PutObjectRequest> savedPutObjectRequest = ArgumentCaptor.forClass(PutObjectRequest.class);
         UploadToS3Output result = d.uploadSourceToS3(listener, testWorkSpace);
         assertEquals(result.getSourceLocation(), s3InputBucketName + "/" + s3InputKeyName);
 
-        verify(s3Client).putObject(savedPutObjectRequest.capture());
-        assertEquals(savedPutObjectRequest.getValue().getBucketName(), s3InputBucketName);
-        assertEquals(savedPutObjectRequest.getValue().getKey(), s3InputKeyName);
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentMD5(), S3DataManager.getZipMD5(file));
-        assertEquals(savedPutObjectRequest.getValue().getMetadata().getContentLength(), file.length());
-        assertNull(savedPutObjectRequest.getValue().getMetadata().getSSEAlgorithm());
+        verify(s3Client).putObject(savedPutObjectRequest.capture(), any(RequestBody.class));
+        assertEquals(savedPutObjectRequest.getValue().bucket(), s3InputBucketName);
+        assertEquals(savedPutObjectRequest.getValue().key(), s3InputKeyName);
+        assertEquals(savedPutObjectRequest.getValue().contentMD5(), S3DataManager.getZipMD5(file));
+        assertEquals(savedPutObjectRequest.getValue().contentLength(), Long.valueOf(file.length()));
+        assertNull(savedPutObjectRequest.getValue().serverSideEncryptionAsString());
     }
 
 

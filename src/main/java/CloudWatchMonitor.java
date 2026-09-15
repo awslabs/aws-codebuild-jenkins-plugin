@@ -14,11 +14,11 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.LogsLocation;
-import com.amazonaws.services.logs.AWSLogsClient;
-import com.amazonaws.services.logs.model.GetLogEventsRequest;
-import com.amazonaws.services.logs.model.GetLogEventsResult;
-import com.amazonaws.services.logs.model.OutputLogEvent;
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
+import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsRequest;
+import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsResponse;
+import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent;
+import software.amazon.awssdk.services.codebuild.model.LogsLocation;
 import hudson.model.TaskListener;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,10 +29,10 @@ import java.util.List;
 
 public class CloudWatchMonitor {
 
-    @Setter private AWSLogsClient logsClient;
+    @Setter private CloudWatchLogsClient logsClient;
     @Setter @Getter private LogsLocation logsLocation;
     @Getter private List<String> latestLogs;
-    @Getter private Long lastPollTime;
+    @Getter private Long lastPollTime = 0L;
     private boolean cwlStreamingDisabled;
 
     private static final int htmlMaxLineLength = 2000;
@@ -40,7 +40,7 @@ public class CloudWatchMonitor {
     public static final String streamingDisabledMessage = "CloudWatch logs streaming is disabled for this build.";
     public static final String failedConfigurationLogsMessage = "CloudWatch configuration for this build is incorrect.";
 
-    public CloudWatchMonitor(AWSLogsClient client, boolean cwlStreamingDisabled) {
+    public CloudWatchMonitor(CloudWatchLogsClient client, boolean cwlStreamingDisabled) {
         this.logsClient = client;
         this.cwlStreamingDisabled = cwlStreamingDisabled;
         if(!CodeBuilderValidation.checkCloudWatchMonitorConfig(logsClient)) {
@@ -59,18 +59,20 @@ public class CloudWatchMonitor {
     public void pollForLogs(TaskListener listener) {
         if(cwlStreamingDisabled) {
             return;
-        } else if(this.logsLocation != null && this.logsLocation.getGroupName() != null && this.logsLocation.getStreamName() != null) {
+        } else if(this.logsLocation != null && this.logsLocation.groupName() != null && this.logsLocation.streamName() != null) {
             this.latestLogs = new ArrayList<>();
-            GetLogEventsRequest logRequest = new GetLogEventsRequest()
-                .withStartTime(lastPollTime)
-                .withStartFromHead(true)
-                .withLogGroupName(logsLocation.getGroupName())
-                .withLogStreamName(logsLocation.getStreamName());
+            GetLogEventsRequest logRequest = GetLogEventsRequest.builder()
+                .startTime(lastPollTime)
+                .startFromHead(true)
+                .logGroupName(logsLocation.groupName())
+                .logStreamName(logsLocation.streamName())
+                .build();
             try {
-                GetLogEventsResult logsResult = logsClient.getLogEvents(logRequest);
-                getAndFormatLogs(logsResult.getEvents(), listener);
+                GetLogEventsResponse logsResult = logsClient.getLogEvents(logRequest);
+                getAndFormatLogs(logsResult.events(), listener);
             } catch (Exception e) {
-                latestLogs = Arrays.asList(e.getMessage());
+                String message = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
+                latestLogs = Arrays.asList(message);
                 return;
             }
         } else {
@@ -82,7 +84,7 @@ public class CloudWatchMonitor {
     private void getAndFormatLogs(List<OutputLogEvent> logs, TaskListener listener) {
         if(logs.size() != 0) {
             for (int i = 0; i < logs.size(); i++) {
-                String entry = logs.get(i).getMessage();
+                String entry = logs.get(i).message();
                 //trim the [Container] string from the log message.
                 if(entry.startsWith("[Container]")) {
                     entry = entry.substring(entry.indexOf("]") + 2);
@@ -93,7 +95,7 @@ public class CloudWatchMonitor {
                 LoggingHelper.log(listener, entry.replace("\n", ""));
                 latestLogs.add(entry);
             }
-            this.lastPollTime = logs.get(logs.size()-1).getTimestamp() + 1;
+            this.lastPollTime = logs.get(logs.size()-1).timestamp() + 1;
         }
     }
 

@@ -33,33 +33,40 @@
  */
 package com.amazonaws.codebuild.jenkinsplugin;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.services.codebuild.AWSCodeBuildClient;
-import com.amazonaws.services.codebuild.model.ListProjectsRequest;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsDescriptor;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
 import lombok.Getter;
 import lombok.Setter;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.codebuild.CodeBuildClient;
+import software.amazon.awssdk.services.codebuild.model.ListProjectsRequest;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.Credentials;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.UUID;
 
 import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 
-public class CodeBuildBaseCredentials extends BaseStandardCredentials implements AWSCredentialsProvider {
+public class CodeBuildBaseCredentials extends BaseStandardCredentials implements AwsCredentialsProvider {
 
     public static final String DEFAULT_CHAIN_CREDS = "Using credentials provided by the DefaultAWSCredentialsProviderChain for authorization";
     public static final String BASIC_AWS_CREDS = "Using given AWS access and secret key for authorization";
@@ -104,48 +111,55 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
     }
 
     @Override
-    public AWSCredentials getCredentials() {
-        AWSCredentialsProvider credentialsProvider = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
-        AWSCredentials credentials = credentialsProvider.getCredentials();
+    public synchronized AwsCredentials resolveCredentials() {
+        AwsCredentialsProvider credentialsProvider = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
+        AwsCredentials credentials = credentialsProvider.resolveCredentials();
 
         if (!iamRoleArn.isEmpty()) {
             if (haveCredentialsExpired()) {
                 refresh();
             }
-            credentials = new BasicSessionCredentials(
-                    roleCredentials.getAccessKeyId(),
-                    roleCredentials.getSecretAccessKey(),
-                    roleCredentials.getSessionToken());
+            Credentials snapshot = roleCredentials;
+            credentials = AwsSessionCredentials.create(
+                    snapshot.accessKeyId(),
+                    snapshot.secretAccessKey(),
+                    snapshot.sessionToken());
         }
 
         return credentials;
     }
 
-    @Override
-    public void refresh() {
+    public synchronized void refresh() {
         if (!iamRoleArn.isEmpty()) {
             if (!haveCredentialsExpired()) {
                 return;
             }
 
-            AWSCredentialsProvider credentialsProvider = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
-            AWSCredentials credentials = credentialsProvider.getCredentials();
+            AwsCredentialsProvider credentialsProvider = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
+            AwsCredentials credentials = credentialsProvider.resolveCredentials();
 
-            AssumeRoleRequest assumeRequest = new AssumeRoleRequest()
-                    .withRoleArn(iamRoleArn)
-                    .withExternalId(externalId)
-                    .withDurationSeconds(3600)
-                    .withRoleSessionName(ROLE_SESSION_NAME);
+            AssumeRoleRequest assumeRequest = AssumeRoleRequest.builder()
+                    .roleArn(iamRoleArn)
+                    .externalId(externalId)
+                    .durationSeconds(3600)
+                    .roleSessionName(ROLE_SESSION_NAME)
+                    .build();
 
-            AssumeRoleResult assumeResult = new AWSSecurityTokenServiceClient(credentials).assumeRole(assumeRequest);
+            AssumeRoleResponse assumeResult;
+            try (StsClient stsClient = StsClient.builder()
+                    .region(Region.AWS_GLOBAL)
+                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                    .build()) {
+                assumeResult = stsClient.assumeRole(assumeRequest);
+            }
 
-            roleCredentials = assumeResult.getCredentials();
+            roleCredentials = assumeResult.credentials();
         }
     }
 
     private boolean haveCredentialsExpired() {
         if (roleCredentials == null
-                || roleCredentials.getExpiration().getTime() < (new Date().getTime() + MIN_VALIDITY_ALLOWED)) {
+                || roleCredentials.expiration().toEpochMilli() < (new Date().getTime() + MIN_VALIDITY_ALLOWED)) {
             return true;
         }
 
@@ -157,35 +171,62 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
 
         private static final int ERROR_MESSAGE_MAX_LENGTH = 178;
 
+        static String truncateErrorMessage(String errorMessage) {
+            if (errorMessage == null) {
+                return "Unknown error";
+            }
+            return errorMessage.substring(0, Math.min(errorMessage.length(), ERROR_MESSAGE_MAX_LENGTH));
+        }
+
         public String getDisplayName() {
             return "CodeBuild Credentials (Groovy-compatible)";
         }
 
-        public FormValidation doCheckSecretKey(@QueryParameter("proxyHost") final String proxyHost,
+        private boolean hasCredentialsValidationPermission(Item item) {
+            if (item == null) {
+                return Jenkins.get().hasPermission(Jenkins.ADMINISTER);
+            }
+            return item.hasPermission(Item.EXTENDED_READ) || item.hasPermission(CredentialsProvider.USE_ITEM);
+        }
+
+        public FormValidation doCheckSecretKey(@AncestorInPath Item item,
+                                               @QueryParameter("proxyHost") final String proxyHost,
                                                @QueryParameter("proxyPort") final String proxyPort,
                                                @QueryParameter("accessKey") final String accessKey,
                                                @QueryParameter("secretKey") final String secretKey) {
 
+            // SECURITY-3773: ok() (not an error) for unpermitted users, so the form leaks nothing
+            if (!hasCredentialsValidationPermission(item)) {
+                return FormValidation.ok();
+            }
+
             try {
-                AWSCredentials initialCredentials = getBasicCredentialsOrDefaultChain(accessKey, secretKey).getCredentials();
-                new AWSCodeBuildClient(initialCredentials, getClientConfiguration(proxyHost, proxyPort)).listProjects(new ListProjectsRequest());
+                AwsCredentialsProvider initialCredentials = getBasicCredentialsOrDefaultChain(accessKey, secretKey);
+                CodeBuildClient client = CodeBuildClient.builder()
+                        .region(Region.US_EAST_1)
+                        .credentialsProvider(initialCredentials)
+                        .httpClientBuilder(getHttpClientBuilder(proxyHost, proxyPort))
+                        .build();
+                client.listProjects(ListProjectsRequest.builder().build());
 
             } catch (Exception e) {
-                String errorMessage = e.getMessage();
-                if(errorMessage.length() >= ERROR_MESSAGE_MAX_LENGTH) {
-                    errorMessage = errorMessage.substring(ERROR_MESSAGE_MAX_LENGTH);
-                }
-                return FormValidation.error("Authorization failed: " + errorMessage);
+                return FormValidation.error("Authorization failed: " + truncateErrorMessage(e.getMessage()));
             }
             return FormValidation.ok("AWS access and secret key authorization successful.");
         }
 
-        public FormValidation doCheckIamRoleArn(@QueryParameter("proxyHost") final String proxyHost,
+        public FormValidation doCheckIamRoleArn(@AncestorInPath Item item,
+                                                @QueryParameter("proxyHost") final String proxyHost,
                                                 @QueryParameter("proxyPort") final String proxyPort,
                                                 @QueryParameter("accessKey") final String accessKey,
                                                 @QueryParameter("secretKey") final String secretKey,
                                                 @QueryParameter("iamRoleArn") final String iamRoleArn,
                                                 @QueryParameter("externalId") final String externalId) {
+
+            // SECURITY-3773: ok() (not an error) for unpermitted users, so the form leaks nothing
+            if (!hasCredentialsValidationPermission(item)) {
+                return FormValidation.ok();
+            }
 
             if (accessKey.isEmpty() || secretKey.isEmpty()) {
                 return FormValidation.error("AWS access and secret keys are required to use an IAM role for authorization");
@@ -197,22 +238,26 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
 
             try {
 
-                AWSCredentials initialCredentials = new BasicAWSCredentials(accessKey, secretKey);
+                AwsCredentialsProvider initialCredentials = StaticCredentialsProvider.create(
+                        software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessKey, secretKey));
 
-                AssumeRoleRequest assumeRequest = new AssumeRoleRequest()
-                        .withRoleArn(iamRoleArn)
-                        .withExternalId(externalId)
-                        .withDurationSeconds(3600)
-                        .withRoleSessionName(ROLE_SESSION_NAME);
+                AssumeRoleRequest assumeRequest = AssumeRoleRequest.builder()
+                        .roleArn(iamRoleArn)
+                        .externalId(externalId)
+                        .durationSeconds(3600)
+                        .roleSessionName(ROLE_SESSION_NAME)
+                        .build();
 
-                new AWSSecurityTokenServiceClient(initialCredentials, getClientConfiguration(proxyHost, proxyPort)).assumeRole(assumeRequest);
+                try (StsClient stsClient = StsClient.builder()
+                        .region(Region.AWS_GLOBAL)
+                        .credentialsProvider(initialCredentials)
+                        .httpClientBuilder(getHttpClientBuilder(proxyHost, proxyPort))
+                        .build()) {
+                    stsClient.assumeRole(assumeRequest);
+                }
 
             } catch (Exception e) {
-                String errorMessage = e.getMessage();
-                if(errorMessage.length() >= ERROR_MESSAGE_MAX_LENGTH) {
-                    errorMessage = errorMessage.substring(ERROR_MESSAGE_MAX_LENGTH);
-                }
-                return FormValidation.error("Authorization failed: " + errorMessage);
+                return FormValidation.error("Authorization failed: " + truncateErrorMessage(e.getMessage()));
             }
             return FormValidation.ok("IAM role authorization successful.");
         }
@@ -221,15 +266,18 @@ public class CodeBuildBaseCredentials extends BaseStandardCredentials implements
             return UUID.randomUUID().toString();
         }
 
-        private ClientConfiguration getClientConfiguration(String proxyHost, String proxyPort) {
-            ClientConfiguration clientConfig = new ClientConfiguration();
-            if (!proxyHost.isEmpty()) {
-                clientConfig.withProxyHost(proxyHost);
+        private ApacheHttpClient.Builder getHttpClientBuilder(String proxyHost, String proxyPort) {
+            ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder();
+            if (proxyHost != null && !proxyHost.isEmpty()) {
+                StringBuilder endpoint = new StringBuilder("http://").append(proxyHost);
+                if (proxyPort != null && !proxyPort.isEmpty()) {
+                    endpoint.append(":").append(Validation.parseInt(proxyPort));
+                }
+                httpClientBuilder.proxyConfiguration(ProxyConfiguration.builder()
+                        .endpoint(URI.create(endpoint.toString()))
+                        .build());
             }
-            if (!proxyPort.isEmpty()) {
-                clientConfig.setProxyPort(Validation.parseInt(proxyPort));
-            }
-            return clientConfig;
+            return httpClientBuilder;
         }
     }
 }

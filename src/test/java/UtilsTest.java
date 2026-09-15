@@ -14,7 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.model.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -134,8 +134,8 @@ public class UtilsTest {
         List<ProjectSourceVersion> versions = Utils.parseDataList("[{\"sourceIdentifier\": \"a\"}]", ProjectSourceVersion.class);
 
         assertEquals(versions.size(), 1);
-        assertEquals(versions.get(0).getSourceIdentifier(), "a");
-        assertNull(versions.get(0).getSourceVersion());
+        assertEquals(versions.get(0).sourceIdentifier(), "a");
+        assertNull(versions.get(0).sourceVersion());
     }
 
     @Test
@@ -143,8 +143,8 @@ public class UtilsTest {
         List<ProjectSourceVersion> versions = Utils.parseDataList("[{\"sourceIdentifier\": \"a\", \"sourceVersion\": \"v\"}]", ProjectSourceVersion.class);
 
         assertEquals(versions.size(), 1);
-        assertEquals(versions.get(0).getSourceIdentifier(), "a");
-        assertEquals(versions.get(0).getSourceVersion(), "v");
+        assertEquals(versions.get(0).sourceIdentifier(), "a");
+        assertEquals(versions.get(0).sourceVersion(), "v");
     }
 
     @Test
@@ -153,8 +153,8 @@ public class UtilsTest {
                 "[{\"sourceIdentifier\": \"a\", \"sourceVersion\": \"v1\"},{\"sourceIdentifier\": \"b\", \"sourceVersion\": \"v2\"}]", ProjectSourceVersion.class);
 
         assertEquals(versions.size(), 2);
-        assert(versions.contains(new ProjectSourceVersion().withSourceIdentifier("a").withSourceVersion("v1")));
-        assert(versions.contains(new ProjectSourceVersion().withSourceIdentifier("b").withSourceVersion("v2")));
+        assert(versions.contains(ProjectSourceVersion.builder().sourceIdentifier("a").sourceVersion("v1").build()));
+        assert(versions.contains(ProjectSourceVersion.builder().sourceIdentifier("b").sourceVersion("v2").build()));
     }
 
 
@@ -197,14 +197,14 @@ public class UtilsTest {
         List<ProjectSource> sources = Utils.parseDataList("[{\"type\": \"t\"}]", ProjectSource.class);
 
         assertEquals(sources.size(), 1);
-        assertEquals(sources.get(0).getType(), "t");
-        assertNull(sources.get(0).getAuth());
-        assertNull(sources.get(0).getBuildspec());
-        assertNull(sources.get(0).getGitCloneDepth());
-        assertNull(sources.get(0).getInsecureSsl());
-        assertNull(sources.get(0).getLocation());
-        assertNull(sources.get(0).getReportBuildStatus());
-        assertNull(sources.get(0).getSourceIdentifier());
+        assertEquals(sources.get(0).typeAsString(), "t");
+        assertNull(sources.get(0).auth());
+        assertNull(sources.get(0).buildspec());
+        assertNull(sources.get(0).gitCloneDepth());
+        assertNull(sources.get(0).insecureSsl());
+        assertNull(sources.get(0).location());
+        assertNull(sources.get(0).reportBuildStatus());
+        assertNull(sources.get(0).sourceIdentifier());
     }
 
     @Test
@@ -221,14 +221,14 @@ public class UtilsTest {
                 "}]", ProjectSource.class);
 
         assertEquals(sources.size(), 1);
-        assertEquals(sources.get(0).getType(), "t");
-        assertEquals(sources.get(0).getLocation(), "l");
-        assert(sources.get(0).getGitCloneDepth() == 1);
-        assertEquals(sources.get(0).getBuildspec(), "b");
-        assertEquals(sources.get(0).getReportBuildStatus(), true);
-        assertEquals(sources.get(0).getInsecureSsl(), true);
-        assertEquals(sources.get(0).getSourceIdentifier(), "i");
-        assertEquals(sources.get(0).getAuth(), new SourceAuth().withType("at").withResource("ar"));
+        assertEquals(sources.get(0).typeAsString(), "t");
+        assertEquals(sources.get(0).location(), "l");
+        assert(sources.get(0).gitCloneDepth() == 1);
+        assertEquals(sources.get(0).buildspec(), "b");
+        assertEquals(sources.get(0).reportBuildStatus(), true);
+        assertEquals(sources.get(0).insecureSsl(), true);
+        assertEquals(sources.get(0).sourceIdentifier(), "i");
+        assertEquals(sources.get(0).auth(), SourceAuth.builder().type("at").resource("ar").build());
     }
 
     @Test
@@ -237,8 +237,8 @@ public class UtilsTest {
                 "[{\"type\": \"t1\", \"location\": \"l1\"},{\"type\": \"t2\", \"location\": \"l2\"}]", ProjectSource.class);
 
         assertEquals(sources.size(), 2);
-        assert(sources.contains(new ProjectSource().withType("t1").withLocation("l1")));
-        assert(sources.contains(new ProjectSource().withType("t2").withLocation("l2")));
+        assert(sources.contains(ProjectSource.builder().type("t1").location("l1").build()));
+        assert(sources.contains(ProjectSource.builder().type("t2").location("l2").build()));
     }
 
     @Test
@@ -270,15 +270,15 @@ public class UtilsTest {
         List<ProjectArtifacts> artifacts = Utils.parseDataList("[{\"type\": \"t\"}]", ProjectArtifacts.class);
 
         assertEquals(artifacts.size(), 1);
-        assertEquals(artifacts.get(0).getType(), "t");
-        assertNull(artifacts.get(0).getArtifactIdentifier());
-        assertNull(artifacts.get(0).getEncryptionDisabled());
-        assertNull(artifacts.get(0).getLocation());
-        assertNull(artifacts.get(0).getName());
-        assertNull(artifacts.get(0).getNamespaceType());
-        assertNull(artifacts.get(0).getOverrideArtifactName());
-        assertNull(artifacts.get(0).getPackaging());
-        assertNull(artifacts.get(0).getPath());
+        assertEquals(artifacts.get(0).typeAsString(), "t");
+        assertNull(artifacts.get(0).artifactIdentifier());
+        assertNull(artifacts.get(0).encryptionDisabled());
+        assertNull(artifacts.get(0).location());
+        assertNull(artifacts.get(0).name());
+        assertNull(artifacts.get(0).namespaceTypeAsString());
+        assertNull(artifacts.get(0).overrideArtifactName());
+        assertNull(artifacts.get(0).packagingAsString());
+        assertNull(artifacts.get(0).path());
     }
 
     @Test
@@ -306,15 +306,15 @@ public class UtilsTest {
                 "}]", ProjectArtifacts.class);
 
         assertEquals(artifacts.size(), 1);
-        assertEquals(artifacts.get(0).getType(), "t");
-        assertEquals(artifacts.get(0).getLocation(), "l");
-        assertEquals(artifacts.get(0).getPath(), "p");
-        assertEquals(artifacts.get(0).getNamespaceType(), "nt");
-        assertEquals(artifacts.get(0).getName(), "n");
-        assertEquals(artifacts.get(0).getPackaging(), "p");
-        assertEquals(artifacts.get(0).getOverrideArtifactName(), true);
-        assertEquals(artifacts.get(0).getEncryptionDisabled(), true);
-        assertEquals(artifacts.get(0).getArtifactIdentifier(), "i");
+        assertEquals(artifacts.get(0).typeAsString(), "t");
+        assertEquals(artifacts.get(0).location(), "l");
+        assertEquals(artifacts.get(0).path(), "p");
+        assertEquals(artifacts.get(0).namespaceTypeAsString(), "nt");
+        assertEquals(artifacts.get(0).name(), "n");
+        assertEquals(artifacts.get(0).packagingAsString(), "p");
+        assertEquals(artifacts.get(0).overrideArtifactName(), true);
+        assertEquals(artifacts.get(0).encryptionDisabled(), true);
+        assertEquals(artifacts.get(0).artifactIdentifier(), "i");
     }
 
     @Test
@@ -323,8 +323,8 @@ public class UtilsTest {
                 "[{\"type\": \"t1\"},{\"type\": \"t2\"}]", ProjectArtifacts.class);
 
         assertEquals(artifacts.size(), 2);
-        assert(artifacts.contains(new ProjectArtifacts().withType("t1")));
-        assert(artifacts.contains(new ProjectArtifacts().withType("t2")));
+        assert(artifacts.contains(ProjectArtifacts.builder().type("t1").build()));
+        assert(artifacts.contains(ProjectArtifacts.builder().type("t2").build()));
     }
 
     @Test

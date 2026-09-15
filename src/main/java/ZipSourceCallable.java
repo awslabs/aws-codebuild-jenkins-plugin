@@ -14,7 +14,7 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.InvalidInputException;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.remoting.VirtualChannel;
@@ -87,7 +87,7 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     @Restricted(NoExternalUse.class)    // For testing purpose
     protected void zipSourceWithArchiver(final OutputStream out) throws InvalidInputException, IOException, InterruptedException {
         if (!workspace.exists() || !workspace.isDirectory()) {
-            throw new InvalidInputException("Empty or invalid source directory: " + workspace.getRemote());
+            throw InvalidInputException.builder().message("Empty or invalid source directory: " + workspace.getRemote()).build();
         }
         Archiver archiver = ArchiverFactory.ZIP.create(out);
         try {
@@ -140,13 +140,13 @@ public class ZipSourceCallable extends MasterToSlaveFileCallable<String> {
     @Deprecated
     public static void zipSource(FilePath workspace, final String directory, final ZipOutputStream out, final String prefixToTrim) throws InvalidInputException, IOException, InterruptedException {
         if (!Paths.get(directory).startsWith(Paths.get(prefixToTrim))) {
-            throw new InvalidInputException(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory);
+            throw InvalidInputException.builder().message(zipSourceError + "prefixToTrim: " + prefixToTrim + ", directory: "+ directory).build();
         }
 
         FilePath dir = new FilePath(workspace, directory);
         List<FilePath> dirFiles = dir.list();
         if (dirFiles == null) {
-            throw new InvalidInputException("Empty or invalid source directory: " + directory);
+            throw InvalidInputException.builder().message("Empty or invalid source directory: " + directory).build();
         }
         byte[] buffer = new byte[1024];
         int bytesRead;

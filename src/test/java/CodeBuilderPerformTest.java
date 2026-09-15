@@ -14,30 +14,24 @@
  *  Please see LICENSE.txt for applicable license terms and NOTICE.txt for applicable notices.
  */
 
-import com.amazonaws.services.codebuild.model.*;
+import software.amazon.awssdk.services.codebuild.model.*;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import enums.*;
 import hudson.model.ParameterValue;
 import hudson.model.Result;
-import hudson.util.Secret;
 import lombok.Getter;
 import lombok.Setter;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.MockedConstruction;
 
 //import static com.amazonaws.codebuild.jenkinsplugin.Validation.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@PowerMockIgnore("javax.management.*")
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({CodeBuilder.class, Secret.class})
 public class CodeBuilderPerformTest extends CodeBuilderTest {
 
     @Before
@@ -134,7 +128,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testStartBuildExcepts() throws Exception {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "StartBuild exception";
-        doThrow(new InvalidInputException(error)).when(mockClient).startBuild(any(StartBuildRequest.class));
+        doThrow(InvalidInputException.builder().message(error).build()).when(mockClient).startBuild(any(StartBuildRequest.class));
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -151,7 +145,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testGetCBClientExcepts() throws Exception {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "failed to instantiate cb client.";
-        doThrow(new InvalidInputException(error)).when(mockFactory).getCodeBuildClient();
+        doThrow(InvalidInputException.builder().message(error).build()).when(mockFactory).getCodeBuildClient();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -168,7 +162,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
     public void testBatchGetBuildsExcepts() throws Exception {
         CodeBuilder test = createDefaultCodeBuilder();
         String error = "cannot get build";
-        doThrow(new InvalidInputException(error)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
+        doThrow(InvalidInputException.builder().message(error).build()).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
 
         test.perform(build, ws, launcher, listener, mockStepContext);
@@ -318,8 +312,8 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                          LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
                                          "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
 
-        Project mockProject = new Project().withSource(new ProjectSource().withType(SourceType.BITBUCKET));
-        when(mockClient.batchGetProjects(any(BatchGetProjectsRequest.class))).thenReturn(new BatchGetProjectsResult().withProjects(mockProject));
+        Project mockProject = Project.builder().source(ProjectSource.builder().type(SourceType.BITBUCKET).build()).build();
+        when(mockClient.batchGetProjects(any(BatchGetProjectsRequest.class))).thenReturn(BatchGetProjectsResponse.builder().projects(mockProject).build());
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -342,7 +336,7 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
                                          LogsConfigStatusType.ENABLED.toString(), "group", "stream", LogsConfigStatusType.ENABLED.toString(), "", "location",
                                          "arn:aws:s3:::my_bucket/certificate.pem", "my_service_role", BooleanValue.False.toString(), BooleanValue.False.toString(), BooleanValue.False.toString(), "", "DISABLED", "");
 
-        Project mockProject = new Project().withSource(new ProjectSource().withType(SourceType.BITBUCKET));
+        Project mockProject = Project.builder().source(ProjectSource.builder().type(SourceType.BITBUCKET).build()).build();
         ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
         test.perform(build, ws, launcher, listener, mockStepContext);
 
@@ -394,6 +388,57 @@ public class CodeBuilderPerformTest extends CodeBuilderTest {
 
         assertEquals(envVars.get("foo"), cb.getParameterized(cb.getProjectName()));
         assertEquals(envVars.get("foo2") + "-" + envVars.get("foo3"), cb.getParameterized(cb.getSourceVersion()));
+    }
+
+    @Test
+    public void testEarlyFactoryFailureWithUninitializedResultSurfacesRealError() throws Exception {
+        String underlyingError = "Unable to load AWS credentials from any provider in the chain";
+
+        awsClientFactoryConstruction.close();
+        awsClientFactoryConstruction = null;
+
+        CodeBuilder test = createDefaultCodeBuilder();
+
+        java.lang.reflect.Field resultField = CodeBuilder.class.getDeclaredField("codeBuildResult");
+        resultField.setAccessible(true);
+        resultField.set(test, null);
+
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+        try (MockedConstruction<AWSClientFactory> throwingConstruction = mockConstruction(AWSClientFactory.class,
+                (constructed, context) -> {
+                    throw SdkClientException.builder().message(underlyingError).build();
+                })) {
+            test.perform(build, ws, launcher, listener, mockStepContext);
+        }
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(Result.FAILURE, savedResult.getValue());
+        assertTrue("Unexpected NullPointerException in log: " + log.toString(),
+                   !log.toString().contains("NullPointerException"));
+        assertTrue("Missing authorization error in log: " + log.toString(),
+                   log.toString().contains(CodeBuilder.authorizationError));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
+        assertTrue("Result error message missing authorization error: " + result.getErrorMessage(),
+                   result.getErrorMessage().startsWith(CodeBuilder.authorizationError));
+        assertTrue("Underlying error detail was swallowed: " + result.getErrorMessage(),
+                   result.getErrorMessage().contains("\n\t> "));
+    }
+
+    @Test
+    public void testPollExceptionWithNullMessage() throws Exception {
+        CodeBuilder test = createDefaultCodeBuilder();
+        doThrow(new RuntimeException((String) null)).when(mockClient).batchGetBuilds(any(BatchGetBuildsRequest.class));
+        ArgumentCaptor<Result> savedResult = ArgumentCaptor.forClass(Result.class);
+
+        test.perform(build, ws, launcher, listener, mockStepContext);
+
+        verify(build).setResult(savedResult.capture());
+        assertEquals(Result.FAILURE, savedResult.getValue());
+        assertTrue("Unexpected NullPointerException in log: " + log.toString(),
+                   !log.toString().contains("NullPointerException"));
+        CodeBuildResult result = test.getCodeBuildResult();
+        assertEquals(CodeBuildResult.FAILURE, result.getStatus());
     }
 
     private class Parameter extends ParameterValue {

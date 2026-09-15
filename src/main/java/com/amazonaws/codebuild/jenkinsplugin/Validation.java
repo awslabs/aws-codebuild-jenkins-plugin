@@ -15,19 +15,15 @@
  */
 package com.amazonaws.codebuild.jenkinsplugin;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.*;
-import com.amazonaws.services.codebuild.model.*;
-import com.amazonaws.services.logs.AWSLogsClient;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
-import hudson.FilePath;
 import org.apache.commons.lang.StringUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.codebuild.model.InvalidInputException;
 
-import java.util.Collection;
-
-import static enums.SourceControlType.JenkinsSource;
-import static enums.SourceControlType.ProjectSource;
 import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
 import static org.apache.commons.lang.StringEscapeUtils.escapeSql;
 
@@ -63,23 +59,23 @@ public class Validation {
         }
     }
 
-    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
+    public static AwsCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey) {
         return getBasicCredentialsOrDefaultChain(accessKey, secretKey, "");
     }
 
-    public static AWSCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {
-        AWSCredentialsProvider result;
+    public static AwsCredentialsProvider getBasicCredentialsOrDefaultChain(String accessKey, String secretKey, String awsSessionToken) {
+        AwsCredentialsProvider result;
         if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(awsSessionToken)) {
-            result = new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKey, secretKey, awsSessionToken));
+            result = StaticCredentialsProvider.create(AwsSessionCredentials.create(accessKey, secretKey, awsSessionToken));
         }
         else if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
-            result = new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey));
+            result = StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
         } else {
-            result = DefaultAWSCredentialsProviderChain.getInstance();
+            result = DefaultCredentialsProvider.create();
             try {
-                result.getCredentials();
+                result.resolveCredentials();
             } catch (SdkClientException e) {
-                throw new InvalidInputException(invalidDefaultCredentialsError);
+                throw InvalidInputException.builder().message(invalidDefaultCredentialsError).build();
             }
         }
         return result;
